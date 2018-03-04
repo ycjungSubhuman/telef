@@ -9,11 +9,14 @@ using namespace openni;
 namespace openni::face {
     class RGBDFrame 
     {
+        public:
+            using SingleFramePtr = std::shared_ptr<VideoFrameRef>;
+
         private:
-            std::shared_ptr<VideoFrameRef> depth, color;
+            SingleFramePtr depth, color;
 
         public:
-            RGBDFrame(std::shared_ptr<VideoFrameRef> depth, std::shared_ptr<VideoFrameRef> color);
+            RGBDFrame(SingleFramePtr depth, SingleFramePtr color);
             pcl::PointCloud<pcl::PointXYZRGB> toPointCloud() const;
     };
 }

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <pcl/io/ply_io.h>
 #include "io/OpenNI2Reader.h"
 #include "RGBDFrame.h"
 
@@ -13,11 +14,15 @@ int main(int ac, char* av[])
     }
 
     std::string outputPath {av[1]};
+    
 
     OpenNI2Reader reader;
     RGBDFrame frame = reader.syncReadFrame();
 
-    auto a = frame.toPointCloud();
+    auto cloud = frame.toPointCloud();
+
+    pcl::PLYWriter writer;
+    writer.write(outputPath, cloud);
 
     return 0;
 }

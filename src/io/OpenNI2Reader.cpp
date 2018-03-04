@@ -3,13 +3,14 @@
 #include <iostream>
 #include <memory>
 #include <cstdlib>
+#include <chrono>
+#include <thread>
+#include "exceptions.h"
 
 namespace {
-    [[noreturn]] inline void putNIExtendedErrorAndDie(const std::string& msg) 
+    [[noreturn]] inline void putNIExtendedErrorAndDie(const std::string& msg)
     {
-        std::cerr << msg << std::endl;
-        std::cerr << OpenNI::getExtendedError() << std::endl;
-        exit(EXIT_FAILURE);
+        throw openni::face::DeviceFailException(msg);
     }
 
     inline void requireStatus(openni::Status status, const std::string& errorMsg)
@@ -19,6 +20,7 @@ namespace {
             putNIExtendedErrorAndDie(errorMsg);
         }
     }
+
 }
 
 using namespace openni;
@@ -29,7 +31,7 @@ namespace openni::face {
     {
         /* OpenNI Global Context Initialization */
         auto initStatus = OpenNI::initialize();
-        requireStatus(initStatus, "OpenNI Initialization Failure");
+        requireStatus(initStatus, "OpenNI initialization failure");
 
         /* Open Any RGB-D Device. Init device */
         auto devOpenStatus = this->device.open(ANY_DEVICE);
@@ -50,15 +52,24 @@ namespace openni::face {
         auto colorVideoStreamCreationStatus = this->colorVideoStream.create(this->device, SENSOR_COLOR);
         requireStatus(colorVideoStreamCreationStatus, "Color video stream creation failed");
 
-        /* Start reading frames */
+        /* Start Reading Frames */
         auto colorStartStatus = this->colorVideoStream.start();
         requireStatus(colorStartStatus, "Could not start color stream");
         auto depthStartStatus = this->depthVideoStream.start();
         requireStatus(depthStartStatus, "Could not start depth stream");
+
+        /* Set Registraion Mode On */
+        if (!this->device.isImageRegistrationModeSupported(IMAGE_REGISTRATION_DEPTH_TO_COLOR)) 
+        {
+            putNIExtendedErrorAndDie("Depth-to-color registration not supported.");
+        }
+        auto registraionInitStatus = this->device.setImageRegistrationMode(IMAGE_REGISTRATION_DEPTH_TO_COLOR);
+        requireStatus(registraionInitStatus, "Could not start depth-to-color registration");
     }
 
     OpenNI2Reader::~OpenNI2Reader() 
     {
+        std::cout << "Closing" << std::endl;
         depthVideoStream.stop();
         colorVideoStream.stop();
         depthVideoStream.destroy();
@@ -70,23 +81,39 @@ namespace openni::face {
     RGBDFrame OpenNI2Reader::syncReadFrame()
     {
         bool isColorFrameAcquired=false, isDepthFrameAcquired=false;
-        std::shared_ptr<VideoFrameRef> colorFrame=std::make_shared<VideoFrameRef>();
-        std::shared_ptr<VideoFrameRef> depthFrame=std::make_shared<VideoFrameRef>();
+        RGBDFrame::SingleFramePtr colorFrame = std::make_shared<VideoFrameRef>();
+        RGBDFrame::SingleFramePtr depthFrame = std::make_shared<VideoFrameRef>();
 
-        while (!isColorFrameAcquired && !isDepthFrameAcquired)
+        while (!isColorFrameAcquired || !isDepthFrameAcquired)
         {
-            int preparedStream = -1;
-            OpenNI::waitForAnyStream((VideoStream**)this->streams, 2, &preparedStream, this->syncReadTimeOut);
-
-            if(preparedStream == this->depthStreamIndex) 
+            int preparedStreamIndex = -1;
+            auto waitStatus =
+                OpenNI::waitForAnyStream((VideoStream**)this->streams, 2, &preparedStreamIndex, this->syncReadTimeOut);
+            if (waitStatus != STATUS_OK) 
             {
-                isDepthFrameAcquired = true;
-                this->depthVideoStream.readFrame(depthFrame.get());
+                std::cout << "Wait failed. Retrying..." << std::endl;
+                continue;
             }
-            else if(preparedStream == this->colorStreamIndex) 
+
+            if(preparedStreamIndex == this->depthStreamIndex) 
             {
+                auto readStatus = this->depthVideoStream.readFrame(depthFrame.get());
+                if (readStatus != STATUS_OK) 
+                {
+                    std::cout << "Depth read failed. Retrying..." << std::endl;
+                    continue;
+                }
+                isDepthFrameAcquired = true;
+            }
+            else if(preparedStreamIndex == this->colorStreamIndex) 
+            {
+                auto readStatus = this->colorVideoStream.readFrame(colorFrame.get());
+                if (readStatus != STATUS_OK) 
+                {
+                    std::cout << "Color read failed. Retrying..." << std::endl;
+                    continue;
+                }
                 isColorFrameAcquired = true;
-                this->colorVideoStream.readFrame(colorFrame.get());
             }
             else {
                 std::cout << "Unexpected Stream" << std::endl;
