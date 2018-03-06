@@ -1,9 +1,84 @@
 #include <iostream>
 #include <pcl/io/ply_io.h>
-#include "io/OpenNI2Reader.h"
-#include "RGBDFrame.h"
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/openni2_grabber.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/filter.h>
+#include <boost/function.hpp>
+#include <memory>
+#include <chrono>
+#include <thread>
+#include <string>
+#include <mutex>
+#include <vector>
 
-using namespace openni::face;
+
+using namespace pcl;
+
+class CloudFetcher {
+private:
+    using CloudConstPtr = PointCloud<PointXYZRGBA>::ConstPtr;
+
+    std::mutex cloudMutex;
+    std::string outputPath;
+    CloudConstPtr currentCloud;
+
+    std::vector<int> dummy;
+    PointCloud<PointXYZRGBA> pc;
+
+    Grabber* grabber;
+
+    void cloudCallback(const CloudConstPtr &cloud) 
+    {
+        std::scoped_lock lock (cloudMutex);
+        currentCloud = cloud;
+    }
+
+    void run(bool runOnce=false)
+    {
+        boost::function<void(const CloudConstPtr&)> _cloudCallback = boost::bind(&CloudFetcher::cloudCallback, this, _1);
+        auto cloudConnection = grabber->registerCallback(_cloudCallback);
+        CloudConstPtr cloud;
+
+        grabber->start();
+
+        while (true) {
+            if(cloudMutex.try_lock())
+            {
+                currentCloud.swap(cloud);
+                cloudMutex.unlock();
+            }
+            if(cloud) 
+            {
+                std::cout << cloud->size() << std::endl;
+
+                removeNaNFromPointCloud(*cloud, pc, dummy);
+                PLYWriter writer{};
+                writer.write(outputPath, pc);
+
+                if(runOnce) 
+                {
+                   break;
+                }
+            }
+        }
+
+        grabber->stop();
+        cloudConnection.disconnect();
+    }
+
+public:
+    CloudFetcher(Grabber* grabber, std::string outputPath)
+        :grabber(grabber),
+        outputPath(outputPath)
+    {}
+
+    void runOnce()
+    {
+        run(true);
+    }
+};
 
 int main(int ac, char* av[]) 
 {
@@ -14,15 +89,14 @@ int main(int ac, char* av[])
     }
 
     std::string outputPath {av[1]};
-    
 
-    OpenNI2Reader reader;
-    RGBDFrame frame = reader.syncReadFrame();
+    pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
+    pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
 
-    auto cloud = frame.toPointCloud();
+    Grabber* grabber = new io::OpenNI2Grabber("#1", depth_mode, image_mode);
+    CloudFetcher fetcher {grabber, std::move(outputPath)};
 
-    pcl::PLYWriter writer;
-    writer.write(outputPath, cloud);
+    fetcher.runOnce();
 
     return 0;
 }
