@@ -32,6 +32,7 @@ private:
     void cloudCallback(const CloudConstPtr &cloud) 
     {
         std::scoped_lock lock (cloudMutex);
+
         currentCloud = cloud;
     }
 
@@ -71,7 +72,7 @@ private:
 public:
     CloudFetcher(Grabber* grabber, std::string outputPath)
         :grabber(grabber),
-        outputPath(outputPath)
+        outputPath(std::move(outputPath))
     {}
 
     void runOnce()
