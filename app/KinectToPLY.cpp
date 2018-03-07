@@ -81,6 +81,12 @@ public:
     }
 };
 
+/**
+ * Captures a frame from connected OpenNI2 device.
+ *
+ * Saves pointcloud as ply
+ */
+
 int main(int ac, char* av[]) 
 {
     if(ac <= 1) 
