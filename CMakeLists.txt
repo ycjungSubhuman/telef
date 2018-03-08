@@ -9,33 +9,30 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
 find_package(Eigen 3.3.4 REQUIRED)
+find_package(Boost 1.60 REQUIRED)
 
 link_directories(${PCL_LIBRARY_DIRS})
 
 add_definitions(${PCL_DEFINITIONS})
 
+include_directories(${PCL_INCLUDE_DIRS})
+include_directories(${Eigen_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
 add_library(telef
-
-        src/io/fetcher.cpp
-# for ide support
-        include/io/device.h
-        include/io/fetcher.h
-        include/feature/feature_detector.h
-        src/io/device.cpp src/feature/feature_detector.cpp)
-
+        src/io/channel.cpp
+        src/io/device.cpp
+        src/feature/feature_detector.cpp
+        )
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_IO_LIBRARIES}
         )
 
-include_directories(${PCL_INCLUDE_DIRS})
-include_directories(${Eigen_INCLUDE_DIRS})
-include_directories(${CMAKE_SOURCE_DIR}/include)
-
-add_executable(KinectToPLY app/KinectToPLY.cpp)
-target_link_libraries(KinectToPLY
-        ${PCL_COMMON_LIBRARIES}
-        ${PCL_IO_LIBRARIES} ${PCL_FILTERS_LIBRARIES}
+add_executable(KinectTest app/KinectTest.cpp)
+target_link_libraries(KinectTest
         telef
+        ${PCL_IO_LIBRARIES}
         )
 
