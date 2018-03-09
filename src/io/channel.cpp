@@ -4,11 +4,11 @@
 
 namespace telef::io {
 
-    void CloudChannel::onData(CloudChannel::DataT data) {
+    void CloudChannel::onData(CloudChannel::DataPtrT data) {
         std::cout << "CloudChannel OnData: " << data->size() << std::endl;
     }
 
-    void ImageChannel::onData(ImageChannel::DataT data) {
+    void ImageChannel::onData(ImageChannel::DataPtrT data) {
         std::cout << "ImageChannel OnData: ("
                   << data->getWidth()
                   << "/" << data->getHeight()

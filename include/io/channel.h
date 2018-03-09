@@ -10,7 +10,7 @@ namespace telef::io {
     /**
      * Data Channel for Device.
      */
-    template <class DataT>
+    template <class DataPtrT>
     class Channel{
     public:
         Channel() {
@@ -23,7 +23,7 @@ namespace telef::io {
          */
         void onDeviceLoop() {
             std::scoped_lock lock{this->dataMutex};
-            DataT data;
+            DataPtrT data;
             this->currentData.swap(data);
             if(data) {
                 this->onData(data);
@@ -33,19 +33,19 @@ namespace telef::io {
         /**
          * Callback to be registerd to pcl::Grabber
          */
-        boost::function<void(const DataT&)> grabberCallback;
+        boost::function<void(const DataPtrT&)> grabberCallback;
     protected:
 
         /**
          * Handle data according to channel usage.
          */
-        virtual void onData(DataT data) = 0;
+        virtual void onData(DataPtrT data) = 0;
     private:
         // allow synchronization between Grabber thread and the thread onDeviceLoop is on
         std::mutex dataMutex;
-        DataT currentData;
+        DataPtrT currentData;
 
-        void _grabberCallback(const DataT &fetchedInstance) {
+        void _grabberCallback(const DataPtrT &fetchedInstance) {
             std::scoped_lock lock{this->dataMutex};
             this->currentData = fetchedInstance;
         }
@@ -60,10 +60,11 @@ namespace telef::io {
     private:
         using PointT = pcl::PointXYZRGBA;
     public:
-        using DataT = pcl::PointCloud<PointT>::ConstPtr;
+        using DataT = pcl::PointCloud<PointT>;
+        using DataPtrT = DataT::ConstPtr;
 
     protected:
-        void onData(DataT data) override;
+        void onData(DataPtrT data) override;
     };
 
     /**
@@ -71,8 +72,9 @@ namespace telef::io {
      */
     class ImageChannel : public Channel<pcl::io::Image::Ptr> {
     public:
-        using DataT = pcl::io::Image::Ptr;
+        using DataT = pcl::io::Image;
+        using DataPtrT = DataT::Ptr;
     protected:
-        void onData(DataT data) override;
+        void onData(DataPtrT data) override;
     };
 }
