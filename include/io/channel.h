@@ -8,7 +8,7 @@
 
 namespace telef::io {
     /**
-     * Channel for Device. Fetch Data on Regular Basis
+     * Data Channel for Device.
      */
     template <class DataT>
     class Channel{
@@ -17,15 +17,6 @@ namespace telef::io {
             this->grabberCallback = boost::bind(&Channel::_grabberCallback, this, _1);
         }
         Channel(const Channel&) = delete;
-
-        /**
-         * Callback to be called when grabber picks data
-         *
-         * While this function runs, blocks onDataReady, vice versa.
-         */
-        void onGrabber(const DataT &fetchedInstance) {
-            this->currentData = fetchedInstance;
-        }
 
         /**
          * Called in Deveice run() Loop
@@ -42,7 +33,7 @@ namespace telef::io {
         }
 
         /**
-         * Callback to be called by pcl::Grabber thread.
+         * Callback to be registerd to pcl::Grabber
          */
         boost::function<void(const DataT&)> grabberCallback;
     protected:
@@ -50,7 +41,7 @@ namespace telef::io {
         /**
          * Called in onDeviceLoop
          *
-         * Handle data according to channel usage
+         * Handle data according to channel usage.
          */
         virtual void onData(DataT data) = 0;
     private:
@@ -60,7 +51,7 @@ namespace telef::io {
 
         void _grabberCallback(const DataT &fetchedInstance) {
             std::scoped_lock lock{this->dataMutex};
-            onGrabber(fetchedInstance);
+            this->currentData = fetchedInstance;
         }
     };
 
