@@ -41,7 +41,7 @@ namespace telef::io {
          */
         virtual void onData(DataT data) = 0;
     private:
-        // allow synchronization between Grabber thread and the thread onGrabber is on
+        // allow synchronization between Grabber thread and the thread onDeviceLoop is on
         std::mutex dataMutex;
         DataT currentData;
 
