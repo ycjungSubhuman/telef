@@ -21,7 +21,7 @@ namespace telef::io {
             grabber->registerCallback(cloudChannel->grabberCallback);
         }
         if(imageChannel) {
-            grabber->registerCallback(cloudChannel->grabberCallback);
+            grabber->registerCallback(imageChannel->grabberCallback);
         }
         grabber->start();
 

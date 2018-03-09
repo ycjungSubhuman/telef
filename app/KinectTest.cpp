@@ -9,9 +9,9 @@ using namespace pcl;
 using namespace telef::io;
 
 /**
- * Try to get a single frame of point cloud and image.
+ * Try to get a frames of point cloud and image.
  *
- * Prints size of pointcloud and width of the image
+ * Prints size of pointcloud and size of the image on every frame received
  */
 
 int main(int ac, char* av[]) 

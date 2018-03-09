@@ -9,6 +9,9 @@ namespace telef::io {
     }
 
     void ImageChannel::onData(ImageChannel::DataT data) {
-        std::cout << "ImageChannel OnData: " << data->getWidth() << std::endl;
+        std::cout << "ImageChannel OnData: ("
+                  << data->getWidth()
+                  << "/" << data->getHeight()
+                  << ")" << std::endl;
     }
 }

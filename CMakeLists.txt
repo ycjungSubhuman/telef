@@ -21,6 +21,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_library(telef
+        include/feature/feature_detector.h
+        include/io/channel.h
+        include/io/device.h
         src/io/channel.cpp
         src/io/device.cpp
         src/feature/feature_detector.cpp
