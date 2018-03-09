@@ -9,7 +9,7 @@ using namespace pcl;
 using namespace telef::io;
 
 /**
- * Try to get a frames of point cloud and image.
+ * Continuously get frames of point cloud and image.
  *
  * Prints size of pointcloud and size of the image on every frame received
  */

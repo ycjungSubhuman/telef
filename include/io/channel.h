@@ -20,8 +20,6 @@ namespace telef::io {
 
         /**
          * Called in Deveice run() Loop
-         *
-         * Acquire mutex before calling executing
          */
         void onDeviceLoop() {
             std::scoped_lock lock{this->dataMutex};
@@ -39,8 +37,6 @@ namespace telef::io {
     protected:
 
         /**
-         * Called in onDeviceLoop
-         *
          * Handle data according to channel usage.
          */
         virtual void onData(DataT data) = 0;
