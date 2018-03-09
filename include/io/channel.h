@@ -36,7 +36,7 @@ namespace telef::io {
             DataPtrT data;
             this->currentData.swap(data);
             if(data) {
-                this->onData(data);
+                this->onData(this->pipe->processData(data));
             }
         }
 

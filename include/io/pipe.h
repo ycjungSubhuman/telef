@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <functional>
+#include <boost/shared_ptr.hpp>
 
 namespace telef::io {
     /**
@@ -23,12 +24,12 @@ namespace telef::io {
             return Pipe{std::move(nextProcessData)};
         }
 
-        using FuncT = std::function<std::unique_ptr<OutT>(std::unique_ptr<InT>)>;
+        using FuncT = std::function<boost::shared_ptr<OutT>(boost::shared_ptr<InT>)>;
 
         FuncT processData;
     private:
         // Default data process method
-        virtual std::unique_ptr<OutT> _processData(std::unique_ptr<InT> in)=0;
+        virtual boost::shared_ptr<OutT> _processData(boost::shared_ptr<InT> in)=0;
         explicit Pipe(FuncT processData) {
             this->processData = std::move(processData);
         }
@@ -39,7 +40,7 @@ namespace telef::io {
      */
     template <class InT>
     class IdentityPipe : public Pipe<InT, InT> {
-        std::unique_ptr<InT> _processData(std::unique_ptr<InT> in) override {
+        boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) override {
             return in;
         }
     };
