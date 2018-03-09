@@ -33,8 +33,8 @@ int main(int ac, char* av[])
     std::shared_ptr<RemoveNaNPoints> cloudPipe2{new RemoveNaNPoints()};
     auto cloudCombinedPipe = cloudPipe->then<CloudConstT>(std::move(cloudPipe2));
 
-    std::shared_ptr<ImageChannel<ImageT>> imageChannel{ new ImageChannel<ImageT>(std::move(imagePipe)) };
-    std::shared_ptr<CloudChannel<CloudConstT>> cloudChannel{ new CloudChannel<CloudConstT>(std::move(cloudCombinedPipe)) };
+    std::shared_ptr<DummyImageChannel<ImageT>> imageChannel{ new DummyImageChannel<ImageT>(std::move(imagePipe)) };
+    std::shared_ptr<DummyCloudChannel<CloudConstT>> cloudChannel{ new DummyCloudChannel<CloudConstT>(std::move(cloudCombinedPipe)) };
 
     ImagePointCloudDevice<CloudConstT, ImageT> device {std::move(grabber)};
     device.addCloudChannel(cloudChannel);

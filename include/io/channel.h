@@ -73,9 +73,7 @@ namespace telef::io {
         explicit CloudChannel(std::shared_ptr<PipeT> pipe) : Channel<CloudConstT, OutDataT>(std::move(pipe)) {}
 
     protected:
-        void onOutData(boost::shared_ptr<OutDataT> data) override {
-            std::cout << "CloudChannel OnData: " << data->size() << std::endl;
-        }
+        void onOutData(boost::shared_ptr<OutDataT> data) override = 0;
     };
 
     /**
@@ -87,6 +85,28 @@ namespace telef::io {
         using PipeT = Pipe<ImageT, OutDataT>;
         explicit ImageChannel(std::shared_ptr<PipeT> pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
     protected:
+        void onOutData(boost::shared_ptr<OutDataT> data) override = 0;
+    };
+
+    template <class OutDataT>
+    class DummyCloudChannel : public CloudChannel<OutDataT> {
+    public:
+        using PipeT = typename CloudChannel<OutDataT>::PipeT;
+        explicit DummyCloudChannel(std::shared_ptr<PipeT> pipe)
+                : CloudChannel<OutDataT>(std::move(pipe)) {}
+
+    protected:
+        void onOutData(boost::shared_ptr<OutDataT> data) override {
+            std::cout << "CloudChannel OnData: " << data->size() << std::endl;
+        }
+    };
+
+    template <class OutDataT>
+    class DummyImageChannel : public ImageChannel<OutDataT> {
+    public:
+        using PipeT = typename ImageChannel<OutDataT>::PipeT;
+        explicit DummyImageChannel(std::shared_ptr<PipeT> pipe) : ImageChannel<OutDataT>(std::move(pipe)) {}
+    protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {
             std::cout << "ImageChannel OnData: ("
                       << data->getWidth()
@@ -94,4 +114,5 @@ namespace telef::io {
                       << ")" << std::endl;
         }
     };
+
 }
