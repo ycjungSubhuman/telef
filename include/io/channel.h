@@ -21,6 +21,7 @@ namespace telef::io {
     public:
         // Use boost shared_ptr for pcl compatibility
         using DataPtrT = boost::shared_ptr<DataT>;
+        using OutDataPtrT = boost::shared_ptr<OutDataT>;
 
         explicit Channel(std::unique_ptr<Pipe<DataT,OutDataT>> pipe) {
             this->grabberCallback = boost::bind(&Channel::_grabberCallback, this, _1);
@@ -36,7 +37,7 @@ namespace telef::io {
             DataPtrT data;
             this->currentData.swap(data);
             if(data) {
-                this->onData(this->pipe->processData(data));
+                this->onOutData(this->pipe->processData(data));
             }
         }
 
@@ -49,7 +50,7 @@ namespace telef::io {
         /**
          * Handle data according to channel usage.
          */
-        virtual void onData(DataPtrT data) = 0;
+        virtual void onOutData(OutDataPtrT data) = 0;
     private:
         // allow synchronization between Grabber thread and the thread onDeviceLoop is on
         std::mutex dataMutex;
@@ -72,7 +73,7 @@ namespace telef::io {
         explicit CloudChannel(std::unique_ptr<PipeT> pipe) : Channel<CloudConstT, OutDataT>(std::move(pipe)) {}
 
     protected:
-        void onData(CloudConstPtrT data) override {
+        void onOutData(boost::shared_ptr<OutDataT> data) override {
             std::cout << "CloudChannel OnData: " << data->size() << std::endl;
         }
     };
@@ -86,7 +87,7 @@ namespace telef::io {
         using PipeT = Pipe<ImageT, OutDataT>;
         explicit ImageChannel(std::unique_ptr<PipeT> pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
     protected:
-        void onData(ImagePtrT data) override {
+        void onOutData(boost::shared_ptr<OutDataT> data) override {
             std::cout << "ImageChannel OnData: ("
                       << data->getWidth()
                       << "/" << data->getHeight()
