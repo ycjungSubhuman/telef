@@ -34,10 +34,8 @@ add_library(telef
         include/io/device.h
         include/io/pipe.h
         include/cloud/cloud_pipe.h
-        src/io/channel.cpp
-        src/io/device.cpp
+        include/type.h
         src/feature/feature_detector.cpp
-        src/io/pipe.cpp
         src/cloud/cloud_pipe.cpp
         )
 target_link_libraries(telef

@@ -5,16 +5,26 @@
 #include <mutex>
 #include <boost/function.hpp>
 #include <pcl/io/image.h>
+#include <memory>
+
+#include "io/pipe.h"
+#include "type.h"
+
+using namespace telef::types;
 
 namespace telef::io {
     /**
      * Data Channel for Device.
      */
-    template <class DataPtrT>
+    template <class DataT, class OutDataT>
     class Channel{
     public:
-        Channel() {
+        // Use boost shared_ptr for pcl compatibility
+        using DataPtrT = boost::shared_ptr<DataT>;
+
+        explicit Channel(std::unique_ptr<Pipe<DataT,OutDataT>> pipe) {
             this->grabberCallback = boost::bind(&Channel::_grabberCallback, this, _1);
+            this->pipe = std::move(pipe);
         }
         Channel(const Channel&) = delete;
 
@@ -44,6 +54,7 @@ namespace telef::io {
         // allow synchronization between Grabber thread and the thread onDeviceLoop is on
         std::mutex dataMutex;
         DataPtrT currentData;
+        std::unique_ptr<Pipe<DataT, OutDataT>> pipe;
 
         void _grabberCallback(const DataPtrT &fetchedInstance) {
             std::scoped_lock lock{this->dataMutex};
@@ -51,30 +62,35 @@ namespace telef::io {
         }
     };
 
-
-
     /**
      * Fetch XYZRGBA Point Cloud from OpenNI2 Devices
      */
-    class CloudChannel : public Channel<pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr> {
-    private:
-        using PointT = pcl::PointXYZRGBA;
+    template <class OutDataT>
+    class CloudChannel : public Channel<CloudConstT, OutDataT> {
     public:
-        using DataT = pcl::PointCloud<PointT>;
-        using DataPtrT = DataT::ConstPtr;
+        using PipeT = Pipe<CloudConstT, OutDataT>;
+        explicit CloudChannel(std::unique_ptr<PipeT> pipe) : Channel<CloudConstT, OutDataT>(std::move(pipe)) {}
 
     protected:
-        void onData(DataPtrT data) override;
+        void onData(CloudConstPtrT data) override {
+            std::cout << "CloudChannel OnData: " << data->size() << std::endl;
+        }
     };
 
     /**
      * Fetch RGB Image from OpenNI2 Devices
      */
-    class ImageChannel : public Channel<pcl::io::Image::Ptr> {
+    template <class OutDataT>
+    class ImageChannel : public Channel<ImageT, OutDataT> {
     public:
-        using DataT = pcl::io::Image;
-        using DataPtrT = DataT::Ptr;
+        using PipeT = Pipe<ImageT, OutDataT>;
+        explicit ImageChannel(std::unique_ptr<PipeT> pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
     protected:
-        void onData(DataPtrT data) override;
+        void onData(ImagePtrT data) override {
+            std::cout << "ImageChannel OnData: ("
+                      << data->getWidth()
+                      << "/" << data->getHeight()
+                      << ")" << std::endl;
+        }
     };
 }
