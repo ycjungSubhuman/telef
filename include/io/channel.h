@@ -23,7 +23,7 @@ namespace telef::io {
         using DataPtrT = boost::shared_ptr<DataT>;
         using OutDataPtrT = boost::shared_ptr<OutDataT>;
 
-        explicit Channel(std::unique_ptr<Pipe<DataT,OutDataT>> pipe) {
+        explicit Channel(std::shared_ptr<Pipe<DataT,OutDataT>> pipe) {
             this->grabberCallback = boost::bind(&Channel::_grabberCallback, this, _1);
             this->pipe = std::move(pipe);
         }
@@ -55,7 +55,7 @@ namespace telef::io {
         // allow synchronization between Grabber thread and the thread onDeviceLoop is on
         std::mutex dataMutex;
         DataPtrT currentData;
-        std::unique_ptr<Pipe<DataT, OutDataT>> pipe;
+        std::shared_ptr<Pipe<DataT, OutDataT>> pipe;
 
         void _grabberCallback(const DataPtrT &fetchedInstance) {
             std::scoped_lock lock{this->dataMutex};
@@ -70,7 +70,7 @@ namespace telef::io {
     class CloudChannel : public Channel<CloudConstT, OutDataT> {
     public:
         using PipeT = Pipe<CloudConstT, OutDataT>;
-        explicit CloudChannel(std::unique_ptr<PipeT> pipe) : Channel<CloudConstT, OutDataT>(std::move(pipe)) {}
+        explicit CloudChannel(std::shared_ptr<PipeT> pipe) : Channel<CloudConstT, OutDataT>(std::move(pipe)) {}
 
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {
@@ -85,7 +85,7 @@ namespace telef::io {
     class ImageChannel : public Channel<ImageT, OutDataT> {
     public:
         using PipeT = Pipe<ImageT, OutDataT>;
-        explicit ImageChannel(std::unique_ptr<PipeT> pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
+        explicit ImageChannel(std::shared_ptr<PipeT> pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {
             std::cout << "ImageChannel OnData: ("

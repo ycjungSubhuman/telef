@@ -12,16 +12,19 @@ namespace telef::io {
     template <class InT, class OutT>
     class Pipe {
     public:
-        Pipe(){
+        explicit Pipe(){
             this->processData = std::bind(&Pipe::_processData, this, std::placeholders::_1);
         }
+        ~Pipe() = default;
+        Pipe& operator=(const Pipe&) = delete;
+        Pipe(const Pipe&) = delete;
 
         template<class NextOutT>
-        Pipe<InT, NextOutT> then(std::unique_ptr<Pipe<OutT, NextOutT>> nextPipe){
-            auto nextProcessData = [this,nextPipe{std::move(nextPipe)}] (InT in)->NextOutT {
+        std::shared_ptr<Pipe<InT, NextOutT>> then(std::shared_ptr<Pipe<OutT, NextOutT>> nextPipe) {
+            auto nextProcessData = [this,nextPipe{std::move(nextPipe)}] (boost::shared_ptr<InT> in)-> boost::shared_ptr<NextOutT> {
                 return nextPipe->processData(this->processData(in));
             };
-            return Pipe{std::move(nextProcessData)};
+            return std::shared_ptr<Pipe<InT, NextOutT>>{new Pipe{nextProcessData}};
         }
 
         using FuncT = std::function<boost::shared_ptr<OutT>(boost::shared_ptr<InT>)>;
@@ -29,21 +32,21 @@ namespace telef::io {
         FuncT processData;
     private:
         // Default data process method
-        virtual boost::shared_ptr<OutT> _processData(boost::shared_ptr<InT> in)=0;
-        explicit Pipe(FuncT processData) {
-            this->processData = std::move(processData);
+        virtual boost::shared_ptr<OutT> _processData(boost::shared_ptr<InT> in) {
+            return in;
+        }
+        explicit Pipe(const FuncT &processData) {
+            this->processData = processData;
         }
     };
 
     /**
      * A Simple Step That Does Nothing on The Input Data
+     *
+     * Just the same as Pipe.
      */
     template <class InT>
-    class IdentityPipe : public Pipe<InT, InT> {
-        boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) override {
-            return in;
-        }
-    };
+    class IdentityPipe : public Pipe<InT, InT> {};
 
 }
 
