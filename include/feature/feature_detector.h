@@ -32,9 +32,9 @@ namespace telef::feature {
 
 
     /**
-     * Face Feature Detector using InfraFace Implementation
+     * Face Feature Detector using IntraFace Implementation
      */
-    class InfraFace : FeatureDetector {
+    class IntraFace : FeatureDetector {
         using ImageT = FeatureDetector::ImageT;
 
         Feature getFeature(const ImageT &image) override;

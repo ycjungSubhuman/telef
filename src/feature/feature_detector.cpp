@@ -2,7 +2,7 @@
 
 namespace telef::feature {
 
-    Feature InfraFace::getFeature(const FeatureDetector::ImageT &image) {
+    Feature IntraFace::getFeature(const FeatureDetector::ImageT &image) {
         return Feature();
     }
 }
