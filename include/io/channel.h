@@ -54,6 +54,7 @@ namespace telef::io {
     private:
         // allow synchronization between Grabber thread and the thread onDeviceLoop is on
         std::mutex dataMutex;
+
         DataPtrT currentData;
         std::shared_ptr<Pipe<DataT, OutDataT>> pipe;
 

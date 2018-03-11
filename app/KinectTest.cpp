@@ -5,6 +5,7 @@
 #include "io/device.h"
 #include "io/channel.h"
 #include "io/pipe.h"
+#include "io/grabber.h"
 #include "cloud/cloud_pipe.h"
 #include "type.h"
 
@@ -26,7 +27,7 @@ int main(int ac, char* av[])
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
 
-    std::unique_ptr<Grabber> grabber {new io::OpenNI2Grabber("#1", depth_mode, image_mode)};
+    std::unique_ptr<TelefOpenNI2Grabber> grabber {new TelefOpenNI2Grabber("#1", depth_mode, image_mode)};
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
     auto cloudPipe = std::make_shared<IdentityPipe<CloudConstT>>();

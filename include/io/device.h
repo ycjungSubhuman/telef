@@ -5,6 +5,8 @@
 #include <memory>
 
 #include "io/channel.h"
+#include "type.h"
+using namespace telef::types;
 
 namespace telef::io {
 
@@ -18,6 +20,16 @@ namespace telef::io {
     public:
         explicit ImagePointCloudDevice(std::unique_ptr<pcl::Grabber> grabber) {
             this->grabber = std::move(grabber);
+
+            boost::function<void(const ImagePtrT&, const CloudConstPtrT&)> callback =
+                    boost::bind(&ImagePointCloudDevice::imageCloudCallback, this, _1, _2);
+            boost::function<void(const ImagePtrT&)> dummyImageCallback = [](const ImagePtrT&){};
+            boost::function<void(const CloudConstPtrT&)> dummyCloudCallback = [](const CloudConstPtrT&){};
+            this->grabber->registerCallback(callback);
+
+            // Register dummy callback to imageCloudCallback to work
+            this->grabber->registerCallback(dummyImageCallback);
+            this->grabber->registerCallback(dummyCloudCallback);
         }
 
         /** After added, channels will be started from the next run() */
@@ -33,12 +45,6 @@ namespace telef::io {
          *  This call blocks thread until the grabber stops.
          */
         void run() {
-            if(cloudChannel) {
-                grabber->registerCallback(cloudChannel->grabberCallback);
-            }
-            if(imageChannel) {
-                grabber->registerCallback(imageChannel->grabberCallback);
-            }
             grabber->start();
 
             while (true)
@@ -56,6 +62,11 @@ namespace telef::io {
             grabber->stop();
         }
     private:
+        void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud) {
+            cloudChannel->grabberCallback(cloud);
+            imageChannel->grabberCallback(image);
+        }
+
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
         std::unique_ptr<pcl::Grabber> grabber;

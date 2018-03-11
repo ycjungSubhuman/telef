@@ -37,7 +37,7 @@ add_library(telef
         include/type.h
         src/feature/feature_detector.cpp
         src/cloud/cloud_pipe.cpp
-        include/util/booststd.h)
+        include/util/booststd.h include/io/grabber.h)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
