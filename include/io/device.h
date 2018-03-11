@@ -49,12 +49,10 @@ namespace telef::io {
 
             while (true)
             {
-                if(cloudChannel)
-                {
+                if(cloudChannel) {
                     cloudChannel->onDeviceLoop();
                 }
-                if(imageChannel)
-                {
+                if(imageChannel) {
                     imageChannel->onDeviceLoop();
                 }
             }
@@ -63,8 +61,12 @@ namespace telef::io {
         }
     private:
         void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud) {
-            cloudChannel->grabberCallback(cloud);
-            imageChannel->grabberCallback(image);
+            if(cloudChannel) {
+                cloudChannel->grabberCallback(cloud);
+            }
+            if(imageChannel) {
+                imageChannel->grabberCallback(image);
+            }
         }
 
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
