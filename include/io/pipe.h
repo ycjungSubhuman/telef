@@ -21,8 +21,8 @@ namespace telef::io {
 
         template<class NextOutT>
         std::shared_ptr<Pipe<InT, NextOutT>> then(std::shared_ptr<Pipe<OutT, NextOutT>> nextPipe) {
-            auto nextProcessData = [self=*this,nextPipe=std::move(nextPipe)] (boost::shared_ptr<InT> in)-> boost::shared_ptr<NextOutT> {
-                return nextPipe->processData(self.processData(in));
+            auto nextProcessData = [*this,nextPipe=std::move(nextPipe)] (boost::shared_ptr<InT> in)-> boost::shared_ptr<NextOutT> {
+                return nextPipe->processData(this->processData(in));
             };
             return std::shared_ptr<Pipe<InT, NextOutT>>{new Pipe{nextProcessData}};
         }
