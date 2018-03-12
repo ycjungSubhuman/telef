@@ -5,6 +5,9 @@
 #include <memory>
 
 #include "io/channel.h"
+#include "io/grabber.h"
+#include "io/merger.h"
+#include "io/frontend.h"
 #include "type.h"
 using namespace telef::types;
 
@@ -14,11 +17,21 @@ namespace telef::io {
      * Manages and Executes Channels for Image and PointCloud
      *
      * Interface with pcl::Grabber.
+     *
+     * @tparam CloudOutT Cloud Channel Piped Output Type
+     * @tparam ImageOutT Image Channel Piped Output Type
+     * @tparam MergeOutT Merger Output Type
+     * @tparam MergePipeOutT Merger Final Output Processed by Pipe in Merger
      */
-    template <class CloudOutT, class ImageOutT>
+    template <class CloudOutT, class ImageOutT, class MergeOutT, class MergePipeOutT>
     class ImagePointCloudDevice {
+    private:
+        using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
+        using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
+        using MergerT = BinaryMerger<CloudOutT, ImageOutT, MergeOutT, MergePipeOutT>;
+        using FrontEndT = FrontEnd<MergePipeOutT>;
     public:
-        explicit ImagePointCloudDevice(std::unique_ptr<pcl::Grabber> grabber) {
+        explicit ImagePointCloudDevice(std::unique_ptr<TelefOpenNI2Grabber> grabber) {
             this->grabber = std::move(grabber);
 
             boost::function<void(const ImagePtrT&, const CloudConstPtrT&)> callback =
@@ -39,27 +52,56 @@ namespace telef::io {
         void addImageChannel(std::shared_ptr<ImageChannel<ImageOutT>> channel) {
             this->imageChannel = std::move(channel);
         }
+        /**
+         * Add Merger to Merge CloudChannel Output and Image Channel Output into One Data
+         *
+         * CloudChannel and ImageChannel should be added before this being called
+         * Adding merger only would not do anything useful. Add a proper frontend for it
+         */
+        void addImageCloudMerger(std::shared_ptr<MergerT> merger) {
+            if(!cloudChannel || !imageChannel) {
+                throw std::runtime_error("Tried to add merger without either CloudChannel or ImageChannel");
+            }
+            this->merger = merger;
+        }
+        /**
+         * Add FrontEnd to Do Something with Side Effect Using the Output From Merger
+         */
+        void addFrontEnd(std::shared_ptr<FrontEndT> frontend) {
+            this->frontend = frontend;
+        }
 
         /** Start Device and Fetch Data Through Channels
          *
-         *  This call blocks thread until the grabber stops.
+         *  This call blocks thread indefinitely
          */
         void run() {
             grabber->start();
 
-            while (true)
-            {
-                if(cloudChannel) {
-                    cloudChannel->onDeviceLoop();
-                }
-                if(imageChannel) {
-                    imageChannel->onDeviceLoop();
-                }
-            }
+            // TODO: find an appropriate program termination condition
+            while (true){};
 
             grabber->stop();
         }
     private:
+        void deviceLoopCallback() {
+            CloudOutPtrT cloudOut;
+            ImageOutPtrT imageOut;
+
+            if(cloudChannel) {
+                cloudOut = cloudChannel->onDeviceLoop();
+            }
+            if(imageChannel) {
+                imageOut = imageChannel->onDeviceLoop();
+            }
+            if(merger && frontend) {
+                if(!imageOut || !cloudOut) {
+                    throw std::runtime_error("Merger is added but one of cloud or image channel is null");
+                }
+                frontend->process(merger->getMergeOut(cloudOut, imageOut));
+            }
+        }
+
         void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud) {
             if(cloudChannel) {
                 cloudChannel->grabberCallback(cloud);
@@ -67,10 +109,13 @@ namespace telef::io {
             if(imageChannel) {
                 imageChannel->grabberCallback(image);
             }
+            deviceLoopCallback();
         }
 
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
+        std::shared_ptr<MergerT> merger;
+        std::shared_ptr<FrontEndT> frontend;
         std::unique_ptr<pcl::Grabber> grabber;
     };
 }

@@ -6,6 +6,8 @@
 #include "io/channel.h"
 #include "io/pipe.h"
 #include "io/grabber.h"
+#include "io/merger.h"
+#include "io/frontend.h"
 #include "cloud/cloud_pipe.h"
 #include "type.h"
 
@@ -27,7 +29,7 @@ int main(int ac, char* av[])
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
 
-    std::unique_ptr<Grabber> grabber {new TelefOpenNI2Grabber("#1", depth_mode, image_mode)};
+    auto grabber = std::make_unique<TelefOpenNI2Grabber>("#1", depth_mode, image_mode);
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
     auto cloudPipe = std::make_shared<IdentityPipe<CloudConstT>>();
@@ -40,9 +42,14 @@ int main(int ac, char* av[])
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
     auto cloudChannel = std::make_shared<DummyCloudChannel<CloudConstT>>(std::move(cloudCombinedPipe));
 
-    ImagePointCloudDevice<CloudConstT, ImageT> device {std::move(grabber)};
+    auto merger = std::make_shared<DummyImageCloudMerger>();
+    auto frontend = std::make_shared<DummyCloudFrontEnd>();
+
+    ImagePointCloudDevice<CloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
     device.addCloudChannel(cloudChannel);
     device.addImageChannel(imageChannel);
+    device.addImageCloudMerger(merger);
+    device.addFrontEnd(frontend);
 
     device.run();
 

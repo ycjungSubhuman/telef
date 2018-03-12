@@ -32,12 +32,17 @@ namespace telef::io {
         /**
          * Called in Deveice run() Loop
          */
-        void onDeviceLoop() {
+        OutDataPtrT onDeviceLoop() {
             std::scoped_lock lock{this->dataMutex};
             DataPtrT data;
             this->currentData.swap(data);
             if(data) {
-                this->onOutData(this->pipe->processData(data));
+                auto outData = this->pipe->processData(data);
+                this->onOutData(outData);
+                return outData;
+            }
+            else {
+                return OutDataPtrT();
             }
         }
 
@@ -49,6 +54,8 @@ namespace telef::io {
 
         /**
          * Handle data according to channel usage.
+         *
+         * This function is called before it enters any Merger.
          */
         virtual void onOutData(OutDataPtrT data) = 0;
     private:
