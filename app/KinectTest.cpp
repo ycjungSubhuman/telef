@@ -27,12 +27,15 @@ int main(int ac, char* av[])
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
 
-    std::unique_ptr<TelefOpenNI2Grabber> grabber {new TelefOpenNI2Grabber("#1", depth_mode, image_mode)};
+    std::unique_ptr<Grabber> grabber {new TelefOpenNI2Grabber("#1", depth_mode, image_mode)};
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
     auto cloudPipe = std::make_shared<IdentityPipe<CloudConstT>>();
     auto cloudPipe2 = std::make_shared<RemoveNaNPoints>();
-    auto cloudCombinedPipe = cloudPipe->then<CloudConstT>(std::move(cloudPipe2));
+    auto cloudPipe3 = std::make_shared<IdentityPipe<CloudConstT>>();
+    auto cloudCombinedPipe = cloudPipe
+            ->then<CloudConstT>(cloudPipe2)
+            ->then<CloudConstT>(cloudPipe3);
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
     auto cloudChannel = std::make_shared<DummyCloudChannel<CloudConstT>>(std::move(cloudCombinedPipe));
