@@ -12,7 +12,6 @@
 #include "FaceAlignment.h"
 #include "XXDescriptor.h"
 
-using namespace cv;
 using namespace std;
 
 bool drawing_box = false;
@@ -50,15 +49,15 @@ int main(int argc, char** argv) {
 	char *trackingModel = "../models/TrackingModel-v1.10.bin";
 	string faceDetectionModel("../models/haarcascade_frontalface_alt2.xml");
 
-	Mat frame;
-	frame = imread(fname, IMREAD_COLOR);
+	cv::Mat frame;
+	frame = cv::imread(fname, cv::IMREAD_COLOR);
 	if (!frame.data) {
 		cout << "Could not open or find the image" << endl;
 		return -1;
 	}
 	
-	Mat frame_gray;
-	cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
+	cv::Mat frame_gray;
+	cv::cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
 	
 	if (!face_cascade.load(faceDetectionModel))
 	{

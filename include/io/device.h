@@ -79,28 +79,38 @@ namespace telef::io {
             grabber->start();
 
             // TODO: find an appropriate program termination condition
-            while (true){};
+            while (true){
+                CloudOutPtrT cloudOut;
+                ImageOutPtrT imageOut;
+
+                if(cloudChannel) {
+                    cloudChannel->dataMutex.lock();
+                    while(!(cloudOut = cloudChannel->onDeviceLoop())) {
+                        cloudChannel->dataMutex.unlock();
+                        cloudChannel->dataMutex.lock();
+                    }
+                }
+                if(imageChannel) {
+                    imageChannel->dataMutex.lock();
+                    while(!(imageOut = imageChannel->onDeviceLoop())) {
+                        imageChannel->dataMutex.unlock();
+                        imageChannel->dataMutex.lock();
+                    }
+                }
+                if(merger && frontend) {
+                    frontend->process(merger->getMergeOut(cloudOut, imageOut));
+                }
+                if(cloudChannel) {
+                    cloudChannel->dataMutex.unlock();
+                }
+                if(imageChannel) {
+                    imageChannel->dataMutex.unlock();
+                }
+            };
 
             grabber->stop();
         }
     private:
-        void deviceLoopCallback() {
-            CloudOutPtrT cloudOut;
-            ImageOutPtrT imageOut;
-
-            if(cloudChannel) {
-                cloudOut = cloudChannel->onDeviceLoop();
-            }
-            if(imageChannel) {
-                imageOut = imageChannel->onDeviceLoop();
-            }
-            if(merger && frontend) {
-                if(!imageOut || !cloudOut) {
-                    throw std::runtime_error("Merger is added but one of cloud or image channel is null");
-                }
-                frontend->process(merger->getMergeOut(cloudOut, imageOut));
-            }
-        }
 
         void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud) {
             if(cloudChannel) {
@@ -109,13 +119,12 @@ namespace telef::io {
             if(imageChannel) {
                 imageChannel->grabberCallback(image);
             }
-            deviceLoopCallback();
         }
 
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
         std::shared_ptr<MergerT> merger;
         std::shared_ptr<FrontEndT> frontend;
-        std::unique_ptr<pcl::Grabber> grabber;
+        std::unique_ptr<TelefOpenNI2Grabber> grabber;
     };
 }

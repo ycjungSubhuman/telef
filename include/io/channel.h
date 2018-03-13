@@ -33,7 +33,6 @@ namespace telef::io {
          * Called in Deveice run() Loop
          */
         OutDataPtrT onDeviceLoop() {
-            std::scoped_lock lock{this->dataMutex};
             DataPtrT data;
             this->currentData.swap(data);
             if(data) {
@@ -45,6 +44,9 @@ namespace telef::io {
                 return OutDataPtrT();
             }
         }
+
+        // allow synchronization between Grabber thread and the thread onDeviceLoop is on
+        std::mutex dataMutex;
 
         /**
          * Callback to be registerd to pcl::Grabber
@@ -59,8 +61,6 @@ namespace telef::io {
          */
         virtual void onOutData(OutDataPtrT data) = 0;
     private:
-        // allow synchronization between Grabber thread and the thread onDeviceLoop is on
-        std::mutex dataMutex;
 
         DataPtrT currentData;
         std::shared_ptr<Pipe<DataT, OutDataT>> pipe;
@@ -105,7 +105,6 @@ namespace telef::io {
 
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {
-            std::cout << "CloudChannel OnData: " << data->size() << std::endl;
         }
     };
 
@@ -116,10 +115,6 @@ namespace telef::io {
         explicit DummyImageChannel(std::shared_ptr<PipeT> pipe) : ImageChannel<OutDataT>(std::move(pipe)) {}
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {
-            std::cout << "ImageChannel OnData: ("
-                      << data->getWidth()
-                      << "/" << data->getHeight()
-                      << ")" << std::endl;
         }
     };
 

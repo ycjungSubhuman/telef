@@ -4,7 +4,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl/console/print.h>
 
-using namespace pcl;
 using namespace pcl::io;
 
 namespace telef::io {
@@ -41,7 +40,7 @@ namespace telef::io {
         }
 
         using sig_cb_openni_image_point_cloud_rgba =
-        void(const boost::shared_ptr<Image> &, const PointCloud<PointXYZRGBA>::ConstPtr &);
+        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &);
 
         boost::signals2::signal<sig_cb_openni_image_point_cloud_rgba>* image_point_cloud_rgba_signal;
     };

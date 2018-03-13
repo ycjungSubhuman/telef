@@ -33,7 +33,7 @@ namespace telef::io {
     private:
         // Default data process method
         virtual boost::shared_ptr<OutT> _processData(boost::shared_ptr<InT> in) {
-            return in;
+            return boost::shared_ptr<OutT>();
         }
         explicit Pipe(const FuncT &processData) {
             this->processData = processData;
@@ -42,11 +42,14 @@ namespace telef::io {
 
     /**
      * A Simple Step That Does Nothing on The Input Data
-     *
-     * Just the same as Pipe.
      */
     template <class InT>
-    class IdentityPipe : public Pipe<InT, InT> {};
+    class IdentityPipe : public Pipe<InT, InT> {
+    private:
+        virtual boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) {
+            return in;
+        }
+    };
 
 }
 

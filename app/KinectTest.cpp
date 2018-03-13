@@ -1,17 +1,9 @@
 #include <iostream>
 #include <pcl/io/openni2_grabber.h>
-#include <memory>
 
 #include "io/device.h"
-#include "io/channel.h"
-#include "io/pipe.h"
-#include "io/grabber.h"
-#include "io/merger.h"
-#include "io/frontend.h"
 #include "cloud/cloud_pipe.h"
-#include "type.h"
 
-using namespace pcl;
 using namespace telef::io;
 using namespace telef::types;
 using namespace telef::cloud;
