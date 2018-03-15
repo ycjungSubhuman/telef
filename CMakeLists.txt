@@ -14,7 +14,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
 find_package(Eigen 3.3.4 REQUIRED)
-find_package(Boost 1.60 REQUIRED)
+find_package(Boost 1.58 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 
 link_directories(${PCL_LIBRARY_DIRS})
