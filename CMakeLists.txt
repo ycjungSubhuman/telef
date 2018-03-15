@@ -16,6 +16,7 @@ find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
 find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
+find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
