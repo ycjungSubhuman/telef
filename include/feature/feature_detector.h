@@ -3,17 +3,26 @@
 #include <vector>
 #include <Eigen/Dense>
 #include <pcl/io/image.h>
+#include <cxcore.h>
 
 namespace telef::feature {
 
     using Feature = struct Feature {
-        // Nx2 int array for points on 2d image
-        Eigen::ArrayX2i points;
+        // Dynamically sized Matrix is used in the case we use 2D or 3D features
+        Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> points;
         // Bounding box for face
         int x;
         int y;
         int width;
         int height;
+
+        // Convenience Method
+        void setBoundingBox(const cv::Rect& rect_) {
+            x = rect_.x;
+            y = rect_.y;
+            width = rect_.width;
+            height = rect_.height;
+        }
     };
 
     /**
@@ -35,6 +44,7 @@ namespace telef::feature {
      * Face Feature Detector using IntraFace Implementation
      */
     class IntraFace : FeatureDetector {
+    public:
         using ImageT = FeatureDetector::ImageT;
 
         Feature getFeature(const ImageT &image) override;

@@ -31,6 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
 add_library(telef
+        # hdrs
         include/feature/feature_detector.h
         include/io/channel.h
         include/io/device.h
@@ -43,9 +44,12 @@ add_library(telef
         include/io/merger.h
         include/io/frontend.h
         include/image/image_pipe.h
-        src/feature/feature_detector.cpp
+
+        # src
         src/cloud/cloud_pipe.cpp
-        )
+        src/feature/feature_detector.cpp
+        src/feature/intraface_detector.cpp
+        include/io/opencv_metadata_wrapper.h)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
@@ -70,6 +74,7 @@ add_library(modelio src/io/modelio.cpp)
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect
+    telef
     modelio
     opencv_core
     opencv_objdetect
