@@ -7,6 +7,7 @@
 #include <map>
 
 using namespace pcl::io;
+using namespace telef::types;
 
 namespace
 {
@@ -44,7 +45,7 @@ namespace telef::io {
 
             if (point_cloud_rgba_signal_->num_slots() > 0 || image_point_cloud_rgba_signal->num_slots() > 0) {
                 pcl::PointCloud<pcl::PointXYZRGBA>::Ptr pc;
-                std::map<std::pair<int, int>, size_t> uvToPointIdMap;
+                Uv2PointIdMapConstPtrT uvToPointIdMap;
                 std::tie(pc, uvToPointIdMap) = mapToXYZRGBPointCloud(image, depth_image);
                 if (point_cloud_rgba_signal_->num_slots() > 0) {
                     point_cloud_rgba_signal_->operator()(pc);
@@ -61,15 +62,15 @@ namespace telef::io {
         }
 
         using sig_cb_openni_image_point_cloud_rgba =
-        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &, const std::map<std::pair<int, int>, size_t> &);
+        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &, const Uv2PointIdMapConstPtrT &);
 
         boost::signals2::signal<sig_cb_openni_image_point_cloud_rgba>* image_point_cloud_rgba_signal;
 
 
-        std::pair<typename pcl::PointCloud<PointT>::Ptr, std::map<std::pair<int, int>, size_t>>
+        std::pair<typename pcl::PointCloud<PointT>::Ptr, Uv2PointIdMapConstPtrT>
         mapToXYZRGBPointCloud (const Image::Ptr &image, const DepthImage::Ptr &depth_image) {
             boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
-            std::map<std::pair<int, int>, size_t> uvToPointIdMap;
+            auto uvToPointIdMap = std::make_shared<Uv2PointIdMapT>();
 
             cloud->header.seq = depth_image->getFrameID ();
             cloud->header.stamp = depth_image->getTimestamp ();
@@ -145,7 +146,7 @@ namespace telef::io {
                 for (int u = 0; u < depth_width_; ++u, ++value_idx, point_idx += step)
                 {
                     PointT& pt = cloud->points[point_idx];
-                    uvToPointIdMap[std::make_pair(u, v)] = (size_t)point_idx;
+                    uvToPointIdMap->operator[](std::make_pair(u, v)) = (size_t)point_idx;
                     /// @todo Different values for these cases
                     // Check for invalid measurements
 

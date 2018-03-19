@@ -13,4 +13,9 @@ namespace telef::types {
     using ImageT = pcl::io::Image;
     using ImagePtrT = pcl::io::Image::Ptr;
     using ImageConstPtrT = pcl::io::Image::ConstPtr;
+
+    using Uv2PointIdMapT = std::map<std::pair<int, int>, size_t>;
+    using Uv2PointIdMapConstT = const Uv2PointIdMapT;
+    using Uv2PointIdMapPtrT = std::shared_ptr<Uv2PointIdMapT>;
+    using Uv2PointIdMapConstPtrT = std::shared_ptr<Uv2PointIdMapConstT>;
 };

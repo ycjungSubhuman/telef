@@ -3,6 +3,7 @@
 #include <pcl/io/grabber.h>
 #include <boost/function.hpp>
 #include <memory>
+#include <condition_variable>
 
 #include "io/channel.h"
 #include "io/grabber.h"
@@ -34,8 +35,8 @@ namespace telef::io {
         explicit ImagePointCloudDevice(std::unique_ptr<TelefOpenNI2Grabber> grabber) {
             this->grabber = std::move(grabber);
 
-            boost::function<void(const ImagePtrT&, const CloudConstPtrT&)> callback =
-                    boost::bind(&ImagePointCloudDevice::imageCloudCallback, this, _1, _2);
+            boost::function<void(const ImagePtrT&, const CloudConstPtrT&, const Uv2PointIdMapConstPtrT&)> callback =
+                    boost::bind(&ImagePointCloudDevice::imageCloudCallback, this, _1, _2, _3);
             boost::function<void(const ImagePtrT&)> dummyImageCallback = [](const ImagePtrT&){};
             boost::function<void(const CloudConstPtrT&)> dummyCloudCallback = [](const CloudConstPtrT&){};
             this->grabber->registerCallback(callback);
@@ -82,49 +83,48 @@ namespace telef::io {
             while (true){
                 CloudOutPtrT cloudOut;
                 ImageOutPtrT imageOut;
+                Uv2PointIdMapConstPtrT map;
+                std::unique_lock<std::mutex> lk(dataMutex);
+                dataCv.wait(lk);
 
                 if(cloudChannel) {
-                    cloudChannel->dataMutex.lock();
-                    while(!(cloudOut = cloudChannel->onDeviceLoop())) {
-                        cloudChannel->dataMutex.unlock();
-                        cloudChannel->dataMutex.lock();
-                    }
+                    cloudOut = cloudChannel->onDeviceLoop();
+                    assert(cloudOut != nullptr);
                 }
                 if(imageChannel) {
-                    imageChannel->dataMutex.lock();
-                    while(!(imageOut = imageChannel->onDeviceLoop())) {
-                        imageChannel->dataMutex.unlock();
-                        imageChannel->dataMutex.lock();
-                    }
+                    imageOut = imageChannel->onDeviceLoop();
+                    assert(imageOut != nullptr);
                 }
+                Uv2PointIdMapConstPtrT _map;
+                _map.swap(uvToPointIdMap);
+                map = _map;
+                assert(map != nullptr);
+
                 if(merger && frontend) {
                     frontend->process(merger->getMergeOut(cloudOut, imageOut));
                 }
-                if(cloudChannel) {
-                    cloudChannel->dataMutex.unlock();
-                }
-                if(imageChannel) {
-                    imageChannel->dataMutex.unlock();
-                }
+                lk.unlock();
             };
 
             grabber->stop();
         }
     private:
-
-        void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud, const std::map<std::pair<int, int>, size_t> &uvToPointIdMap) {
+        void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud, const Uv2PointIdMapConstPtrT &uvToPointIdMap) {
+            std::unique_lock<std::mutex> lk(dataMutex);
             if(cloudChannel) {
                 cloudChannel->grabberCallback(cloud);
             }
             if(imageChannel) {
                 imageChannel->grabberCallback(image);
             }
-            std::scoped_lock lock{uvToPointIdMapMutex};
             this->uvToPointIdMap = uvToPointIdMap;
+            lk.unlock();
+            dataCv.notify_all();
         }
 
-        std::map<std::pair<int, int>, size_t> uvToPointIdMap;
-        std::mutex uvToPointIdMapMutex;
+        Uv2PointIdMapConstPtrT uvToPointIdMap;
+        std::mutex dataMutex;
+        std::condition_variable dataCv;
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
         std::shared_ptr<MergerT> merger;

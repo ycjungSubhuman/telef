@@ -45,9 +45,6 @@ namespace telef::io {
             }
         }
 
-        // allow synchronization between Grabber thread and the thread onDeviceLoop is on
-        std::mutex dataMutex;
-
         /**
          * Callback to be registerd to pcl::Grabber
          */
@@ -66,7 +63,6 @@ namespace telef::io {
         std::shared_ptr<Pipe<DataT, OutDataT>> pipe;
 
         void _grabberCallback(const DataPtrT &fetchedInstance) {
-            std::scoped_lock lock{this->dataMutex};
             this->currentData = fetchedInstance;
         }
     };
