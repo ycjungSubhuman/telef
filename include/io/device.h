@@ -112,15 +112,19 @@ namespace telef::io {
         }
     private:
 
-        void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud) {
+        void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud, const std::map<std::pair<int, int>, size_t> &uvToPointIdMap) {
             if(cloudChannel) {
                 cloudChannel->grabberCallback(cloud);
             }
             if(imageChannel) {
                 imageChannel->grabberCallback(image);
             }
+            std::scoped_lock lock{uvToPointIdMapMutex};
+            this->uvToPointIdMap = uvToPointIdMap;
         }
 
+        std::map<std::pair<int, int>, size_t> uvToPointIdMap;
+        std::mutex uvToPointIdMapMutex;
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
         std::shared_ptr<MergerT> merger;

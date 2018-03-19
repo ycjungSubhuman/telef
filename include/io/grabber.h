@@ -3,8 +3,27 @@
 #include <pcl/io/openni2_grabber.h>
 #include <pcl/point_cloud.h>
 #include <pcl/console/print.h>
+#include <tuple>
+#include <map>
 
 using namespace pcl::io;
+
+namespace
+{
+    // Treat color as chars, float32, or uint32
+    typedef union
+    {
+        struct
+        {
+            unsigned char Blue;
+            unsigned char Green;
+            unsigned char Red;
+            unsigned char Alpha;
+        };
+        float float_value;
+        uint32_t long_value;
+    } RGBValue;
+}
 
 namespace telef::io {
     class TelefOpenNI2Grabber : public OpenNI2Grabber {
@@ -24,12 +43,14 @@ namespace telef::io {
             }
 
             if (point_cloud_rgba_signal_->num_slots() > 0 || image_point_cloud_rgba_signal->num_slots() > 0) {
-                auto pc = convertToXYZRGBPointCloud<pcl::PointXYZRGBA>(image, depth_image);
+                pcl::PointCloud<pcl::PointXYZRGBA>::Ptr pc;
+                std::map<std::pair<int, int>, size_t> uvToPointIdMap;
+                std::tie(pc, uvToPointIdMap) = mapToXYZRGBPointCloud(image, depth_image);
                 if (point_cloud_rgba_signal_->num_slots() > 0) {
                     point_cloud_rgba_signal_->operator()(pc);
                 }
                 if (image_point_cloud_rgba_signal->num_slots() > 0) {
-                    image_point_cloud_rgba_signal->operator()(image,pc);
+                    image_point_cloud_rgba_signal->operator()(image, pc, uvToPointIdMap);
                 }
             }
 
@@ -40,8 +61,135 @@ namespace telef::io {
         }
 
         using sig_cb_openni_image_point_cloud_rgba =
-        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &);
+        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &, const std::map<std::pair<int, int>, size_t> &);
 
         boost::signals2::signal<sig_cb_openni_image_point_cloud_rgba>* image_point_cloud_rgba_signal;
+
+
+        std::pair<typename pcl::PointCloud<PointT>::Ptr, std::map<std::pair<int, int>, size_t>>
+        mapToXYZRGBPointCloud (const Image::Ptr &image, const DepthImage::Ptr &depth_image) {
+            boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
+            std::map<std::pair<int, int>, size_t> uvToPointIdMap;
+
+            cloud->header.seq = depth_image->getFrameID ();
+            cloud->header.stamp = depth_image->getTimestamp ();
+            cloud->header.frame_id = rgb_frame_id_;
+            cloud->height = std::max (image_height_, depth_height_);
+            cloud->width = std::max (image_width_, depth_width_);
+            cloud->is_dense = false;
+
+            cloud->points.resize (cloud->height * cloud->width);
+
+            // Generate default camera parameters
+            float fx = device_->getDepthFocalLength (); // Horizontal focal length
+            float fy = device_->getDepthFocalLength (); // Vertcal focal length
+            float cx = ((float)depth_width_ - 1.f) / 2.f;  // Center x
+            float cy = ((float)depth_height_- 1.f) / 2.f; // Center y
+
+            // Load pre-calibrated camera parameters if they exist
+            if (pcl_isfinite (depth_parameters_.focal_length_x))
+                fx =  static_cast<float> (depth_parameters_.focal_length_x);
+
+            if (pcl_isfinite (depth_parameters_.focal_length_y))
+                fy =  static_cast<float> (depth_parameters_.focal_length_y);
+
+            if (pcl_isfinite (depth_parameters_.principal_point_x))
+                cx =  static_cast<float> (depth_parameters_.principal_point_x);
+
+            if (pcl_isfinite (depth_parameters_.principal_point_y))
+                cy =  static_cast<float> (depth_parameters_.principal_point_y);
+
+            // Get inverse focal length for calculations below
+            float fx_inv = 1.0f / fx;
+            float fy_inv = 1.0f / fy;
+
+            const uint16_t* depth_map = (const uint16_t*) depth_image->getData ();
+            if (depth_image->getWidth () != depth_width_ || depth_image->getHeight () != depth_height_)
+            {
+                // Resize the image if nessacery
+                depth_resize_buffer_.resize(depth_width_ * depth_height_);
+                depth_map = depth_resize_buffer_.data();
+                depth_image->fillDepthImageRaw (depth_width_, depth_height_, (unsigned short*) depth_map );
+            }
+
+            const uint8_t* rgb_buffer = (const uint8_t*) image->getData ();
+            if (image->getWidth () != image_width_ || image->getHeight () != image_height_)
+            {
+                // Resize the image if nessacery
+                color_resize_buffer_.resize(image_width_ * image_height_ * 3);
+                rgb_buffer = color_resize_buffer_.data();
+                image->fillRGB (image_width_, image_height_, (unsigned char*) rgb_buffer, image_width_ * 3);
+            }
+
+
+            float bad_point = std::numeric_limits<float>::quiet_NaN ();
+
+            // set xyz to Nan and rgb to 0 (black)
+            if (image_width_ != depth_width_)
+            {
+                PointT pt;
+                pt.x = pt.y = pt.z = bad_point;
+                pt.b = pt.g = pt.r = 0;
+                pt.a = 255; // point has no color info -> alpha = max => transparent
+                cloud->points.assign (cloud->points.size (), pt);
+            }
+
+            // fill in XYZ values
+            unsigned step = cloud->width / depth_width_;
+            unsigned skip = cloud->width - (depth_width_ * step);
+
+            int value_idx = 0;
+            int point_idx = 0;
+            for (int v = 0; v < depth_height_; ++v, point_idx += skip)
+            {
+                for (int u = 0; u < depth_width_; ++u, ++value_idx, point_idx += step)
+                {
+                    PointT& pt = cloud->points[point_idx];
+                    uvToPointIdMap[std::make_pair(u, v)] = (size_t)point_idx;
+                    /// @todo Different values for these cases
+                    // Check for invalid measurements
+
+                    OniDepthPixel pixel = depth_map[value_idx];
+                    if (pixel != 0 &&
+                        pixel != depth_image->getNoSampleValue () &&
+                        pixel != depth_image->getShadowValue () )
+                    {
+                        pt.z = depth_map[value_idx] * 0.001f;  // millimeters to meters
+                        pt.x = (static_cast<float> (u) - cx) * pt.z * fx_inv;
+                        pt.y = (static_cast<float> (v) - cy) * pt.z * fy_inv;
+                    }
+                    else
+                    {
+                        pt.x = pt.y = pt.z = bad_point;
+                    }
+                }
+            }
+
+            // fill in the RGB values
+            step = cloud->width / image_width_;
+            skip = cloud->width - (image_width_ * step);
+
+            value_idx = 0;
+            point_idx = 0;
+            RGBValue color;
+            color.Alpha = 0xff;
+
+            for (unsigned yIdx = 0; yIdx < image_height_; ++yIdx, point_idx += skip)
+            {
+                for (unsigned xIdx = 0; xIdx < image_width_; ++xIdx, point_idx += step, value_idx += 3)
+                {
+                    PointT& pt = cloud->points[point_idx];
+
+                    color.Red   = rgb_buffer[value_idx];
+                    color.Green = rgb_buffer[value_idx + 1];
+                    color.Blue  = rgb_buffer[value_idx + 2];
+
+                    pt.rgba = color.long_value;
+                }
+            }
+            cloud->sensor_origin_.setZero ();
+            cloud->sensor_orientation_.setIdentity ();
+            return std::make_pair(cloud, uvToPointIdMap);
+        }
     };
 }
