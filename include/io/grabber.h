@@ -146,7 +146,6 @@ namespace telef::io {
                 for (int u = 0; u < depth_width_; ++u, ++value_idx, point_idx += step)
                 {
                     PointT& pt = cloud->points[point_idx];
-                    uvToPointIdMap->operator[](std::make_pair(u, v)) = (size_t)point_idx;
                     /// @todo Different values for these cases
                     // Check for invalid measurements
 
@@ -155,6 +154,7 @@ namespace telef::io {
                         pixel != depth_image->getNoSampleValue () &&
                         pixel != depth_image->getShadowValue () )
                     {
+                        uvToPointIdMap->insert(std::make_pair(std::make_pair(u, v),(size_t)point_idx));
                         pt.z = depth_map[value_idx] * 0.001f;  // millimeters to meters
                         pt.x = (static_cast<float> (u) - cx) * pt.z * fx_inv;
                         pt.y = (static_cast<float> (v) - cy) * pt.z * fy_inv;

@@ -99,11 +99,11 @@ namespace telef::io {
                 _map.swap(uvToPointIdMap);
                 map = _map;
                 assert(map != nullptr);
+                lk.unlock();
 
                 if(merger && frontend) {
                     frontend->process(merger->getMergeOut(cloudOut, imageOut));
                 }
-                lk.unlock();
             };
 
             grabber->stop();
