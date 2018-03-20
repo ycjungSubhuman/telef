@@ -63,6 +63,7 @@ target_link_libraries(KinectTest
 
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
 target_link_libraries(LandmarkProject
+        stdc++fs
         telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}

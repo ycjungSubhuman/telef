@@ -29,7 +29,13 @@ int main(int ac, char* av[])
     auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));
 
     auto merger = std::make_shared<LandmarkMerger>();
-    auto frontend = std::make_shared<CloudVisualizerFrontEnd>();
+    std::shared_ptr<FrontEnd<CloudConstT>> frontend;
+    if (ac > 1 && strcmp(av[1], "csv")==0) {
+        frontend = std::make_shared<Point3DCsvWriterFrontEnd>();
+    }
+    else {
+        frontend = std::make_shared<CloudVisualizerFrontEnd>();
+    }
 
     ImagePointCloudDevice<MappedCloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
     device.addCloudChannel(cloudChannel);
