@@ -45,7 +45,7 @@ namespace telef::io {
 
             if (point_cloud_rgba_signal_->num_slots() > 0 || image_point_cloud_rgba_signal->num_slots() > 0) {
                 pcl::PointCloud<pcl::PointXYZRGBA>::Ptr pc;
-                Uv2PointIdMapConstPtrT uvToPointIdMap;
+                Uv2PointIdMapPtrT uvToPointIdMap;
                 std::tie(pc, uvToPointIdMap) = mapToXYZRGBPointCloud(image, depth_image);
                 if (point_cloud_rgba_signal_->num_slots() > 0) {
                     point_cloud_rgba_signal_->operator()(pc);
@@ -62,15 +62,15 @@ namespace telef::io {
         }
 
         using sig_cb_openni_image_point_cloud_rgba =
-        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &, const Uv2PointIdMapConstPtrT &);
+        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &, const Uv2PointIdMapPtrT &);
 
         boost::signals2::signal<sig_cb_openni_image_point_cloud_rgba>* image_point_cloud_rgba_signal;
 
 
-        std::pair<typename pcl::PointCloud<PointT>::Ptr, Uv2PointIdMapConstPtrT>
+        std::pair<typename pcl::PointCloud<PointT>::Ptr, Uv2PointIdMapPtrT>
         mapToXYZRGBPointCloud (const Image::Ptr &image, const DepthImage::Ptr &depth_image) {
             boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
-            auto uvToPointIdMap = std::make_shared<Uv2PointIdMapT>();
+            auto uvToPointIdMap = std::make_shared<Uv2PointIdMapT>(image->getWidth(), image->getHeight());
 
             cloud->header.seq = depth_image->getFrameID ();
             cloud->header.stamp = depth_image->getTimestamp ();
@@ -154,7 +154,7 @@ namespace telef::io {
                         pixel != depth_image->getNoSampleValue () &&
                         pixel != depth_image->getShadowValue () )
                     {
-                        uvToPointIdMap->insert(std::make_pair(std::make_pair(u, v),(size_t)point_idx));
+                        uvToPointIdMap->addSingle(u, v, (size_t)point_idx);
                         pt.z = depth_map[value_idx] * 0.001f;  // millimeters to meters
                         pt.x = (static_cast<float> (u) - cx) * pt.z * fx_inv;
                         pt.y = (static_cast<float> (v) - cy) * pt.z * fy_inv;

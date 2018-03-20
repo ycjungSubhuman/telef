@@ -79,7 +79,7 @@ namespace telef::io {
             auto feature = featureDetector.getFeature(*image);
             for (long i=0; i<feature.points.cols(); i++) {
                 try {
-                    auto pointInd = mapping->at(std::make_pair(feature.points(0, i), feature.points(1, i)));
+                    auto pointInd = mapping->getMappedPointId(feature.points(0, i), feature.points(1, i));
                     result->push_back(cloud->at(pointInd));
                 } catch (std::out_of_range &e) {
                     std::cout << "WARNING: Landmark Points at Hole." << std::endl;

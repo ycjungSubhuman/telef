@@ -38,7 +38,6 @@ add_library(telef
         include/io/pipe.h
         include/cloud/cloud_pipe.h
         include/type.h
-        include/util/booststd.h
         include/io/grabber.h
         include/io/merger.h
         include/io/frontend.h
