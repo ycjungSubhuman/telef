@@ -51,8 +51,8 @@ namespace telef::io {
             if(!visualizer->updatePointCloud(input)) {
                 visualizer->addPointCloud(input);
                 visualizer->setPosition (0, 0);
+                visualizer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5);
                 visualizer->setSize (input->width, input->height);
-                visualizer->setPointCloudRenderingProperties(vis::PCL_VISUALIZER_POINT_SIZE, 1);
                 visualizer->initCameraParameters();
                 //visualizer->setCameraFieldOfView(NUI_CAMERA_COLOR_NOMINAL_VERTICAL_FOV);
             }

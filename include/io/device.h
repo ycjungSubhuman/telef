@@ -86,7 +86,6 @@ namespace telef::io {
                 Uv2PointIdMapConstPtrT map;
                 std::unique_lock<std::mutex> lk(dataMutex);
                 dataCv.wait(lk);
-
                 if(cloudChannel) {
                     cloudOut = cloudChannel->onDeviceLoop();
                     assert(cloudOut != nullptr);

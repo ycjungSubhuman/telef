@@ -13,6 +13,7 @@ namespace telef::cloud {
         auto mapping = std::make_shared<Uv2PointIdMapT>(*in->second);
         std::vector<int> mappingChange;
         pcl::removeNaNFromPointCloud(*cloudIn, *cloudOut, mappingChange);
+        // out.points[i] = in.points[mappingChange[i]]
         for (const auto &p : *mapping) {
             for(unsigned long i=0; i<mappingChange.size(); i++) {
                 if (p.second == mappingChange[i]) {

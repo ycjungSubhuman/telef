@@ -12,9 +12,7 @@ using namespace telef::image;
 using namespace telef::feature;
 
 /**
- * Project 5 predefined point onto captured pointcloud
- *
- * selected points get visualized as red
+ * Project IntraFace landmark points onto captured pointcloud
  */
 
 int main(int ac, char* av[])
@@ -25,7 +23,7 @@ int main(int ac, char* av[])
     auto grabber = std::make_unique<TelefOpenNI2Grabber>("#1", depth_mode, image_mode);
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<RemoveNaNPoints>();
+    auto cloudPipe = std::make_shared<IdentityPipe<MappedCloudConstT>>();
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
     auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));

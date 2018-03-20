@@ -47,7 +47,7 @@ add_library(telef
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        include/io/opencv_metadata_wrapper.h)
+        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h)
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
@@ -62,10 +62,8 @@ target_link_libraries(KinectTest
         ${PCL_IO_LIBRARIES}
         )
 
-add_executable(DummyLandmarkProject app/DummyLandmarkProject.cpp src/io/modelio.cpp)
-target_link_libraries(DummyLandmarkProject
-        IlmImf
-        Half
+add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
+target_link_libraries(LandmarkProject
         telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}

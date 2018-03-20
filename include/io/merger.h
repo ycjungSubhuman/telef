@@ -77,14 +77,17 @@ namespace telef::io {
             auto mapping = cloudPair->second;
             feature::IntraFace featureDetector;
             auto feature = featureDetector.getFeature(*image);
-            for (long i=0; i<feature.points.rows(); i++) {
+            for (long i=0; i<feature.points.cols(); i++) {
                 try {
-                    auto pointInd = mapping->at(std::make_pair(feature.points(i, 0), feature.points(i, 1)));
+                    auto pointInd = mapping->at(std::make_pair(feature.points(0, i), feature.points(1, i)));
                     result->push_back(cloud->at(pointInd));
                 } catch (std::out_of_range &e) {
                     std::cout << "WARNING: Landmark Points at Hole." << std::endl;
                 }
             }
+            result->height = cloud->height;
+            result->width = cloud->width;
+            std::cout << result->size() <<std::endl;
             return result;
         }
     };
@@ -92,12 +95,13 @@ namespace telef::io {
     /**
      * Just discard image and select PointCloud. Used for debugging
      */
-    class DummyImageCloudMerger : public SimpleBinaryMerger<ImageT, CloudConstT, CloudConstT> {
+    class DummyMappedImageCloudMerger : public SimpleMappedImageCloudMerger<CloudConstT> {
     private:
         using OutPtrT = const boost::shared_ptr<CloudConstT>;
+        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
     public:
-        OutPtrT merge(const ImagePtrT image, const CloudConstPtrT cloud) override {
-            return cloud;
+        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloud) override {
+            return cloud->first;
         }
     };
 }
