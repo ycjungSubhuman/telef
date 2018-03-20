@@ -37,7 +37,6 @@ add_library(telef
         include/io/device.h
         include/io/pipe.h
         include/cloud/cloud_pipe.h
-        include/cloud/cloud_merger.h
         include/type.h
         include/util/booststd.h
         include/io/grabber.h
@@ -47,14 +46,15 @@ add_library(telef
 
         # src
         src/cloud/cloud_pipe.cpp
-        src/feature/feature_detector.cpp
         src/feature/intraface_detector.cpp
         include/io/opencv_metadata_wrapper.h)
+target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
         ${PCL_IO_LIBRARIES}
         )
+add_library(modelio src/io/modelio.cpp)
 
 add_executable(KinectTest app/KinectTest.cpp)
 target_link_libraries(KinectTest
@@ -62,20 +62,25 @@ target_link_libraries(KinectTest
         ${PCL_IO_LIBRARIES}
         )
 
-add_executable(DummyLandmarkProject app/DummyLandmarkProject.cpp)
+add_executable(DummyLandmarkProject app/DummyLandmarkProject.cpp src/io/modelio.cpp)
 target_link_libraries(DummyLandmarkProject
+        IlmImf
+        Half
         telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
         )
 
-add_library(modelio src/io/modelio.cpp)
 
-add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp)
+add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect
     telef
-    modelio
     opencv_core
     opencv_objdetect
     opencv_highgui

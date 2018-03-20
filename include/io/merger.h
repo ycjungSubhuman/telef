@@ -3,6 +3,7 @@
 #include <boost/shared_ptr.hpp>
 #include "type.h"
 #include "io/pipe.h"
+#include "feature/feature_detector.h"
 
 using namespace telef::types;
 
@@ -54,17 +55,48 @@ namespace telef::io {
     };
 
     /**
-     * Merge const PointCloud and Image
-     *
+     * Merge const PointCloud and Image Using (UV coord) -> Point ID mapping
+     */
+    template<class OutT>
+    class SimpleMappedImageCloudMerger : public SimpleBinaryMerger<ImageT, MappedCloudConstT, OutT> {
+    private:
+        using OutPtrT = const boost::shared_ptr<OutT>;
+        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+    public:
+        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override=0;
+    };
+
+    class LandmarkMerger : public SimpleMappedImageCloudMerger<CloudConstT> {
+    private:
+        using OutPtrT = const boost::shared_ptr<CloudConstT>;
+        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+    public:
+        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override {
+            auto result = boost::make_shared<CloudT>();
+            auto cloud = cloudPair->first;
+            auto mapping = cloudPair->second;
+            feature::IntraFace featureDetector;
+            auto feature = featureDetector.getFeature(*image);
+            for (long i=0; i<feature.points.rows(); i++) {
+                try {
+                    auto pointInd = mapping->at(std::make_pair(feature.points(i, 0), feature.points(i, 1)));
+                    result->push_back(cloud->at(pointInd));
+                } catch (std::out_of_range &e) {
+                    std::cout << "WARNING: Landmark Points at Hole." << std::endl;
+                }
+            }
+            return result;
+        }
+    };
+
+    /**
      * Just discard image and select PointCloud. Used for debugging
      */
-    class DummyImageCloudMerger : public SimpleBinaryMerger<CloudConstT, ImageT, CloudConstT> {
+    class DummyImageCloudMerger : public SimpleBinaryMerger<ImageT, CloudConstT, CloudConstT> {
     private:
-        using PipeT = Pipe<CloudConstT, CloudConstT>;
-        using BaseT = SimpleBinaryMerger<ImageT, CloudConstT, CloudConstT>;
         using OutPtrT = const boost::shared_ptr<CloudConstT>;
     public:
-        OutPtrT merge(const CloudConstPtrT cloud, const ImagePtrT image) override {
+        OutPtrT merge(const ImagePtrT image, const CloudConstPtrT cloud) override {
             return cloud;
         }
     };

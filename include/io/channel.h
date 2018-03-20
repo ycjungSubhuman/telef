@@ -71,10 +71,10 @@ namespace telef::io {
      * Fetch XYZRGBA Point Cloud from OpenNI2 Devices
      */
     template <class OutDataT>
-    class CloudChannel : public Channel<CloudConstT, OutDataT> {
+    class CloudChannel : public Channel<MappedCloudConstT, OutDataT> {
     public:
-        using PipeT = Pipe<CloudConstT, OutDataT>;
-        explicit CloudChannel(std::shared_ptr<PipeT> pipe) : Channel<CloudConstT, OutDataT>(std::move(pipe)) {}
+        using PipeT = Pipe<MappedCloudConstT, OutDataT>;
+        explicit CloudChannel(std::shared_ptr<PipeT> pipe) : Channel<MappedCloudConstT, OutDataT>(std::move(pipe)) {}
 
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override = 0;

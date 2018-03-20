@@ -31,4 +31,9 @@ namespace telef::types {
     using Uv2PointIdMapConstT = const Uv2PointIdMapT;
     using Uv2PointIdMapPtrT = std::shared_ptr<Uv2PointIdMapT>;
     using Uv2PointIdMapConstPtrT = std::shared_ptr<Uv2PointIdMapConstT>;
+
+    using MappedCloudT = std::pair<CloudConstPtrT, Uv2PointIdMapConstPtrT>;
+    using MappedCloudConstT = const MappedCloudT;
+    using MappedCloudPtrT = std::shared_ptr<MappedCloudT>;
+    using MappedCloudConstPtrT = std::shared_ptr<MappedCloudConstT>;
 };

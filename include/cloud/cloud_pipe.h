@@ -9,8 +9,8 @@ using namespace telef::io;
 using namespace telef::types;
 namespace telef::cloud {
     /** Remove NaN Positioned Points from PointCloud */
-    class RemoveNaNPoints : public Pipe<CloudConstT, CloudConstT> {
+    class RemoveNaNPoints : public Pipe<MappedCloudConstT, MappedCloudConstT> {
     private:
-        boost::shared_ptr<CloudConstT> _processData(boost::shared_ptr<CloudConstT> in) override;
+        boost::shared_ptr<MappedCloudConstT> _processData(boost::shared_ptr<MappedCloudConstT> in) override;
     };
 }

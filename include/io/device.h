@@ -29,7 +29,7 @@ namespace telef::io {
     private:
         using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
         using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
-        using MergerT = BinaryMerger<CloudOutT, ImageOutT, MergeOutT, MergePipeOutT>;
+        using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
         using FrontEndT = FrontEnd<MergePipeOutT>;
     public:
         explicit ImagePointCloudDevice(std::unique_ptr<TelefOpenNI2Grabber> grabber) {
@@ -95,15 +95,11 @@ namespace telef::io {
                     imageOut = imageChannel->onDeviceLoop();
                     assert(imageOut != nullptr);
                 }
-                Uv2PointIdMapConstPtrT _map;
-                _map.swap(uvToPointIdMap);
-                map = _map;
-                assert(map != nullptr);
-                lk.unlock();
 
                 if(merger && frontend) {
-                    frontend->process(merger->getMergeOut(cloudOut, imageOut));
+                    frontend->process(merger->getMergeOut(imageOut, cloudOut));
                 }
+                lk.unlock();
             };
 
             grabber->stop();
@@ -112,17 +108,15 @@ namespace telef::io {
         void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud, const Uv2PointIdMapConstPtrT &uvToPointIdMap) {
             std::unique_lock<std::mutex> lk(dataMutex);
             if(cloudChannel) {
-                cloudChannel->grabberCallback(cloud);
+                cloudChannel->grabberCallback(boost::make_shared<MappedCloudT>(cloud, uvToPointIdMap));
             }
             if(imageChannel) {
                 imageChannel->grabberCallback(image);
             }
-            this->uvToPointIdMap = uvToPointIdMap;
             lk.unlock();
             dataCv.notify_all();
         }
 
-        Uv2PointIdMapConstPtrT uvToPointIdMap;
         std::mutex dataMutex;
         std::condition_variable dataCv;
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;

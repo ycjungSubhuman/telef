@@ -7,11 +7,20 @@
 using namespace telef::types;
 
 namespace telef::cloud {
-    boost::shared_ptr<CloudConstT> RemoveNaNPoints::_processData(boost::shared_ptr<CloudConstT> in) {
-        auto *out = new CloudT;
-        std::vector<int> dummy;
-        pcl::removeNaNFromPointCloud(*in, *out, dummy);
-
-        return boost::shared_ptr<CloudConstT>{out};
+    boost::shared_ptr<MappedCloudConstT> RemoveNaNPoints::_processData(boost::shared_ptr<MappedCloudConstT> in) {
+        auto cloudOut = boost::make_shared<CloudT>();
+        auto cloudIn = in->first;
+        auto mapping = std::make_shared<Uv2PointIdMapT>(*in->second);
+        std::vector<int> mappingChange;
+        pcl::removeNaNFromPointCloud(*cloudIn, *cloudOut, mappingChange);
+        for (const auto &p : *mapping) {
+            for(unsigned long i=0; i<mappingChange.size(); i++) {
+                if (p.second == mappingChange[i]) {
+                    (*mapping)[p.first] = i;
+                    break;
+                }
+            }
+        }
+        return boost::make_shared<MappedCloudConstT>(cloudOut, mapping);
     }
 }
