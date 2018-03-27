@@ -1,9 +1,11 @@
 #pragma once
 
 #include <boost/shared_ptr.hpp>
+#include <memory>
 #include "type.h"
 #include "io/pipe.h"
 #include "feature/feature_detector.h"
+#include "io/frontend.h"
 
 using namespace telef::types;
 
@@ -23,20 +25,26 @@ namespace telef::io {
         using PipeOutPtrT = const boost::shared_ptr<PipeOutT>;
         using PipeT = Pipe<OutT, PipeOutT>;
     public:
-        explicit BinaryMerger (std::shared_ptr<PipeT> pipe) {
+        explicit BinaryMerger (std::shared_ptr<PipeT> pipe, std::shared_ptr<FrontEnd<PipeOutT>> frontend) {
             this->pipe = pipe;
+            this->frontend = frontend;
         }
         virtual ~BinaryMerger() = default;
         BinaryMerger& operator=(const BinaryMerger&) = delete;
         BinaryMerger (const BinaryMerger&) = default;
 
+        void run(DataAPtrT a, DataBPtrT b) {
+            frontend->process(getMergeOut(a, b));
+        }
+
+    private:
         PipeOutPtrT getMergeOut(DataAPtrT a, DataBPtrT b) {
             auto merged = merge(a, b);
             return this->pipe->processData(merged);
         }
-    private:
         virtual OutPtrT merge(DataAPtrT a, DataBPtrT b)=0;
         std::shared_ptr<PipeT> pipe;
+        std::shared_ptr<FrontEnd<PipeOutT>> frontend;
     };
 
     /**
@@ -50,7 +58,7 @@ namespace telef::io {
         using DataAPtrT = const boost::shared_ptr<DataAT>;
         using DataBPtrT = const boost::shared_ptr<DataBT>;
     public:
-        SimpleBinaryMerger() : BaseT(std::make_shared<IdentityPipe<OutT>>()) {}
+        SimpleBinaryMerger(std::shared_ptr<FrontEnd<OutT>> frontend) : BaseT(std::make_shared<IdentityPipe<OutT>>(), frontend) {}
         OutPtrT merge (DataAPtrT a, DataBPtrT b) override = 0;
     };
 
@@ -63,6 +71,7 @@ namespace telef::io {
         using OutPtrT = const boost::shared_ptr<OutT>;
         using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
     public:
+        SimpleMappedImageCloudMerger(std::shared_ptr<FrontEnd<OutT>> frontend) : SimpleBinaryMerger<ImageT, MappedCloudConstT, OutT>(frontend) {}
         OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override=0;
     };
 
@@ -71,6 +80,7 @@ namespace telef::io {
         using OutPtrT = const boost::shared_ptr<CloudConstT>;
         using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
     public:
+        LandmarkMerger(std::shared_ptr<FrontEnd<CloudConstT>> frontend) : SimpleMappedImageCloudMerger<CloudConstT>(frontend){}
         OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override {
             auto result = boost::make_shared<CloudT>();
             auto cloud = cloudPair->first;
@@ -100,6 +110,7 @@ namespace telef::io {
         using OutPtrT = const boost::shared_ptr<CloudConstT>;
         using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
     public:
+        DummyMappedImageCloudMerger():SimpleMappedImageCloudMerger<CloudConstT>(std::make_shared<DummyCloudFrontEnd>()){}
         OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloud) override {
             return cloud->first;
         }

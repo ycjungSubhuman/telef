@@ -4,6 +4,7 @@
 #include <boost/function.hpp>
 #include <memory>
 #include <condition_variable>
+#include <algorithm>
 
 #include "io/channel.h"
 #include "io/grabber.h"
@@ -47,29 +48,22 @@ namespace telef::io {
         }
 
         /** After added, channels will be started from the next run() */
-        void addCloudChannel(std::shared_ptr<CloudChannel<CloudOutT>> channel) {
+        void setCloudChannel(std::shared_ptr<CloudChannel<CloudOutT>> channel) {
             this->cloudChannel = std::move(channel);
         }
-        void addImageChannel(std::shared_ptr<ImageChannel<ImageOutT>> channel) {
+        void setImageChannel(std::shared_ptr<ImageChannel<ImageOutT>> channel) {
             this->imageChannel = std::move(channel);
         }
         /**
          * Add Merger to Merge CloudChannel Output and Image Channel Output into One Data
          *
          * CloudChannel and ImageChannel should be added before this being called
-         * Adding merger only would not do anything useful. Add a proper frontend for it
          */
-        void addImageCloudMerger(std::shared_ptr<MergerT> merger) {
+        void addMerger(std::shared_ptr<MergerT> merger) {
             if(!cloudChannel || !imageChannel) {
                 throw std::runtime_error("Tried to add merger without either CloudChannel or ImageChannel");
             }
-            this->merger = merger;
-        }
-        /**
-         * Add FrontEnd to Do Something with Side Effect Using the Output From Merger
-         */
-        void addFrontEnd(std::shared_ptr<FrontEndT> frontend) {
-            this->frontend = frontend;
+            this->mergers.emplace_back(merger);
         }
 
         /** Start Device and Fetch Data Through Channels
@@ -95,8 +89,8 @@ namespace telef::io {
                     assert(imageOut != nullptr);
                 }
 
-                if(merger && frontend) {
-                    frontend->process(merger->getMergeOut(imageOut, cloudOut));
+                for(const auto &m : mergers) {
+                    m->run(imageOut, cloudOut);
                 }
                 lk.unlock();
             };
@@ -120,8 +114,7 @@ namespace telef::io {
         std::condition_variable dataCv;
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
-        std::shared_ptr<MergerT> merger;
-        std::shared_ptr<FrontEndT> frontend;
+        std::vector<std::shared_ptr<MergerT>> mergers;
         std::unique_ptr<TelefOpenNI2Grabber> grabber;
     };
 }
