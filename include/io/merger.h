@@ -2,12 +2,14 @@
 
 #include <boost/shared_ptr.hpp>
 #include <memory>
+#include <future>
 #include "type.h"
 #include "io/pipe.h"
 #include "feature/feature_detector.h"
 #include "io/frontend.h"
 
 using namespace telef::types;
+using namespace telef::feature;
 
 namespace telef::io {
 
@@ -79,28 +81,36 @@ namespace telef::io {
         OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override=0;
     };
 
-    class LandmarkMerger : public SimpleMappedImageCloudMerger<CloudConstT> {
+    // TODO: Inject landmark detectors later
+    class FittingSuiteMerger : public SimpleMappedImageCloudMerger<FittingSuite> {
     private:
-        using OutPtrT = const boost::shared_ptr<CloudConstT>;
+        using OutPtrT = const boost::shared_ptr<FittingSuite>;
         using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
     public:
         OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override {
-            auto result = boost::make_shared<CloudT>();
-            auto cloud = cloudPair->first;
+            auto landmark3d = boost::make_shared<CloudT>();
+            auto rawCloud = cloudPair->first;
             auto mapping = cloudPair->second;
             feature::IntraFace featureDetector;
-            auto feature = featureDetector.getFeature(*image);
-            for (long i=0; i<feature.points.cols(); i++) {
+            auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
+            for (long i=0; i<feature->points.cols(); i++) {
                 try {
-                    auto pointInd = mapping->getMappedPointId(feature.points(0, i), feature.points(1, i));
-                    result->push_back(cloud->at(pointInd));
+                    auto pointInd = mapping->getMappedPointId(feature->points(0, i), feature->points(1, i));
+                    landmark3d->push_back(rawCloud->at(pointInd));
                 } catch (std::out_of_range &e) {
                     std::cout << "WARNING: Landmark Points at Hole." << std::endl;
                 }
             }
-            result->height = cloud->height;
-            result->width = cloud->width;
-            std::cout << result->size() <<std::endl;
+            landmark3d->height = rawCloud->height;
+            landmark3d->width = rawCloud->width;
+            std::cout << landmark3d->size() <<std::endl;
+
+            auto result = boost::make_shared<FittingSuite>();
+            result->landmark2d = feature;
+            result->landmark3d = landmark3d;
+            result->rawCloud = rawCloud;
+            result->rawImage = image;
+
             return result;
         }
     };

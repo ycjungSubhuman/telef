@@ -25,7 +25,8 @@ int main(int ac, const char* const * av)
             ("help,H", "print help message")
             ("include-holes,I", "include landmark projections with holes")
             ("view,V", "open GUI window for monitoring captured landmarks")
-            ("save-rgb,S", "save corresponding RGB images too");
+            ("save-rgb,R", "save corresponding RGB images too")
+            ("save-cloud,C", "save corresponding raw cloud images too");
 
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -47,15 +48,15 @@ int main(int ac, const char* const * av)
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
     auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));
 
-    auto merger = std::make_shared<LandmarkMerger>();
-    auto csvFrontend = std::make_shared<Point3DCsvWriterFrontEnd>(vm.count("include-holes")==0);
+    auto merger = std::make_shared<FittingSuiteMerger>();
+    auto csvFrontend = std::make_shared<FittingSuiteWriterFrontEnd>(vm.count("include-holes")==0, vm.count("save-rgb")>0, vm.count("save-cloud")>0);
     merger->addFrontEnd(csvFrontend);
     if(vm.count("view")) {
-        auto viewFrontend = std::make_shared<CloudVisualizerFrontEnd>();
+        auto viewFrontend = std::make_shared<Landmark3DVisualizerFrontEnd>();
         merger->addFrontEnd(viewFrontend);
     }
 
-    ImagePointCloudDevice<MappedCloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
+    ImagePointCloudDevice<MappedCloudConstT, ImageT, FittingSuite, FittingSuite> device {std::move(grabber)};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

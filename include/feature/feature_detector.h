@@ -4,10 +4,15 @@
 #include <Eigen/Dense>
 #include <pcl/io/image.h>
 #include <cxcore.h>
+#include "type.h"
+
+using namespace telef::types;
 
 namespace telef::feature {
 
     using Feature = struct Feature {
+        using Ptr = std::shared_ptr<Feature>;
+        using ConstPtr = std::shared_ptr<const Feature>;
         // Dynamically sized Matrix is used in the case we use 2D or 3D features
         Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> points;
         // Bounding box for face
@@ -23,6 +28,17 @@ namespace telef::feature {
             width = rect_.width;
             height = rect_.height;
         }
+    };
+
+    // Data needed for fitting face
+    using FittingSuite = struct FittingSuite {
+        using Ptr = std::shared_ptr<FittingSuite>;
+        using ConstPtr = std::shared_ptr<const FittingSuite>;
+
+        Feature::Ptr landmark2d;
+        CloudConstPtrT landmark3d;
+        ImagePtrT rawImage;
+        CloudConstPtrT rawCloud;
     };
 
     /**
