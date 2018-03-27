@@ -54,6 +54,7 @@ namespace telef::io {
         void setImageChannel(std::shared_ptr<ImageChannel<ImageOutT>> channel) {
             this->imageChannel = std::move(channel);
         }
+
         /**
          * Add Merger to Merge CloudChannel Output and Image Channel Output into One Data
          *
@@ -89,6 +90,7 @@ namespace telef::io {
                     assert(imageOut != nullptr);
                 }
 
+                //TODO : Make passed data const to enforce consistence btw mergers
                 for(const auto &m : mergers) {
                     m->run(imageOut, cloudOut);
                 }

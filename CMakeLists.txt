@@ -14,7 +14,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
 find_package(Eigen 3.3.4 REQUIRED)
-find_package(Boost 1.58 REQUIRED)
+find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
@@ -64,6 +64,7 @@ target_link_libraries(KinectTest
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
 target_link_libraries(LandmarkProject
         stdc++fs
+        ${Boost_LIBRARIES}
         telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}
