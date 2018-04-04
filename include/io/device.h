@@ -5,6 +5,7 @@
 #include <memory>
 #include <condition_variable>
 #include <algorithm>
+#include <stdio.h>
 
 #include "io/channel.h"
 #include "io/grabber.h"
@@ -66,16 +67,27 @@ namespace telef::io {
             }
             this->mergers.emplace_back(merger);
         }
+        void run() {
+            std::cout << "Press Q-Enter to quit" << std::endl;
+            isRunning = true;
+            grabber->start();
+            this->runThread = std::thread(&ImagePointCloudDevice::_run, this);
+            while(getchar()!='q');
+            std::cout << "Quitting..." << std::endl;
+            isRunning = false;
+            runThread.join();
+
+            //grabber->stop();
+        }
+
+    private:
 
         /** Start Device and Fetch Data Through Channels
          *
          *  This call blocks thread indefinitely
          */
-        void run() {
-            grabber->start();
-
-            // TODO: find an appropriate program termination condition
-            while (true){
+        void _run() {
+            while (isRunning){
                 CloudOutPtrT cloudOut;
                 ImageOutPtrT imageOut;
                 Uv2PointIdMapConstPtrT map;
@@ -96,10 +108,11 @@ namespace telef::io {
                 }
                 lk.unlock();
             };
-
-            grabber->stop();
+            mergers.clear();
         }
-    private:
+
+
+
         void imageCloudCallback(const ImagePtrT &image, const CloudConstPtrT &cloud, const Uv2PointIdMapPtrT &uvToPointIdMap) {
             std::unique_lock<std::mutex> lk(dataMutex);
             if(cloudChannel) {
@@ -118,5 +131,7 @@ namespace telef::io {
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
         std::vector<std::shared_ptr<MergerT>> mergers;
         std::unique_ptr<TelefOpenNI2Grabber> grabber;
+        std::thread runThread;
+        volatile bool isRunning;
     };
 }

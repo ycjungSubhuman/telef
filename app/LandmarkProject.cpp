@@ -43,7 +43,7 @@ int main(int ac, const char* const * av)
     auto grabber = std::make_unique<TelefOpenNI2Grabber>("#1", depth_mode, image_mode);
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<IdentityPipe<MappedCloudConstT>>();
+    auto cloudPipe = std::make_shared<RemoveNaNPoints>();
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
     auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));

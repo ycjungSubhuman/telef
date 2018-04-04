@@ -2,15 +2,21 @@
 
 #include <iostream>
 #include <sstream>
+#include <ctime>
+#include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <experimental/filesystem>
+
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/io/png_io.h>
 #include <pcl/io/ply_io.h>
-#include <experimental/filesystem>
-#include <ctime>
-#include <future>
+
 #include "type.h"
 #include "camera.h"
 #include "bmp.h"
+#include "feature/feature_detector.h"
 
 using namespace telef::types;
 using namespace telef::feature;
@@ -73,37 +79,36 @@ namespace telef::io {
         bool saveRawCloud;
         int expectedPointsCount;
         int frameCount;
+
+        std::mutex dataMutex;
+        std::condition_variable nonempty;
+        std::queue<boost::shared_ptr<FittingSuite>> pendingData;
+
         std::experimental::filesystem::path folder;
-    public:
-        explicit FittingSuiteWriterFrontEnd (bool ignoreIncomplete=true, bool saveRGB=false, bool saveRawCloud=false, int expectedPointsCount=49):
-                ignoreIncomplete(ignoreIncomplete),
-                saveRGB(saveRGB),
-                saveRawCloud(saveRawCloud),
-                expectedPointsCount(expectedPointsCount),
-                frameCount(0) {
-            std::time_t t= std::time(nullptr);
-            auto localTime = std::localtime(&t);
-            std::stringstream folderNameStream;
-            folderNameStream << "capture_" << localTime->tm_mday << "-"
-                       << localTime->tm_mon+1 << "-"
-                       << localTime->tm_year+1900 << "-"
-                       << localTime->tm_hour << "-"
-                       << localTime->tm_min << "-"
-                       << localTime->tm_sec;
-            folder=folderNameStream.str();
-            std::experimental::filesystem::create_directory(folder);
-        }
-        void process(InputPtrT input) override {
-            if(ignoreIncomplete && (input->landmark3d->size() != expectedPointsCount)) {
-                return;
+
+        std::thread saveThread;
+        volatile bool isSaveRunning;
+
+        void saveLoop() {
+            while(isSaveRunning) {
+                std::unique_lock ul{dataMutex};
+                nonempty.wait(ul);
+                InputPtrT data = pendingData.front();
+                pendingData.pop();
+                ul.unlock();
+
+                save(data);
             }
-
-            auto save = std::bind(&FittingSuiteWriterFrontEnd::_save, this, std::placeholders::_1);
-            std::async(save, input);
-
+            std::cout << "Finishing up Save..." << std::endl;
+            while(!pendingData.empty()) {
+                std::cout << pendingData.size() << "frames to go" << std::endl;
+                save(pendingData.front());
+                pendingData.pop();
+            }
+            std::cout << "Save Complete" << std::endl;
         }
 
-        void _save(InputPtrT input) {
+        void save(InputPtrT input) {
             // point order is preserved from 0 to 48(see LandMarkMerger::merge)
             // So it is safe to just put every points in order
             std::stringstream sstream;
@@ -127,6 +132,42 @@ namespace telef::io {
 
             frameCount++;
             std::cout << "Captured" << std::endl;
+        }
+
+    public:
+        explicit FittingSuiteWriterFrontEnd (bool ignoreIncomplete=true, bool saveRGB=false, bool saveRawCloud=false, int expectedPointsCount=49):
+                ignoreIncomplete(ignoreIncomplete),
+                saveRGB(saveRGB),
+                saveRawCloud(saveRawCloud),
+                expectedPointsCount(expectedPointsCount),
+                saveThread(std::thread(&FittingSuiteWriterFrontEnd::saveLoop, this)),
+                isSaveRunning(true),
+                frameCount(0) {
+            std::time_t t= std::time(nullptr);
+            auto localTime = std::localtime(&t);
+            std::stringstream folderNameStream;
+            folderNameStream << "capture_" << localTime->tm_mday << "-"
+                             << localTime->tm_mon+1 << "-"
+                             << localTime->tm_year+1900 << "-"
+                             << localTime->tm_hour << "-"
+                             << localTime->tm_min << "-"
+                             << localTime->tm_sec;
+            folder=folderNameStream.str();
+            std::experimental::filesystem::create_directory(folder);
+        }
+        ~FittingSuiteWriterFrontEnd() {
+            isSaveRunning = false;
+            saveThread.join();
+        }
+        void process(InputPtrT input) override {
+            if(ignoreIncomplete && (input->landmark3d->size() != expectedPointsCount)) {
+                return;
+            }
+
+            std::unique_lock<std::mutex> ul {dataMutex};
+            pendingData.push(input);
+            ul.unlock();
+            nonempty.notify_all();
         }
     };
 }
