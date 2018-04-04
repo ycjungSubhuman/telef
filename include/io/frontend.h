@@ -157,6 +157,7 @@ namespace telef::io {
         }
         ~FittingSuiteWriterFrontEnd() {
             isSaveRunning = false;
+            nonempty.notify_all();
             saveThread.join();
         }
         void process(InputPtrT input) override {
