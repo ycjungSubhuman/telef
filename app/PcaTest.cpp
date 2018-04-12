@@ -1,9 +1,13 @@
 #include <iostream>
 #include <experimental/filesystem>
+#include <boost/program_options.hpp>
 
 #include "io/ply/meshio.h"
+#include "face/model.h"
 
 namespace fs = std::experimental::filesystem;
+namespace po = boost::program_options;
+
 int main() {
     auto path = fs::path("test.ply");
 

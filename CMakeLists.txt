@@ -89,4 +89,4 @@ target_link_libraries(FaceFeatureDetect
     )
 
 add_executable(PcaTest app/PcaTest.cpp)
-target_link_libraries(PcaTest stdc++fs telef)
+target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
