@@ -42,11 +42,13 @@ add_library(telef
         include/io/merger.h
         include/io/frontend.h
         include/image/image_pipe.h
+        include/io/ply/ply.h
 
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h)
+        src/io/ply/plyfile.c
+        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h)
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
@@ -76,7 +78,7 @@ target_link_libraries(LandmarkProject
         )
 
 
-add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp)
+add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect
     telef
