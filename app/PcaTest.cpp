@@ -11,4 +11,6 @@ int main() {
     std::cout << mesh.position.size() << std::endl;
     std::cout << mesh.color.size() << std::endl;
     std::cout << mesh.triangles.size() << std::endl;
+
+    telef::io::ply::writeMesh(fs::path("testout.ply"), mesh);
 }

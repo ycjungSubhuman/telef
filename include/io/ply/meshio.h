@@ -61,5 +61,19 @@ namespace telef::io::ply {
 
         return colorMesh;
     }
+
+    void writeMesh(fs::path f, ColorMesh &mesh) {
+        yaply::PlyFile plyFile;
+
+        assert(mesh.position.size() % 3 == 0);
+        plyFile["vertex"].nrElements = static_cast<size_t>(mesh.position.size()/3);
+        plyFile["vertex"].setScalars("x,y,z", mesh.position.data());
+        if(mesh.color.size() != 0) {
+            plyFile["vertex"].setScalars("red,green,blue", mesh.color.data());
+        }
+        plyFile["face"].nrElements = static_cast<size_t>(mesh.triangles.size());
+        plyFile["face"].setList("vertex_indices", mesh.triangles);
+        plyFile.save(f.c_str(), false);
+    }
 }
 

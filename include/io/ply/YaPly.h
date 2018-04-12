@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <limits>
 #include <sstream>
+#include <exception>
 
 namespace yaply {
 
@@ -242,7 +243,9 @@ inline const char* ply_type<type>() {\
     void PLY_ELEMENT::setList(const char* name, const std::vector<std::vector<TYPE>>& data) {
         PLY_PROPERTY_LIST<TYPE, uint32_t>& property = getPropertyCreate<
                                                       PLY_PROPERTY_LIST<TYPE, uint32_t>>(name);
-        CHECK (nrElements == data.size()) << "nr Elements in List do not match";
+        if (nrElements != data.size()) {
+           throw std::runtime_error("nr Elements in List do not match");
+        }
         for (size_t ii = 0; ii < nrElements; ii++){
             property.data[ii] = data[ii];
         }
