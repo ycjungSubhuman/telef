@@ -42,13 +42,12 @@ add_library(telef
         include/io/merger.h
         include/io/frontend.h
         include/image/image_pipe.h
-        include/io/ply/ply.h
+        include/io/ply/YaPly.h
 
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        src/io/ply/plyfile.c
-        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h)
+        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h)
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
@@ -88,3 +87,6 @@ target_link_libraries(FaceFeatureDetect
     opencv_imgproc
     opencv_flann
     )
+
+add_executable(PcaTest app/PcaTest.cpp)
+target_link_libraries(PcaTest stdc++fs telef)

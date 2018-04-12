@@ -7,88 +7,59 @@
 #include <Eigen/Core>
 
 #include "mesh/mesh.h"
-#include "io/ply/ply.h"
+#include "io/ply/YaPly.h"
 
 using namespace telef::mesh;
-using fs = std::experimental::filesystem;
+namespace fs = std::experimental::filesystem;
 
 namespace {
-    Eigen::Matrix2Xf getPositionAndColor(PlyFile *vertexElem, int numElem) {
-        for (int i=0; i<numElem; i++) {
-            ply_
-        }
-    }
-    Eigen::VectorXf getPosition(PlyFile *vertexElem, int numElem) {
-
-    }
-    Eigen::Matrix3Xf getFace(PlyFile *faceElem, int numElem) {
-
-    }
 }
 
 namespace telef::io::ply {
     ColorMesh readMesh(fs::path f) {
-        int nelems;
-        char **elem_names;
-        int file_type;
-        float version;
+        yaply::PlyFile plyFile {f.c_str()};
+        auto vertexElem = plyFile["vertex"];
+        auto faceElem = plyFile["face"];
+        assert (vertexElem.nrElements > 0);
+        std::vector<float> x;
+        std::vector<float> y;
+        std::vector<float> z;
+        std::vector<float> red;
+        std::vector<float> green;
+        std::vector<float> blue;
+        std::vector<std::vector<int>> vertex_index;
+        bool xSucc = vertexElem.getScalarProperty("x", x);
+        bool ySucc = vertexElem.getScalarProperty("y", y);
+        bool zSucc = vertexElem.getScalarProperty("z", z);
+        bool rSucc = vertexElem.getScalarProperty("red", red);
+        bool gSucc = vertexElem.getScalarProperty("green", green);
+        bool bSucc = vertexElem.getScalarProperty("blue", blue);
+        auto vi = faceElem.getProperty<yaply::PLY_PROPERTY_LIST<int32_t, int32_t>>("vertex_indices");
 
-        std::vector<char> filename(f.begin(), f.end());
-        PlyFile* ply = ply_open_for_reading(&filename[0], &nelems, &elem_names, &file_type, &version);
+        assert (xSucc && ySucc && zSucc);
+        assert (vi != nullptr);
 
-        if(ply == NULL) {
-            throw std::runtime_error("File Open Failed");
-        }
-
-        // Read vertex element
-        int numVertexElems;
-        bool isColorMesh = false;
-        {
-            int numVertexProps;
-            ply_get_element_description(ply, const_cast<char *>("vertex"), &numVertexElems, &numVertexProps);
-            PlyProperty *vertexPropList;
-            // Vertex element sanity check && Detect color properties
-            assert(numVertexProps >= 3);
-            assert(std::strcmp("x", vertexElement->props[0]->name) == 0);
-            assert(std::strcmp("y", vertexElement->props[1]->name) == 0);
-            assert(std::strcmp("z", vertexElement->props[2]->name) == 0);
-            if (numVertexProps != 3) {
-                assert(numVertexProps == 6);
-                assert(std::strcmp("red", vertexElement->props[3]->name) == 0);
-                assert(std::strcmp("green", vertexElement->props[4]->name) == 0);
-                assert(std::strcmp("blue", vertexElement->props[5]->name) == 0);
-                isColorMesh = true;
+        std::vector<float> position(x.size()*3);
+        std::vector<float> color(red.size()*3);
+        for (unsigned long i = 0; i < x.size(); i++) {
+            position[i*3+0] = x[i];
+            position[i*3+1] = y[i];
+            position[i*3+2] = z[i];
+            if(rSucc && gSucc && bSucc) {
+                color[i * 3 + 0] = red[i];
+                color[i * 3 + 1] = green[i];
+                color[i * 3 + 2] = blue[i];
             }
         }
 
-        // Read face element
-        int numFaceElems;
-        {
-            int numFaceProps;
-            PlyProperty *facePropList;
-            ply_get_element_description(ply, const_cast<char *>("face"), &numFaceElems, &numFaceProps);
-            // Face element sanity check
-            assert(faceElement->props[0]->is_list == PLY_LIST);
-        }
+        vertex_index = vi->data;
 
-        ColorMesh mesh;
+        ColorMesh colorMesh;
+        colorMesh.position = Eigen::Map<Eigen::VectorXf> (position.data(), position.size());
+        colorMesh.color = Eigen::Map<Eigen::VectorXf> (color.data(), color.size());
+        colorMesh.triangles = std::move(vertex_index);
 
-        // Read vertex element into Eigen matrix
-        if(isColorMesh) {
-            auto posCol = getPositionAndColor(ply, numVertexElems);
-            mesh.position.swap(posCol.col(0));
-            mesh.color.swap(posCol.col(1));
-        }
-        else {
-            auto pos = getPosition(ply, numVertexElems);
-            mesh.position.swap(pos.col(0));
-        }
-
-
-        auto face = getFace(ply, numFaceElems);
-
-        ply_close(ply);
-        return ColorMesh();
+        return colorMesh;
     }
 }
 
