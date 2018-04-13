@@ -131,10 +131,7 @@ boost::shared_ptr<cv::Mat> loadCvMatFromCSV(string fname) {
     return cvMat;
 }
 
-/*
-typedef pcl::search::KdTree<PointTarget> KdTree;
-typedef typename KdTree::Ptr KdTreePtr;
-*/
+
 int main(int argc, char** argv) {
 
     if (argc != 5) {
@@ -147,6 +144,7 @@ int main(int argc, char** argv) {
     string lmk_faces_fname = argv[3];
     string lmk_b_coords_fname = argv[4];
 
+    // Load Mean Face model
     pcl::PolygonMesh::Ptr mesh = load_template(model_fname);
 
     boost::shared_ptr<cv::Mat> lmks = loadCvMatFromCSV(lmk_fname);
@@ -167,9 +165,6 @@ int main(int argc, char** argv) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr model_ptr(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromPCLPointCloud2(mesh->cloud,*model_ptr);
 
-    //cout << "Polygon verts: " << model_ptr->points[mesh->polygons[1515].vertices[0]] << "\n";
-
-
 
     //Get only faces of model
     pcl::PointCloud<pcl::PointXYZ>::Ptr model_lmk_points(new pcl::PointCloud<pcl::PointXYZ>);
@@ -180,15 +175,6 @@ int main(int argc, char** argv) {
 
     pcl::search::Search<pcl::PointXYZ>* kdtree = new pcl::search::KdTree<pcl::PointXYZ> ();
     unsigned int no_of_neighbors = 1;
-
-    /*
-    kdtree->setInputCloud(model_ptr);
-
-    vector<int> k_indices;
-    k_indices.resize (no_of_neighbors);
-    vector<float> k_distances;
-    k_distances.resize (no_of_neighbors);
-     */
 
     for (int idx = 0; idx < lmk_faces_idx->rows; idx++) {
         // current landmark index from Captured landmakrs
@@ -228,19 +214,10 @@ int main(int argc, char** argv) {
         // Add correspondances between inderpolated lmk@indk and captured lmk@idx
         pcl::Correspondence corr;
 
-        // Compute nearest point on the model
-        //kdtree->nearestKSearch (mdl_lmk_point, 1, k_indices, k_distances);
-        //auto index_match = k_indices[0];
-        //auto distance_mdl = k_distances[0];
 
         // Euclidean distance between lmks
         auto distance = pcl::geometry::distance(mdl_lmk_point, lmksPtCld->points[idx]);
-        //auto distance = pcl::geometry::distance(model_ptr->points[index_match],lmksPtCld->points[idx]);
 
-        //cout << "Distance["<<idx<<"]: "<< distance << endl;
-        //corr.index_query = index_match;
-
-        // Interpolated lmk
         corr.index_query = idx;
 
         // Captured lmk
@@ -256,7 +233,6 @@ int main(int argc, char** argv) {
     // Use SVD to estimate Rigid Transformation between interpolated
     Eigen::Matrix4f transformation;
     pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ> svd;
-    //svd.estimateRigidTransformation(*model_ptr, *lmksPtCld, *lmk_corres, transformation);
     svd.estimateRigidTransformation(*model_lmk_points, *lmksPtCld, *lmk_corres, transformation);
 
     cout << "Transformtion Matrix: " << transformation << endl;
@@ -264,70 +240,6 @@ int main(int argc, char** argv) {
     // Use resultant Transformtion Matrix from SVD to Model to rigid transform Model -> captured Landmarks
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
     pcl::transformPointCloud (*model_ptr, *transformed_cloud, transformation);
-
-
-    // TODO: Clean up after commit to save work
-    //pcl::registration::CorrespondenceEstimation<pcl::PointXYZ, pcl::PointXYZ> corr_est;
-    // Correspondance Estimation: Too many points, just ends up grabbing closest points with poor result
-    // Most features are mapped to the tip of the nose
-    /*
-    pcl::CorrespondencesPtr correspondences (new pcl::Correspondences);
-    pcl::registration::CorrespondenceEstimation<pcl::PointXYZ, pcl::PointXYZ> corr_est;
-    corr_est.setInputCloud(lmksPtCld);
-    corr_est.setInputTarget(model_lmk_points);
-    corr_est.determineCorrespondences(*correspondences);
-     */
-    /*
-    for (int i = 0; i < correspondences->size(); ++i)
-        pcl::console::print_value("Correspondences: %f\n",(*correspondences)[i]);
-
-    for (int i = 0; i < correspondences->size(); ++i)
-        pcl::console::print_value("Correspondences: %f\n",(*correspondences)[i]);
-    */
-
-    /* ICP is not good enough. I think it should expect both point clouds to be
-     * Close in alignment, points, and structure. Not good for  3D model and sparse features
-     */
-
-    /*
-    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-    icp.setInputCloud(model_lmk_points);
-    icp.setInputTarget(lmksPtCld);
-    icp.setEuclideanFitnessEpsilon(1e-5);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr final(new pcl::PointCloud<pcl::PointXYZ>);
-    icp.align(*final);
-     */
-
-
-    /* ICP NL is not good enough. It gits stuck in a local minimum,
-     * probably due to Full 3D face model of flame and the relatively flat features
-     */
-    /*
-    pcl::IterativeClosestPointNonLinear<pcl::PointXYZ, pcl::PointXYZ> icp;
-    icp.setInputSource (model_ptr);
-    //icp.setInputSource (model_lmk_points);
-    icp.setInputTarget (lmksPtCld);
-    icp.setEuclideanFitnessEpsilon(1e-15);
-    icp.setRANSACIterations(2000);
-    icp.setMaxCorrespondenceDistance(1);
-    icp.setMaximumIterations(1000);
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr final(new pcl::PointCloud<pcl::PointXYZ>);
-    icp.align(*final);
-     */
-
-
-    // creates the visualization object and adds either our orignial cloud or all of the inliers
-    // depending on the command line arguments specified.
-    /*
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
-    viewer = simpleVis(lmksPtCld);
-
-    if (pcl::console::find_argument (argc, argv, "-f") >= 0 || pcl::console::find_argument (argc, argv, "-sf") >= 0)
-        viewer = simpleVis(lmksPtCld);
-    else
-        viewer = simpleVis(model_ptr);
-    */
 
 
     //---------------Visualize--------------------------
@@ -344,14 +256,12 @@ int main(int argc, char** argv) {
     viewer->addPointCloud<pcl::PointXYZ> (lmksPtCld, single_color1, "Landmarks");
     viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "Landmarks");
 
-    //viewer->addPointCloud(lmksPtCld, "Landmarks", 0);
 
 
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color2(transformed_cloud, 0, 255, 0);
     viewer->addPointCloud<pcl::PointXYZ> (transformed_cloud, single_color2, "ICP Result");
     viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "ICP Result");
-    /**/
-    //viewer->addPointCloud(final, "Rigid ICP", 0);
+
     //viewer->addCorrespondences<pcl::PointXYZ>(model_ptr, lmksPtCld, *lmk_corres, "Correspondences");
 
 
