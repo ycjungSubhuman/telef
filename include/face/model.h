@@ -229,4 +229,15 @@ namespace telef::face {
             return genMesh(Eigen::Map<Eigen::Matrix<float, ShapeRank, 1>>(coeff.data(), coeff.size()));
         }
     };
-}
+
+
+    template <int ShapeRank>
+    class MorphableClusterModel {
+        MorphableClusterModel (std::vector<fs::path> files) {
+            assert(files.size() > 0);
+            std::vector<ColorMesh> meshes(files.size());
+            std::transform(files.begin(), files.end(), meshes.begin(), [](auto &a){return read(a);});
+
+        }
+    };
+};

@@ -47,7 +47,7 @@ add_library(telef
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h)
+        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h include/cluster/cluster.h)
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
