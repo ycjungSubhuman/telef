@@ -37,7 +37,7 @@ inline const char* ply_type<type>() {\
     DEFINE_PLY_TYPE(int16_t, short);
     DEFINE_PLY_TYPE(uint16_t, ushort);
     DEFINE_PLY_TYPE(int32_t, int);
-    DEFINE_PLY_TYPE(uint32_t, uint);
+    DEFINE_PLY_TYPE(uint32_t, uchar);
     DEFINE_PLY_TYPE(float, float);
     DEFINE_PLY_TYPE(double, double);
 

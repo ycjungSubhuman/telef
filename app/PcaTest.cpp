@@ -1,20 +1,21 @@
 #include <iostream>
 #include <experimental/filesystem>
-#include <boost/program_options.hpp>
 
 #include "io/ply/meshio.h"
 #include "face/model.h"
 
 namespace fs = std::experimental::filesystem;
-namespace po = boost::program_options;
 
 int main() {
-    auto path = fs::path("test.ply");
+    std::vector<fs::path> files;
+    for (int i=1; i<=50; i++) {
+        files.push_back("/home/ycjung/Projects/flame-fitting/output/" + std::to_string(i) + ".ply");
+    }
+    telef::face::MorphableFaceModel<10> model(files);
+    std::cout << "GENED" << std::endl;
 
-    auto mesh = telef::io::ply::readMesh(path);
-    std::cout << mesh.position.size() << std::endl;
-    std::cout << mesh.color.size() << std::endl;
-    std::cout << mesh.triangles.size() << std::endl;
-
-    telef::io::ply::writeMesh(fs::path("testout.ply"), mesh);
+    for(int i=1; i<10; i++) {
+        auto sample = model.sample();
+        telef::io::ply::writeMesh(fs::path("sample"+std::to_string(i)+".ply"), sample);
+    }
 }
