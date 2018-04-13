@@ -47,6 +47,7 @@ add_library(telef
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
         include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h)
+
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
@@ -59,21 +60,27 @@ add_executable(KinectTest app/KinectTest.cpp)
 target_link_libraries(KinectTest
         telef
         ${PCL_IO_LIBRARIES}
-        )
-
-add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
-target_link_libraries(LandmarkProject
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
         opencv_core
         opencv_objdetect
         opencv_highgui
         opencv_imgproc
         opencv_flann
         )
+
+# TODO: Uncomment before merging with master, fix issues first
+#add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
+#target_link_libraries(LandmarkProject
+#        stdc++fs
+#        ${Boost_LIBRARIES}
+#        telef
+#        ${PCL_IO_LIBRARIES}
+#        ${PCL_VISUALIZATION_LIBRARIES}
+#        opencv_core
+#        opencv_objdetect
+#        opencv_highgui
+#        opencv_imgproc
+#        opencv_flann
+#        )
 
 
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp)
@@ -86,3 +93,18 @@ target_link_libraries(FaceFeatureDetect
     opencv_imgproc
     opencv_flann
     )
+
+add_executable(RigidAlighnment app/RigidAlighnment.cpp src/io/modelio.cpp)
+target_link_libraries(RigidAlighnment
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
+        )
