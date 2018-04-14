@@ -26,5 +26,7 @@ int main() {
         telef::io::ply::writeMesh(fs::path("newsample"+std::to_string(i)+".ply"), sample);
     }
 
+    telef::face::MorphableClusterModel<10> model3(files);
+
     return 0;
 }

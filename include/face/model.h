@@ -15,6 +15,7 @@
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 #include "io/ply/meshio.h"
+#include "cluster/cluster.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -233,11 +234,12 @@ namespace telef::face {
 
     template <int ShapeRank>
     class MorphableClusterModel {
+    public:
         MorphableClusterModel (std::vector<fs::path> files) {
             assert(files.size() > 0);
             std::vector<ColorMesh> meshes(files.size());
             std::transform(files.begin(), files.end(), meshes.begin(), [](auto &a){return read(a);});
-
+            cluster::KMeansCluster<ColorMesh> wow(40, 100);
         }
     };
 };
