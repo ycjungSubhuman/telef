@@ -34,15 +34,19 @@ namespace {
         // Sort eigenvectors according to (singular value)^2 / (n -1), which is equal to eigenvalues
         std::vector<std::pair<float, Eigen::VectorXf>> pairs;
         if (d.rows() <= d.cols()) { //singular values are shorter than position dimension
+            std::cout << "Singular values are shorter then dimension" << std::endl;
             pairs.resize(static_cast<unsigned long>(bdc.singularValues().rows()));
         }
         else { // singular values are exact match with V
+            std::cout << "Exact match" << std::endl;
             pairs.resize(static_cast<unsigned long>(d.cols()));
         }
         for(unsigned long i=0; i<pairs.size(); i++) {
+            auto s = bdc.singularValues()(i);
+            auto s2 = s*s;
             pairs[i] = std::make_pair(
-                    std::pow(bdc.singularValues()(i), 2.0), // propertional to eigenvalue (omitted /(n-1))
-                    bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
+                    s2, // propertional to eigenvalue (omitted /(n-1))
+                    bdc.matrixV().col(i)*s2); // eivenvector, which is a PCA basis
         }
         std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {return l.first > r.first;});
 
@@ -53,6 +57,7 @@ namespace {
 
         // Fill in empty basis if given PCA rank is higher than the rank of the data matrix
         if (Rank > d.cols()) {
+            std::cout << "WARNING : given rank is higher than number of singular values" << std::endl;
             for (long i = d.cols(); i < Rank; i++) {
                 result.col(i) = Eigen::VectorXf::Zero(d.cols());
             }
@@ -219,7 +224,7 @@ namespace telef::face {
 
         /* Generate a random sample ColorMesh */
         ColorMesh sample() {
-            std::normal_distribution<float> dist(0.0, 0.03);
+            std::normal_distribution<float> dist(0.0, 0.003);
 
             std::vector<float> coeff(static_cast<unsigned long>(ShapeRank));
             std::generate(coeff.begin(), coeff.end(), [this, &dist]{return dist(this->mt);});
@@ -227,6 +232,7 @@ namespace telef::face {
                 std::cout << a << ", ";
             }
             std::cout << std::endl;
+
             return genMesh(Eigen::Map<Eigen::Matrix<float, ShapeRank, 1>>(coeff.data(), coeff.size()));
         }
     };

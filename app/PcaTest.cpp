@@ -8,10 +8,10 @@ namespace fs = std::experimental::filesystem;
 
 int main() {
     std::vector<fs::path> files;
-    for (int i=1; i<=1000; i++) {
+    for (int i=1; i<=4000; i++) {
         files.push_back("/home/ycjung/Projects/flame-fitting/output/" + std::to_string(i) + ".ply");
     }
-    telef::face::MorphableFaceModel<50> model(files);
+    telef::face::MorphableFaceModel<150> model(files);
 
     for(int i=1; i<10; i++) {
         auto sample = model.sample();
@@ -19,14 +19,14 @@ int main() {
     }
     model.save(fs::path("data/example"));
 
-    telef::face::MorphableFaceModel<50> model2(fs::path("data/example"));
+    telef::face::MorphableFaceModel<150> model2(fs::path("data/example"));
 
     for(int i=1; i<10; i++) {
         auto sample = model2.sample();
         telef::io::ply::writeMesh(fs::path("newsample"+std::to_string(i)+".ply"), sample);
     }
 
-    telef::face::MorphableClusterModel<10> model3(files);
+    telef::face::MorphableClusterModel<150> model3(files);
 
     return 0;
 }
