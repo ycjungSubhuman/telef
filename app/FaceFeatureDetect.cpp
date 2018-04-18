@@ -83,8 +83,7 @@ int test_cv(cv::Mat frame) {
                 for (int i = 0; i < featCoords.cols; i++) {
                     int x_coord = (int) featCoords.at<float>(0, i);
                     int y_coord = (int) featCoords.at<float>(1, i);
-                    cv::circle(frame, cv::Point(x_coord, y_coord), 1,
-                               cv::Scalar(0, 255, 0), -1);
+                    cv::circle(frame, cv::Point(x_coord, y_coord), 1, cv::Scalar(0, 255, 0), -1);
                 }
             }
         }
@@ -111,6 +110,7 @@ int test_detector(cv::Mat frame) {
         int x_coord = (int) featureData.points(0, i);
         int y_coord = (int) featureData.points(1, i);
         cv::circle(frame, cv::Point(x_coord, y_coord), 1, cv::Scalar(0, 255, 0), -1);
+        cv::putText(frame, std::to_string(i), cv::Point(x_coord+2, y_coord), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0,255,0));
     }
 
     imwrite("output.jpg", frame);

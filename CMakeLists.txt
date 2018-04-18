@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fopenmp -march=native")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -42,11 +42,12 @@ add_library(telef
         include/io/merger.h
         include/io/frontend.h
         include/image/image_pipe.h
+        include/io/ply/YaPly.h
 
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h)
+        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h include/cluster/cluster.h)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -61,13 +62,10 @@ target_link_libraries(KinectTest
         telef
         ${PCL_IO_LIBRARIES}
         opencv_core
-        opencv_objdetect
-        opencv_highgui
         opencv_imgproc
-        opencv_flann
+        opencv_highgui
         )
 
-# TODO: Uncomment before merging with master, fix issues first
 #add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
 #target_link_libraries(LandmarkProject
 #        stdc++fs
@@ -83,16 +81,22 @@ target_link_libraries(KinectTest
 #        )
 
 
-add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp)
+add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect
-    telef
-    opencv_core
-    opencv_objdetect
-    opencv_highgui
-    opencv_imgproc
-    opencv_flann
-    )
+        telef
+        opencv_core
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
+        )
+
+add_executable(PcaTest app/PcaTest.cpp)
+target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
+
+add_executable(PcaSample app/PcaSample.cpp)
+target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlighnment

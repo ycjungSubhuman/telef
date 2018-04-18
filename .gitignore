@@ -2,7 +2,10 @@ build
 cmake-build*
 .idea/
 src/io/modelio.cpp
-include/face/*.h
+include/face/binary_model_file.h
+include/face/FaceAlignment.h
+include/face/Marcos.h
+include/face/XXDescriptor.h
 models/*.bin
 models/*.xml
 lib/libface.a
