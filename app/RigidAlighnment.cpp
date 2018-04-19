@@ -8,13 +8,18 @@
 #include <vector>
 #include <time.h>
 #include <sys/stat.h>
+#include <fstream>
+
+#include <Eigen/Dense>
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/eigen.hpp>
 #include <opencv2/ml/ml.hpp>
 
 #include <pcl/common/common.h>
 #include <pcl/conversions.h>
 #include <pcl/io/obj_io.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/console/parse.h>
@@ -36,7 +41,6 @@
 
 using namespace std;
 using namespace cv;
-//using namespace telef::feature;
 
 bool fileExists(const string& name) {
     struct stat buffer;
@@ -58,7 +62,7 @@ simpleVis (pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud)
     return (viewer);
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr matToPointXYZ(cv::Mat cvPtCld)
+pcl::PointCloud<pcl::PointXYZ>::Ptr matToPointXYZ(cv::Mat mat)
 {
     /*
     *  Function: Get from a Mat to pcl pointcloud datatype
@@ -70,13 +74,13 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr matToPointXYZ(cv::Mat cvPtCld)
     pcl::PointCloud<pcl::PointXYZ>::Ptr ptCld_ptr(new pcl::PointCloud<pcl::PointXYZ>);
     //(new pcl::pointcloud<pcl::pointXYZ>);
 
-    for(int i=0;i<cvPtCld.rows;i++)
+    for(int i=0; i < mat.rows; i++)
     {
 
         pcl::PointXYZ point;
-        point.x = cvPtCld.at<float>(i,0);
-        point.y = cvPtCld.at<float>(i,1);
-        point.z = cvPtCld.at<float>(i,2);
+        point.x = mat.at<float>(i,0);
+        point.y = mat.at<float>(i,1);
+        point.z = mat.at<float>(i,2);
 
         //std::cout<<point.x<<", "<<point.y<<", "<<point.z<<endl;
         // when color needs to be added:
@@ -87,6 +91,34 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr matToPointXYZ(cv::Mat cvPtCld)
 
 
     }
+    ptCld_ptr->width = (int)ptCld_ptr->points.size();
+    ptCld_ptr->height = 1;
+
+    return ptCld_ptr;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr matToPointXYZ(Eigen::MatrixXf mat)
+{
+    /*
+    *  Function: Get from a Mat to pcl pointcloud datatype
+    *  In: cv::Mat
+    *  Out: pcl::PointCloud
+    */
+
+    //char pr=100, pg=100, pb=100;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr ptCld_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+
+    for(int i=0; i < mat.rows(); i++)
+    {
+
+        pcl::PointXYZ point;
+        point.x = mat(i,0);
+        point.y = mat(i,1);
+        point.z = mat(i,2);
+
+        ptCld_ptr->points.push_back(point);
+    }
+
     ptCld_ptr->width = (int)ptCld_ptr->points.size();
     ptCld_ptr->height = 1;
 
@@ -113,7 +145,7 @@ pcl::PolygonMesh::Ptr load_template(string fname) {
     return mesh;
 }
 
-boost::shared_ptr<cv::Mat> loadCvMatFromCSV(string fname) {
+boost::shared_ptr<cv::Mat> readCSVtoCV(string fname) {
     if (! fileExists(fname)) {
         cout << "File doesn't exist " << fname << endl;
     }
@@ -124,13 +156,32 @@ boost::shared_ptr<cv::Mat> loadCvMatFromCSV(string fname) {
     CvMLData mlData;
     mlData.read_csv(fname.c_str());
 
-    //Seems Mat takes ownership of this pointer, if I delete it then it Seg Faults
+    // cv::Mat takes ownership of this pointer
     const CvMat* tmp = mlData.get_values();
     boost::shared_ptr<cv::Mat> cvMat(new cv::Mat(tmp, true));
 
     return cvMat;
 }
 
+/**
+ * Reads a CSV file an returns the data as an Eigan Matrix
+ *
+ * @param fname
+ * @param rows
+ * @param cols
+ * @return
+ */
+boost::shared_ptr<Eigen::MatrixXf> readCSVtoEigan(string fname) {
+
+    // Using OpenCV to be able to create an arbitrary sized matrix
+    // as well as not reinventing the wheel.
+    boost::shared_ptr<cv::Mat> cvsMat = readCSVtoCV(fname);
+
+    boost::shared_ptr<Eigen::MatrixXf> eigMat(new Eigen::MatrixXf());
+    cv::cv2eigen(*cvsMat, *eigMat);
+
+    return eigMat;
+}
 
 int main(int argc, char** argv) {
 
@@ -147,19 +198,29 @@ int main(int argc, char** argv) {
     // Load Mean Face model
     pcl::PolygonMesh::Ptr mesh = load_template(model_fname);
 
-    boost::shared_ptr<cv::Mat> lmks = loadCvMatFromCSV(lmk_fname);
-    cout << "Loaded Landmarks: " /*<< *lmks */<< "\n";
+//    boost::shared_ptr<cv::Mat> lmks = readCSVtoCV(lmk_fname);
+//    cout << "Loaded Landmarks (OpenCV): " /*<< *lmks */<< "\n";
 
-    boost::shared_ptr<cv::Mat> lmk_faces_idx = loadCvMatFromCSV(lmk_faces_fname);
-    cout << "Loaded lmk_faces_idx: " << lmk_faces_idx->rows << "\n";
+    boost::shared_ptr<Eigen::MatrixXf> eigLmks = readCSVtoEigan(lmk_fname);
+    cout << "Loaded Landmarks (Eigan): " << *eigLmks << "\n";
 
-    boost::shared_ptr<cv::Mat> lmk_b_coords = loadCvMatFromCSV(lmk_b_coords_fname);
-    cout << "Loaded lmk_b_coords: " /*<< *lmk_b_coords */<< "\n";
+    boost::shared_ptr<cv::Mat> lmk_faces_idx = readCSVtoCV(lmk_faces_fname);
+    cout << "Loaded lmk_faces_idx (OpenCV): " << lmk_faces_idx->rows << "\n";
+
+    boost::shared_ptr<Eigen::MatrixXf> eig_lmk_faces_idx = readCSVtoEigan(lmk_faces_fname);
+    cout << "Loaded lmk_faces_idx (Eigan): " << *eig_lmk_faces_idx << "\n";
+
+    boost::shared_ptr<cv::Mat> lmk_b_coords = readCSVtoCV(lmk_b_coords_fname);
+    cout << "Loaded lmk_b_coords (OpenCV): " /*<< *lmk_b_coords */<< "\n";
+
+    boost::shared_ptr<Eigen::MatrixXf> eig_lmk_b_coords = readCSVtoEigan(lmk_b_coords_fname);
+    cout << "Loaded lmk_b_coords (Eigan): " << *eig_lmk_b_coords << "\n";
 
 
     // Convert cv::Mat into PointCloud<PointT>
-    pcl::PointCloud<pcl::PointXYZ>::Ptr lmksPtCld = matToPointXYZ(*lmks);
-
+    //pcl::PointCloud<pcl::PointXYZ>::Ptr lmksPtCld = matToPointXYZ(*lmks);
+    // Is necessary, we could use just Eigan maybe??
+    pcl::PointCloud<pcl::PointXYZ>::Ptr lmksPtCld = matToPointXYZ(*eigLmks);
 
     // Convert PointCloud2 into PointCloud<PointT>
     pcl::PointCloud<pcl::PointXYZ>::Ptr model_ptr(new pcl::PointCloud<pcl::PointXYZ>);
@@ -185,7 +246,7 @@ int main(int argc, char** argv) {
          * Using the barycentric coordinates and face indices
          * provided by the FLAME demonstration code.
          *
-         * NOTE: Bary coods sum to 1
+         * NOTE: Bary coords sum to 1
          */
         // 3 points per polygon face (Triangle)
         auto m_pol_verts = mesh->polygons[face_idx].vertices;
@@ -197,7 +258,7 @@ int main(int argc, char** argv) {
         // Interpolated point holder
         pcl::PointXYZ mdl_lmk_point;
 
-        // Interpolation of cartisian cords done using bary coods
+        // Interpolation of cartesian cords done using bary coods
         mdl_lmk_point.x = (point1.x * lmk_b_coords->at<float>(idx,0))
                        + (point2.x * lmk_b_coords->at<float>(idx,1))
                        + (point3.x * lmk_b_coords->at<float>(idx,2));

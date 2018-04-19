@@ -43,6 +43,7 @@ add_library(telef
         include/io/frontend.h
         include/image/image_pipe.h
         include/io/ply/YaPly.h
+        #include/align/rigid.h
 
         # src
         src/cloud/cloud_pipe.cpp
