@@ -60,6 +60,11 @@ add_executable(KinectTest app/KinectTest.cpp)
 target_link_libraries(KinectTest
         telef
         ${PCL_IO_LIBRARIES}
+        opencv_core
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
         )
 
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
