@@ -31,3 +31,11 @@ cd build
 cmake ../
 make
 ```
+
+## Reference
+
+Face model samples
+* Tianye Li*, Timo Bolkart*, Michael J. Black, Hao Li, and Javier Romero. 2017. Learning a model of facial shape and expression from 4D scans. ACM Trans. Graph. 36, 6, Article 194 (November 2017), 17 pages. https://doi.org/10.1145/3130800.3130813
+
+Landmark detection temporary implementation
+X. Xiong and F. De la Torre. 2013. Supervised descent method and its applications to face alignment. In Conference on Computer Vision and Pattern Recognition. 532–539
