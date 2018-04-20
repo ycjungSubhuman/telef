@@ -43,11 +43,15 @@ add_library(telef
         include/io/frontend.h
         include/image/image_pipe.h
         include/io/ply/YaPly.h
-        #include/align/rigid.h
+        include/align/rigid.h
+        include/align/rigid_pipe.h
+        include/util/eigen_pcl.h
+        include/io/align/align_frontend.h
 
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
+        src/align/svd_rigid_alignment.cpp
         include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h include/cluster/cluster.h)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
@@ -67,19 +71,20 @@ target_link_libraries(KinectTest
         opencv_highgui
         )
 
-#add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
-#target_link_libraries(LandmarkProject
-#        stdc++fs
-#        ${Boost_LIBRARIES}
-#        telef
-#        ${PCL_IO_LIBRARIES}
-#        ${PCL_VISUALIZATION_LIBRARIES}
-#        opencv_core
-#        opencv_objdetect
-#        opencv_highgui
-#        opencv_imgproc
-#        opencv_flann
-#        )
+add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
+target_link_libraries(LandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(LandmarkProject
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
+        )
 
 
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
@@ -111,5 +116,20 @@ target_link_libraries(RigidAlighnment
         opencv_objdetect
         opencv_highgui
         opencv_imgproc
+        opencv_flann
+        )
+
+add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp include/io/ply/meshio.h)
+target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(RigidAlignmentTest
+        stdc++fs
+        telef
+        ${Boost_LIBRARIES}
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
         opencv_flann
         )

@@ -115,6 +115,47 @@ namespace telef::io {
         }
     };
 
+    // PipeOutT is the output of the given pipe, the pipe = FittingSuite -> pipe1 -> a -> pipe2 -> PipeOutT
+    template <class PipeOutT>
+    class FittingSuitePipeMerger : public BinaryMerger<ImageT, MappedCloudConstT, FittingSuite, PipeOutT> {
+    private:
+        using BaseT = BinaryMerger<ImageT, MappedCloudConstT, FittingSuite, PipeOutT>;
+        using OutPtrT = const boost::shared_ptr<FittingSuite>;
+        using PipeT = Pipe<FittingSuite, PipeOutT>;
+
+        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+
+    public:
+        FittingSuitePipeMerger(std::shared_ptr<PipeT> pipe) : BaseT(pipe) {}
+        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override {
+            auto landmark3d = boost::make_shared<CloudT>();
+            auto rawCloud = cloudPair->first;
+            auto mapping = cloudPair->second;
+            feature::IntraFace featureDetector;
+            auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
+            for (long i=0; i<feature->points.cols(); i++) {
+                try {
+                    auto pointInd = mapping->getMappedPointId(feature->points(0, i), feature->points(1, i));
+                    landmark3d->push_back(rawCloud->at(pointInd));
+                } catch (std::out_of_range &e) {
+                    std::cout << "WARNING: Landmark Points at Hole." << std::endl;
+                }
+            }
+
+            landmark3d->height = rawCloud->height;
+            landmark3d->width = rawCloud->width;
+            std::cout << landmark3d->size() <<std::endl;
+
+            auto result = boost::make_shared<FittingSuite>();
+            result->landmark2d = feature;
+            result->landmark3d = landmark3d;
+            result->rawCloud = rawCloud;
+            result->rawImage = image;
+
+            return result;
+        }
+    };
+
     /**
      * Just discard image and select PointCloud. Used for debugging
      */
