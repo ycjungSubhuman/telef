@@ -53,6 +53,11 @@ target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
         ${PCL_IO_LIBRARIES}
+        opencv_core
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
         )
 add_library(modelio src/io/modelio.cpp)
 
