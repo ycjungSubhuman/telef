@@ -156,7 +156,7 @@ namespace {
         int count = std::stoi(c);
         std::string pt;
         while(f >> pt) {
-            lmk.push_back(std::stoi(c));
+            lmk.push_back(std::stoi(pt));
         }
     }
 }
@@ -234,6 +234,10 @@ namespace telef::face {
             std::cout << std::endl;
 
             return genMesh(Eigen::Map<Eigen::Matrix<float, ShapeRank, 1>>(coeff.data(), coeff.size()));
+        }
+
+        std::vector<int> getLandmarks() {
+            return landmarks;
         }
     };
 
