@@ -31,35 +31,19 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
 add_library(telef
-        # hdrs
-        include/feature/feature_detector.h
-        include/io/channel.h
-        include/io/device.h
-        include/io/pipe.h
-        include/cloud/cloud_pipe.h
-        include/type.h
-        include/io/grabber.h
-        include/io/merger.h
-        include/io/frontend.h
-        include/image/image_pipe.h
-        include/io/ply/YaPly.h
-        include/align/rigid.h
-        include/align/rigid_pipe.h
-        include/util/eigen_pcl.h
-        include/io/align/align_frontend.h
-
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
         src/align/rigid_pipe.cpp
         src/io/align/rigid_frontend.cpp
-        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h include/cluster/cluster.h)
+        src/io/ply/meshio.cpp src/io/bmp.cpp)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
         ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
         )
 add_library(modelio src/io/modelio.cpp)
 
@@ -124,8 +108,8 @@ add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(RigidAlignmentTest
         stdc++fs
-        ${Boost_LIBRARIES}
         telef
+        ${Boost_LIBRAREIS}
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}
         opencv_core
