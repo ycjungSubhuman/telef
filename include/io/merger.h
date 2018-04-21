@@ -140,8 +140,11 @@ namespace telef::io {
                     landmark3d->push_back(rawCloud->at(pointInd));
                 } catch (std::out_of_range &e) {
                     badlmks.push_back(i);
-                    std::cout << "WARNING: Landmark Points at Hole." << std::endl;
                 }
+            }
+
+            if (badlmks.size() > 0) {
+                std::cout << "WARNING: Landmark Points at Hole." << std::endl;
             }
 
             landmark3d->height = rawCloud->height;
