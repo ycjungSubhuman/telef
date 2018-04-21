@@ -31,33 +31,19 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
 add_library(telef
-        # hdrs
-        include/feature/feature_detector.h
-        include/io/channel.h
-        include/io/device.h
-        include/io/pipe.h
-        include/cloud/cloud_pipe.h
-        include/type.h
-        include/io/grabber.h
-        include/io/merger.h
-        include/io/frontend.h
-        include/image/image_pipe.h
-        include/io/ply/YaPly.h
-
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h include/cluster/cluster.h)
+        src/align/rigid_pipe.cpp
+        src/io/align/rigid_frontend.cpp
+        src/io/ply/meshio.cpp src/io/bmp.cpp)
+
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
         ${PCL_IO_LIBRARIES}
-        opencv_core
-        opencv_objdetect
-        opencv_highgui
-        opencv_imgproc
-        opencv_flann
+        ${PCL_VISUALIZATION_LIBRARIES}
         )
 add_library(modelio src/io/modelio.cpp)
 
@@ -66,13 +52,12 @@ target_link_libraries(KinectTest
         telef
         ${PCL_IO_LIBRARIES}
         opencv_core
-        opencv_objdetect
-        opencv_highgui
         opencv_imgproc
-        opencv_flann
+        opencv_highgui
         )
 
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
+target_link_libraries(LandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(LandmarkProject
         stdc++fs
         ${Boost_LIBRARIES}
@@ -81,8 +66,8 @@ target_link_libraries(LandmarkProject
         ${PCL_VISUALIZATION_LIBRARIES}
         opencv_core
         opencv_objdetect
-        opencv_highgui
         opencv_imgproc
+        opencv_highgui
         opencv_flann
         )
 
@@ -90,16 +75,46 @@ target_link_libraries(LandmarkProject
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect
-    telef
-    opencv_core
-    opencv_objdetect
-    opencv_highgui
-    opencv_imgproc
-    opencv_flann
-    )
+        telef
+        opencv_core
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
+        )
 
 add_executable(PcaTest app/PcaTest.cpp)
 target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
 
 add_executable(PcaSample app/PcaSample.cpp)
 target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
+
+add_executable(RigidAlighnment app/RigidAlighnment.cpp)
+target_link_libraries(RigidAlighnment
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
+        )
+
+add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
+target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(RigidAlignmentTest
+        stdc++fs
+        telef
+        ${Boost_LIBRAREIS}
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
+        )

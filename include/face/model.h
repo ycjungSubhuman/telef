@@ -15,7 +15,6 @@
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 #include "io/ply/meshio.h"
-#include "cluster/cluster.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -156,7 +155,7 @@ namespace {
         int count = std::stoi(c);
         std::string pt;
         while(f >> pt) {
-            lmk.push_back(std::stoi(c));
+            lmk.push_back(std::stoi(pt));
         }
     }
 }
@@ -235,17 +234,9 @@ namespace telef::face {
 
             return genMesh(Eigen::Map<Eigen::Matrix<float, ShapeRank, 1>>(coeff.data(), coeff.size()));
         }
-    };
 
-
-    template <int ShapeRank>
-    class MorphableClusterModel {
-    public:
-        MorphableClusterModel (std::vector<fs::path> files) {
-            assert(files.size() > 0);
-            std::vector<ColorMesh> meshes(files.size());
-            std::transform(files.begin(), files.end(), meshes.begin(), [](auto &a){return read(a);});
-            cluster::KMeansCluster<ColorMesh> wow(40, 100);
+        std::vector<int> getLandmarks() {
+            return landmarks;
         }
     };
 };

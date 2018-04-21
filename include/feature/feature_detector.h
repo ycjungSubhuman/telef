@@ -37,6 +37,7 @@ namespace telef::feature {
 
         Feature::Ptr landmark2d;
         CloudConstPtrT landmark3d;
+        std::vector<int> invalid3dLandmarks;
         ImagePtrT rawImage;
         CloudConstPtrT rawCloud;
     };
