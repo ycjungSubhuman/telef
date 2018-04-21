@@ -1,11 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <experimental/filesystem>
-
-#include <Eigen/Dense>
-#include <pcl/common/eigen.h>
-
 #include "align/rigid.h"
 #include "io/pipe.h"
 #include "mesh/mesh.h"
@@ -18,9 +12,7 @@ namespace telef::align {
     //template <int ShapeRank>
     class PCARigidFittingPipe : public telef::io::Pipe<telef::feature::FittingSuite, PCARigidAlignmentSuite> {
     public:
-
         PCARigidFittingPipe(std::shared_ptr<telef::face::MorphableFaceModel<150>> model);
-        //PCARigidFittingPipe();
 
     private:
         using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel<150>>;

@@ -6,16 +6,12 @@
 #include <pcl/point_cloud.h>
 
 #include "feature/feature_detector.h"
-//Problem including face/model.h due to meshio and cluster due to modelio name conflicts??
+//Problem including face/model.h due to meshio and cluster due to name conflicts??
 //#include "face/model.h"
 
 //Forward Declare MorphableFaceModel
-namespace telef
-{
-    namespace face
-    {
+namespace telef::face {
         template <int ShapeRank> class MorphableFaceModel;
-    }
 }
 
 namespace telef::align {

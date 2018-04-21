@@ -1,15 +1,11 @@
 
 #include <iostream>
 
-//#include <experimental/filesystem>
-
 #include <pcl/registration/transformation_estimation_svd.h>
 
 #include "align/rigid_pipe.h"
 #include "util/eigen_pcl.h"
 #include "face/model.h"
-
-//namespace fs = std::experimental::filesystem;
 
 using namespace std;
 using namespace telef::feature;
@@ -32,7 +28,6 @@ namespace telef::align {
     }
 
     boost::shared_ptr<PCARigidAlignmentSuite> PCARigidFittingPipe::_processData(boost::shared_ptr<FittingSuite> in) {
-        std::cout << "In PCARigidFittingPipe::_processData\n";
         std::vector<int> pca_lmks = pca_model->getLandmarks();
         auto in_lmks = in->landmark3d;
 
@@ -49,7 +44,6 @@ namespace telef::align {
         alignment->fittingSuite = in;
         alignment->pca_model = pca_model;
         alignment->transformation = transformation;
-        std::cout << "Out PCARigidFittingPipe::_processData\n";
         return alignment;
     }
 }

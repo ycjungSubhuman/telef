@@ -17,7 +17,6 @@ namespace telef::io::align {
 
 
     void PCARigidVisualizerFrontEnd::process(InputPtrT input) {
-        std::cout << "In PCARigidVisualizerFrontEnd::process\n";
         auto lmksPtCld = input->fittingSuite->landmark3d;
 
         ColorMesh meanMesh = input->pca_model->genMesh(Eigen::VectorXf::Zero(150));
@@ -47,8 +46,6 @@ namespace telef::io::align {
             visualizer->setSize(pcaPtCld->width, pcaPtCld->height);
             visualizer->initCameraParameters();
         }
-
-        std::cout << "Out PCARigidVisualizerFrontEnd::process\n";
     }
 
 }
