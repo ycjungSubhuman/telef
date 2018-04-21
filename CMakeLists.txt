@@ -51,7 +51,8 @@ add_library(telef
         # src
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
-        src/align/svd_rigid_alignment.cpp
+        src/align/rigid_pipe.cpp
+        src/io/align/rigid_frontend.cpp
         include/io/opencv_metadata_wrapper.h include/util/UvPointMapping.h include/io/bmp.h include/face/model.h include/mesh/mesh.h include/io/ply/YaPly.h include/cluster/cluster.h)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
@@ -104,7 +105,7 @@ target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
 add_executable(PcaSample app/PcaSample.cpp)
 target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
 
-add_executable(RigidAlighnment app/RigidAlighnment.cpp src/io/modelio.cpp)
+add_executable(RigidAlighnment app/RigidAlighnment.cpp)
 target_link_libraries(RigidAlighnment
         stdc++fs
         ${Boost_LIBRARIES}
@@ -119,12 +120,12 @@ target_link_libraries(RigidAlighnment
         opencv_flann
         )
 
-add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp include/io/ply/meshio.h)
+add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp)
 target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(RigidAlignmentTest
         stdc++fs
-        telef
         ${Boost_LIBRARIES}
+        telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}
         opencv_core

@@ -1,64 +1,18 @@
 #pragma once
 
-#include <Eigen/Dense>
-
-#include <pcl/point_types.h>
-#include <pcl/PCLPointCloud2.h>
-#include <pcl/conversions.h>
-#include <pcl/point_cloud.h>
 #include <pcl/visualization/pcl_visualizer.h>
-
-
-#include "feature/feature_detector.h"
-#include "face/model.h"
 #include "io/frontend.h"
-#include "util/eigen_pcl.h"
 #include "align/rigid.h"
-
-
-using namespace telef::align;
-using namespace telef::io;
-using namespace telef::face;
 
 namespace telef::io::align {
     /** Visualize Pointcloud through PCL Visualizer */
-    class PCARigidVisualizerFrontEnd : public FrontEnd<PCARigidAlignmentSuite> {
+
+    class PCARigidVisualizerFrontEnd : public telef::io::FrontEnd<telef::align::PCARigidAlignmentSuite> {
     private:
         std::unique_ptr<vis::PCLVisualizer> visualizer;
-        using InputPtrT = const boost::shared_ptr<PCARigidAlignmentSuite>;
+        using InputPtrT = const boost::shared_ptr<telef::align::PCARigidAlignmentSuite>;
 
     public:
-
-        void process(InputPtrT input) override {
-            auto lmksPtCld = input->fittingSuite->landmark3d;
-
-            ColorMesh meanMesh = input->pca_model->genMesh(Eigen::VectorXf::Zero(150));
-            pcl::PointCloud<pcl::PointXYZ>::Ptr pcaPtCld = telef::util::convert(meanMesh.position);
-
-            pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-            pcl::transformPointCloud(*pcaPtCld, *transformed_cloud, input->transformation);
-
-//            pcl::PCLPointCloud2 mesh;
-//            pcl::toPCLPointCloud2(pcaPointCloud, mesh);
-//            pcl::PolygonMesh polyMesh;
-//            polyMesh.cloud = mesh;
-//            polyMesh.polygons[];
-
-//            pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZRGBA> single_color(lmksPtCld, 255, 0, 0);
-
-            if (!visualizer) {
-                visualizer = std::make_unique<vis::PCLVisualizer>();
-                visualizer->setBackgroundColor(0, 0, 0);
-            }
-            visualizer->spinOnce();
-            if (!visualizer->updatePointCloud(lmksPtCld) && !visualizer->updatePointCloud(pcaPtCld)) {
-                visualizer->addPointCloud(lmksPtCld);
-                visualizer->addPointCloud(pcaPtCld);
-                visualizer->setPosition(0, 0);
-                visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5);
-                visualizer->setSize(pcaPtCld->width, pcaPtCld->height);
-                visualizer->initCameraParameters();
-            }
-        }
+        void process(InputPtrT input) override;
     };
 }

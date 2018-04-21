@@ -15,7 +15,7 @@ namespace telef::io {
         explicit Pipe(){
             this->processData = std::bind(&Pipe::_processData, this, std::placeholders::_1);
         }
-        ~Pipe() = default;
+        virtual ~Pipe() = default;
         Pipe& operator=(const Pipe&) = delete;
         Pipe(const Pipe&) = default;
 

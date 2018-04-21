@@ -2,19 +2,19 @@
 #include <pcl/io/openni2_grabber.h>
 //#include <boost/program_options.hpp>
 
-#include "io/device.h"
 #include "cloud/cloud_pipe.h"
 #include "image/image_pipe.h"
-#include "align/rigid.h"
-#include "align/rigid_pipe.h"
+#include "io/device.h"
 #include "io/align/align_frontend.h"
+#include "align/rigid_pipe.h"
+//#include "align/rigid.h"
+#include "face/model.h"
 
 using namespace telef::io;
 using namespace telef::types;
 using namespace telef::cloud;
 using namespace telef::image;
 using namespace telef::feature;
-using namespace telef::align;
 
 /**
  * Project IntraFace landmark points onto captured pointcloud and Rigid Fit a PCA model
@@ -52,12 +52,12 @@ int main(int argc, char** argv) {
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
     auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));
 
-    //telef::face::MorphableFaceModel<150> model(fs::path("../pcamodels/example"));
 
+    auto model = std::make_shared<telef::face::MorphableFaceModel<150>>(fs::path("../pcamodels/example"));
+    auto rigidFitPipe = std::make_shared<telef::align::PCARigidFittingPipe>(model);
 
-//    auto rigidFitPipe = std::make_shared<PCARigidFittingPipe>(model);
-    auto rigidFitPipe = std::make_shared<PCARigidFittingPipe>();
-    auto merger = std::make_shared<FittingSuitePipeMerger<PCARigidAlignmentSuite>>(rigidFitPipe);
+    //auto rigidFitPipe = std::make_shared<telef::align::PCARigidFittingPipe>();
+    auto merger = std::make_shared<FittingSuitePipeMerger<telef::align::PCARigidAlignmentSuite>>(rigidFitPipe);
 
 
     //auto merger = std::make_shared<RigidAlignFrontEnd>();
@@ -71,10 +71,12 @@ int main(int argc, char** argv) {
 //        merger->addFrontEnd(viewFrontend);
 //    }
 
-    auto viewFrontend = std::make_shared<align::PCARigidVisualizerFrontEnd>();
+    auto viewFrontend = std::make_shared<telef::io::align::PCARigidVisualizerFrontEnd>();
     merger->addFrontEnd(viewFrontend);
 
-    ImagePointCloudDevice<MappedCloudConstT, ImageT, FittingSuite, PCARigidAlignmentSuite> device{std::move(grabber)};
+    ImagePointCloudDevice<MappedCloudConstT, ImageT,
+            FittingSuite, telef::align::PCARigidAlignmentSuite> device{std::move(grabber)};
+
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

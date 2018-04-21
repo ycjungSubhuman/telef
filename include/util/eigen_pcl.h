@@ -7,13 +7,11 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-using namespace std;
-
 namespace telef::util {
 
     // Convert Eigen::Vector into pcl::Pointcloud<PointXYZ>
     // TODO: make generic to PointT?? to handle PointXYZ
-    pcl::PointCloud<pcl::PointXYZ>::Ptr convert(const Eigen::VectorXf& vector) {
+    inline pcl::PointCloud<pcl::PointXYZ>::Ptr convert(const Eigen::VectorXf& vector) {
 
         assert(("Vector doesn't contains (x,y,z) for each n 3D vertex", vector.size() % 3 == 0));
 
