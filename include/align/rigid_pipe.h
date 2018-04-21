@@ -23,6 +23,7 @@ namespace telef::align {
         MModelTptr pca_model;
         telef::mesh::ColorMesh meanMesh;
         PtCldPtr initShape;
+        Eigen::Matrix4f transformation;
         // TODO: Keep last frame transformation matrix (Trans1 * Trans2)
         // or pointcloud in to optimize between frames?
 

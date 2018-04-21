@@ -133,22 +133,25 @@ namespace telef::io {
             auto mapping = cloudPair->second;
             feature::IntraFace featureDetector;
             auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
+            auto badlmks = std::vector<int>();
             for (long i=0; i<feature->points.cols(); i++) {
                 try {
                     auto pointInd = mapping->getMappedPointId(feature->points(0, i), feature->points(1, i));
                     landmark3d->push_back(rawCloud->at(pointInd));
                 } catch (std::out_of_range &e) {
+                    badlmks.push_back(i);
                     std::cout << "WARNING: Landmark Points at Hole." << std::endl;
                 }
             }
 
             landmark3d->height = rawCloud->height;
             landmark3d->width = rawCloud->width;
-            std::cout << landmark3d->size() <<std::endl;
+            std::cout << "3D Lmks: " << landmark3d->size() <<std::endl;
 
             auto result = boost::make_shared<FittingSuite>();
             result->landmark2d = feature;
             result->landmark3d = landmark3d;
+            result->invalid3dLandmarks = badlmks;
             result->rawCloud = rawCloud;
             result->rawImage = image;
 

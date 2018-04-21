@@ -17,6 +17,7 @@ namespace telef::io::align {
 
 
     void PCARigidVisualizerFrontEnd::process(InputPtrT input) {
+        cout << "PCARigidVisualizerFrontEnd::process\n";
         auto lmksPtCld = input->fittingSuite->landmark3d;
 
         ColorMesh meanMesh = input->pca_model->genMesh(Eigen::VectorXf::Zero(150));
@@ -38,12 +39,15 @@ namespace telef::io::align {
             visualizer->setBackgroundColor(0, 0, 0);
         }
         visualizer->spinOnce();
-        if (!visualizer->updatePointCloud(lmksPtCld) && !visualizer->updatePointCloud(pcaPtCld)) {
-            visualizer->addPointCloud(lmksPtCld);
-            visualizer->addPointCloud(pcaPtCld);
+        if (!visualizer->updatePointCloud(lmksPtCld, "Landmarks")) {
+            visualizer->addPointCloud(lmksPtCld, "Landmarks");
+            visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "Landmarks");
+        }
+
+        if(!visualizer->updatePointCloud(transformed_cloud, "Mesh")) {
+            visualizer->addPointCloud(transformed_cloud, "Mesh");
             visualizer->setPosition(0, 0);
-            visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5);
-            visualizer->setSize(pcaPtCld->width, pcaPtCld->height);
+            visualizer->setSize(transformed_cloud->width, transformed_cloud->height);
             visualizer->initCameraParameters();
         }
     }
