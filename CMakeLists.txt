@@ -120,7 +120,7 @@ target_link_libraries(RigidAlighnment
         opencv_flann
         )
 
-add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp)
+add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(RigidAlignmentTest
         stdc++fs
