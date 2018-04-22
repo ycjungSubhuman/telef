@@ -11,10 +11,15 @@ namespace telef::mesh {
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->fitResult = in->pca_model->genMesh(in->fitCoeff);
+        result->fitResult.applyTransform(in->transformation);
         result->fx = in->fx;
         result->fy = in->fy;
 
         return result;
+    }
+
+    Fitting2ProjectionPipe::Fitting2ProjectionPipe() {
+        this->composed = std::bind(&Fitting2ProjectionPipe::_processData, this, std::placeholders::_1);
     }
 
     boost::shared_ptr<telef::mesh::ColorMesh>
@@ -22,5 +27,9 @@ namespace telef::mesh {
     {
         projectColor(in->image, in->fitResult, in->fx, in->fy);
         return boost::make_shared<telef::mesh::ColorMesh>(in->fitResult);
+    }
+
+    ColorProjectionPipe::ColorProjectionPipe() {
+        this->composed = std::bind(&ColorProjectionPipe::_processData, this, std::placeholders::_1);
     }
 }

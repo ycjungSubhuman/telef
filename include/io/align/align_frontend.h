@@ -15,4 +15,15 @@ namespace telef::io::align {
     public:
         void process(InputPtrT input) override;
     };
+
+    /** Write a colormesh */
+    class ColorMeshPlyWriteFrontEnd : public FrontEnd<ColorMesh> {
+    private:
+        using InputPtrT = const boost::shared_ptr<ColorMesh>;
+    public:
+        ColorMeshPlyWriteFrontEnd(std::string outputPath) : outputPath(outputPath){}
+        void process(InputPtrT input) override;
+    private:
+        std::string outputPath;
+    };
 }

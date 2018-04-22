@@ -47,7 +47,7 @@ namespace telef::io {
     private:
         PipeOutPtrT getMergeOut(DataAPtrT a, DataBPtrT b) {
             auto merged = merge(a, b);
-            return this->pipe->processData(merged);
+            return this->pipe->composed(merged);
         }
         virtual OutPtrT merge(DataAPtrT a, DataBPtrT b)=0;
         std::shared_ptr<PipeT> pipe;

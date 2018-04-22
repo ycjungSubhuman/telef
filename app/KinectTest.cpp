@@ -21,7 +21,7 @@ int main(int ac, char* av[])
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
 
-    auto grabber = std::make_unique<TelefOpenNI2Grabber>("#1", depth_mode, image_mode);
+    auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
     auto cloudPipe = std::make_shared<IdentityPipe<DeviceCloudConstT>>();

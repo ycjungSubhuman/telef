@@ -12,9 +12,9 @@ namespace telef::io::ply {
         std::vector<float> x;
         std::vector<float> y;
         std::vector<float> z;
-        std::vector<float> red;
-        std::vector<float> green;
-        std::vector<float> blue;
+        std::vector<uint8_t> red;
+        std::vector<uint8_t> green;
+        std::vector<uint8_t> blue;
         std::vector<std::vector<int>> vertex_index;
         bool xSucc = vertexElem.getScalarProperty("x", x);
         bool ySucc = vertexElem.getScalarProperty("y", y);
@@ -28,7 +28,7 @@ namespace telef::io::ply {
         assert (vi != nullptr);
 
         std::vector<float> position(x.size()*3);
-        std::vector<float> color(red.size()*3);
+        std::vector<uint8_t> color(red.size()*3);
         for (unsigned long i = 0; i < x.size(); i++) {
             position[i*3+0] = x[i];
             position[i*3+1] = y[i];
@@ -44,7 +44,7 @@ namespace telef::io::ply {
 
         ColorMesh colorMesh;
         colorMesh.position = Eigen::Map<Eigen::VectorXf> (position.data(), position.size());
-        colorMesh.color = Eigen::Map<Eigen::VectorXf> (color.data(), color.size());
+        colorMesh.color = color;
         colorMesh.triangles = std::move(vertex_index);
 
         return colorMesh;

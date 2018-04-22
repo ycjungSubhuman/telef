@@ -24,6 +24,8 @@ namespace telef::align {
         // Rigid alignment
         Eigen::Matrix4f transformation;
         telef::types::ImagePtrT image;
+        CloudConstPtrT rawCloud;
+
         float fx;
         float fy;
     };

@@ -12,31 +12,24 @@ namespace telef::io {
     template <class InT, class OutT>
     class Pipe {
     public:
-        explicit Pipe(){
-            this->processData = std::bind(&Pipe::_processData, this, std::placeholders::_1);
-        }
+        using FuncT = std::function<boost::shared_ptr<OutT>(boost::shared_ptr<InT>)>;
+        FuncT composed;
+
+        explicit Pipe() {composed=[](boost::shared_ptr<InT> in){return boost::shared_ptr<OutT>();};}
         virtual ~Pipe() = default;
         Pipe& operator=(const Pipe&) = delete;
         Pipe(const Pipe&) = default;
 
+        explicit Pipe(const FuncT &processData) {
+            this->composed = processData;
+        }
+
         template<class NextOutT>
         std::shared_ptr<Pipe<InT, NextOutT>> then(std::shared_ptr<Pipe<OutT, NextOutT>> nextPipe) {
-            auto nextProcessData = [*this,nextPipe=std::move(nextPipe)] (boost::shared_ptr<InT> in)-> boost::shared_ptr<NextOutT> {
-                return nextPipe->processData(this->processData(in));
+            auto nextProcessData = [curr=*this, nextPipe=std::move(nextPipe)] (boost::shared_ptr<InT> in)-> boost::shared_ptr<NextOutT> {
+                return nextPipe->composed(curr.composed(in));
             };
-            return std::shared_ptr<Pipe<InT, NextOutT>>{new Pipe{nextProcessData}};
-        }
-
-        using FuncT = std::function<boost::shared_ptr<OutT>(boost::shared_ptr<InT>)>;
-
-        FuncT processData;
-    private:
-        // Default data process method
-        virtual boost::shared_ptr<OutT> _processData(boost::shared_ptr<InT> in) {
-            return boost::shared_ptr<OutT>();
-        }
-        explicit Pipe(const FuncT &processData) {
-            this->processData = processData;
+            return std::shared_ptr<Pipe<InT, NextOutT>>{new Pipe<InT, NextOutT>{nextProcessData}};
         }
     };
 
@@ -45,8 +38,13 @@ namespace telef::io {
      */
     template <class InT>
     class IdentityPipe : public Pipe<InT, InT> {
+    public:
+        IdentityPipe() {
+            this->composed = std::bind(&IdentityPipe::_processData, this, std::placeholders::_1);
+        }
     private:
-        virtual boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) {
+
+        boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) {
             return in;
         }
     };

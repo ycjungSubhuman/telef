@@ -7,6 +7,11 @@
 using namespace telef::types;
 
 namespace telef::cloud {
+
+    RemoveNaNPoints::RemoveNaNPoints() {
+        this->composed = std::bind(&RemoveNaNPoints::_processData, this, std::placeholders::_1);
+    }
+
     boost::shared_ptr<DeviceCloudConstT> RemoveNaNPoints::_processData(boost::shared_ptr<DeviceCloudConstT> in) {
         auto cloudOut = boost::make_shared<CloudT>();
         auto cloudIn = in->cloud;

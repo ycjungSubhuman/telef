@@ -12,12 +12,15 @@ namespace telef::align {
         std::shared_ptr<telef::face::MorphableFaceModel<150>> pca_model;
         Eigen::VectorXf fitCoeff;
         telef::types::ImagePtrT image;
+        Eigen::Matrix4f transformation;
         float fx;
         float fy;
     };
 
     class PCANonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {
+    public:
+        PCANonRigidFittingPipe();
     private:
-        boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in) override;
+        boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in);
     };
 }

@@ -35,8 +35,8 @@ namespace telef::io {
         using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
         using FrontEndT = FrontEnd<MergePipeOutT>;
     public:
-        explicit ImagePointCloudDevice(std::unique_ptr<TelefOpenNI2Grabber> grabber) {
-            this->grabber = std::move(grabber);
+        explicit ImagePointCloudDevice(TelefOpenNI2Grabber *grabber) {
+            this->grabber = grabber;
 
             boost::function<void(const ImagePtrT&, const DeviceCloud&)> callback =
                     boost::bind(&ImagePointCloudDevice::imageCloudCallback, this, _1, _2);
@@ -77,8 +77,7 @@ namespace telef::io {
             std::cout << "Quitting..." << std::endl;
             isRunning = false;
             runThread.join();
-
-            //grabber->stop();
+            grabber->stop();
         }
 
     private:
@@ -130,7 +129,7 @@ namespace telef::io {
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
         std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
         std::vector<std::shared_ptr<MergerT>> mergers;
-        std::unique_ptr<TelefOpenNI2Grabber> grabber;
+        TelefOpenNI2Grabber *grabber;
         std::thread runThread;
         volatile bool isRunning;
     };

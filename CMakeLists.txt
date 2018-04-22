@@ -62,12 +62,13 @@ add_library(telef
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
         src/align/rigid_pipe.cpp
-        src/io/align/rigid_frontend.cpp
+        src/io/align/align_frontend.cpp
         src/io/ply/meshio.cpp
         src/io/bmp.cpp
         src/mesh/color_projection_pipe.cpp
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
+        src/mesh/mesh.cpp
         )
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)

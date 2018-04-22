@@ -49,6 +49,18 @@ namespace telef::io::align {
             visualizer->setSize(transformed_cloud->width, transformed_cloud->height);
             visualizer->initCameraParameters();
         }
+
+        if(!visualizer->updatePointCloud(input->rawCloud, "PC")) {
+            visualizer->addPointCloud(input->rawCloud, "PC");
+            visualizer->setPosition(0, 0);
+            visualizer->initCameraParameters();
+        }
     }
 
+    void ColorMeshPlyWriteFrontEnd::process(ColorMeshPlyWriteFrontEnd::InputPtrT input)
+    {
+        std::cout << "Saved" << std::endl;
+        fs::path p{outputPath.c_str()};
+        ply::writeMesh(p, *input);
+    }
 }

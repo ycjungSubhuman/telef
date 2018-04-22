@@ -22,12 +22,16 @@ namespace telef::mesh {
     };
 
     class Fitting2ProjectionPipe : public telef::io::Pipe<telef::align::PCANonRigidFittingResult, ProjectionSuite> {
+    public:
+        Fitting2ProjectionPipe();
     private:
-        boost::shared_ptr<ProjectionSuite> _processData(boost::shared_ptr<telef::align::PCANonRigidFittingResult> in) override;
+        boost::shared_ptr<ProjectionSuite> _processData(boost::shared_ptr<telef::align::PCANonRigidFittingResult> in);
     };
 
     class ColorProjectionPipe : public telef::io::Pipe<ProjectionSuite, telef::mesh::ColorMesh> {
+    public:
+        ColorProjectionPipe();
     private:
-        boost::shared_ptr<telef::mesh::ColorMesh> _processData(boost::shared_ptr<ProjectionSuite> in) override;
+        boost::shared_ptr<telef::mesh::ColorMesh> _processData(boost::shared_ptr<ProjectionSuite> in);
     };
 }

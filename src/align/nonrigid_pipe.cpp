@@ -1,6 +1,10 @@
 #include "align/nonrigid_pipe.h"
 
 namespace telef::align {
+    PCANonRigidFittingPipe::PCANonRigidFittingPipe() {
+        this->composed = std::bind(&PCANonRigidFittingPipe::_processData, this, std::placeholders::_1);
+    }
+
     boost::shared_ptr<PCANonRigidFittingResult>
     PCANonRigidFittingPipe::_processData(boost::shared_ptr<telef::align::PCARigidAlignmentSuite> in)
     {
@@ -11,6 +15,7 @@ namespace telef::align {
         result->image = in->image;
         result->fx = in->fx;
         result->fy = in->fy;
+        result->transformation = in->transformation;
 
         return result;
     }

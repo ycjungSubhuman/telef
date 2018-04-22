@@ -27,6 +27,6 @@ namespace telef::align {
         // TODO: Keep last frame transformation matrix (Trans1 * Trans2)
         // or pointcloud in to optimize between frames?
 
-        boost::shared_ptr<PCARigidAlignmentSuite> _processData(boost::shared_ptr<telef::feature::FittingSuite> in) override;
+        boost::shared_ptr<PCARigidAlignmentSuite> _processData(boost::shared_ptr<telef::feature::FittingSuite> in);
     };
 }
