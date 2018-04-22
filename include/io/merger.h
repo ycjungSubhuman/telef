@@ -73,10 +73,10 @@ namespace telef::io {
      * Merge const PointCloud and Image Using (UV coord) -> Point ID mapping
      */
     template<class OutT>
-    class SimpleMappedImageCloudMerger : public SimpleBinaryMerger<ImageT, MappedCloudConstT, OutT> {
+    class SimpleMappedImageCloudMerger : public SimpleBinaryMerger<ImageT, DeviceCloudConstT, OutT> {
     private:
         using OutPtrT = const boost::shared_ptr<OutT>;
-        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+        using MappedConstBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
     public:
         OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override=0;
     };
@@ -85,12 +85,12 @@ namespace telef::io {
     class FittingSuiteMerger : public SimpleMappedImageCloudMerger<FittingSuite> {
     private:
         using OutPtrT = const boost::shared_ptr<FittingSuite>;
-        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+        using DeviceCloudBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
     public:
-        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override {
+        OutPtrT merge(const ImagePtrT image, const DeviceCloudBoostPtrT deviceCloud) override {
             auto landmark3d = boost::make_shared<CloudT>();
-            auto rawCloud = cloudPair->first;
-            auto mapping = cloudPair->second;
+            auto rawCloud = deviceCloud->cloud;
+            auto mapping = deviceCloud->img2cloudMapping;
             feature::IntraFace featureDetector;
             auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
             for (long i=0; i<feature->points.cols(); i++) {
@@ -110,6 +110,8 @@ namespace telef::io {
             result->landmark3d = landmark3d;
             result->rawCloud = rawCloud;
             result->rawImage = image;
+            result->fx = deviceCloud->fx;
+            result->fy = deviceCloud->fy;
 
             return result;
         }
@@ -117,20 +119,20 @@ namespace telef::io {
 
     // PipeOutT is the output of the given pipe, the pipe = FittingSuite -> pipe1 -> a -> pipe2 -> PipeOutT
     template <class PipeOutT>
-    class FittingSuitePipeMerger : public BinaryMerger<ImageT, MappedCloudConstT, FittingSuite, PipeOutT> {
+    class FittingSuitePipeMerger : public BinaryMerger<ImageT, DeviceCloudConstT, FittingSuite, PipeOutT> {
     private:
-        using BaseT = BinaryMerger<ImageT, MappedCloudConstT, FittingSuite, PipeOutT>;
+        using BaseT = BinaryMerger<ImageT, DeviceCloudConstT, FittingSuite, PipeOutT>;
         using OutPtrT = const boost::shared_ptr<FittingSuite>;
         using PipeT = Pipe<FittingSuite, PipeOutT>;
 
-        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+        using DeviceCloudBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
 
     public:
         FittingSuitePipeMerger(std::shared_ptr<PipeT> pipe) : BaseT(pipe) {}
-        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override {
+        OutPtrT merge(const ImagePtrT image, const DeviceCloudBoostPtrT deviceCloud) override {
             auto landmark3d = boost::make_shared<CloudT>();
-            auto rawCloud = cloudPair->first;
-            auto mapping = cloudPair->second;
+            auto rawCloud = deviceCloud->cloud;
+            auto mapping = deviceCloud->img2cloudMapping;
             feature::IntraFace featureDetector;
             auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
             auto badlmks = std::vector<int>();
@@ -157,6 +159,8 @@ namespace telef::io {
             result->invalid3dLandmarks = badlmks;
             result->rawCloud = rawCloud;
             result->rawImage = image;
+            result->fx = deviceCloud->fx;
+            result->fy = deviceCloud->fy;
 
             return result;
         }
@@ -168,10 +172,10 @@ namespace telef::io {
     class DummyMappedImageCloudMerger : public SimpleMappedImageCloudMerger<CloudConstT> {
     private:
         using OutPtrT = const boost::shared_ptr<CloudConstT>;
-        using MappedConstBoostPtrT = boost::shared_ptr<MappedCloudConstT>;
+        using DeviceCloudConstBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
     public:
-        OutPtrT merge(const ImagePtrT image, const MappedConstBoostPtrT cloud) override {
-            return cloud->first;
+        OutPtrT merge(const ImagePtrT image, const DeviceCloudConstBoostPtrT deviceCloud) override {
+            return deviceCloud->cloud;
         }
     };
 }

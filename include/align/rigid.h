@@ -6,13 +6,8 @@
 #include <pcl/point_cloud.h>
 
 #include "feature/feature_detector.h"
-//Problem including face/model.h due to meshio and cluster due to name conflicts??
-//#include "face/model.h"
-
-//Forward Declare MorphableFaceModel
-namespace telef::face {
-        template <int ShapeRank> class MorphableFaceModel;
-}
+#include "type.h"
+#include "face/model.h"
 
 namespace telef::align {
 
@@ -28,5 +23,8 @@ namespace telef::align {
         std::shared_ptr<telef::face::MorphableFaceModel<150>> pca_model;
         // Rigid alignment
         Eigen::Matrix4f transformation;
+        telef::types::ImagePtrT image;
+        float fx;
+        float fy;
     };
 }

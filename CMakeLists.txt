@@ -31,12 +31,44 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
 add_library(telef
-        # src
+        include/align/nonrigid_pipe.h
+        include/align/rigid.h
+        include/align/rigid_pipe.h
+        include/cloud/cloud_pipe.h
+        include/face/binary_model_file.h
+        include/face/FaceAlignment.h
+        include/face/XXDescriptor.h
+        include/feature/feature_detector.h
+        include/image/image_pipe.h
+        include/io/align/align_frontend.h
+        include/io/ply/meshio.h
+        include/io/ply/YaPly.h
+        include/io/bmp.h
+        include/io/channel.h
+        include/io/device.h
+        include/io/frontend.h
+        include/io/grabber.h
+        include/io/merger.h
+        include/io/opencv_metadata_wrapper.h
+        include/io/pipe.h
+        include/mesh/color_projection_pipe.h
+        include/mesh/colormapping.h
+        include/mesh/mesh.h
+        include/util/eigen_pcl.h
+        include/util/UvPointMapping.h
+        include/camera.h
+        include/type.h
+
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
         src/align/rigid_pipe.cpp
         src/io/align/rigid_frontend.cpp
-        src/io/ply/meshio.cpp src/io/bmp.cpp)
+        src/io/ply/meshio.cpp
+        src/io/bmp.cpp
+        src/mesh/color_projection_pipe.cpp
+        src/align/nonrigid_pipe.cpp
+        src/mesh/colormapping.cpp
+        )
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -116,5 +148,21 @@ target_link_libraries(RigidAlignmentTest
         opencv_objdetect
         opencv_imgproc
         opencv_highgui
+        opencv_flann
+        )
+
+add_executable(PcaFit app/PcaFit.cpp src/io/modelio.cpp)
+target_link_libraries(PcaFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(PcaFit
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
         opencv_flann
         )

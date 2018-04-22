@@ -63,6 +63,9 @@ namespace telef::align {
         alignment->fittingSuite = in;
         alignment->pca_model = pca_model;
         alignment->transformation = this->transformation;
+        alignment->image = in->rawImage;
+        alignment->fx = in->fx;
+        alignment->fy = in->fy;
         return alignment;
     }
 }

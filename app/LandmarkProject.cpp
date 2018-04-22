@@ -46,7 +46,7 @@ int main(int ac, const char* const * av)
     auto cloudPipe = std::make_shared<RemoveNaNPoints>();
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudPipe));
 
     auto merger = std::make_shared<FittingSuiteMerger>();
     auto csvFrontend = std::make_shared<FittingSuiteWriterFrontEnd>(vm.count("include-holes")==0, vm.count("save-rgb")>0, vm.count("save-cloud")>0);
@@ -56,7 +56,7 @@ int main(int ac, const char* const * av)
         merger->addFrontEnd(viewFrontend);
     }
 
-    ImagePointCloudDevice<MappedCloudConstT, ImageT, FittingSuite, FittingSuite> device {std::move(grabber)};
+    ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, FittingSuite> device {std::move(grabber)};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

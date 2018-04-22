@@ -6,8 +6,6 @@
 #include <unordered_map>
 #include "util/UvPointMapping.h"
 
-
-
 namespace telef::types {
     using PointT = pcl::PointXYZRGBA;
     using CloudT = pcl::PointCloud<pcl::PointXYZRGBA>;
@@ -24,8 +22,21 @@ namespace telef::types {
     using Uv2PointIdMapPtrT = std::shared_ptr<Uv2PointIdMapT>;
     using Uv2PointIdMapConstPtrT = std::shared_ptr<Uv2PointIdMapConstT>;
 
-    using MappedCloudT = std::pair<CloudConstPtrT, Uv2PointIdMapPtrT>;
-    using MappedCloudConstT = const MappedCloudT;
-    using MappedCloudPtrT = std::shared_ptr<MappedCloudT>;
-    using MappedCloudConstPtrT = std::shared_ptr<MappedCloudConstT>;
+}
+
+namespace telef::io {
+    /** Point cloud with metadata */
+    using DeviceCloud = struct DeviceCloud {
+        telef::types::CloudConstPtrT cloud;
+        telef::types::Uv2PointIdMapPtrT img2cloudMapping;
+        float fx;
+        float fy;
+    };
+}
+
+namespace telef::types {
+    using DeviceCloudT = telef::io::DeviceCloud;
+    using DeviceCloudConstT = const DeviceCloudT;
+    using DeviceCloudPtrT = std::shared_ptr<DeviceCloudT>;
+    using DeviceCloutConstPtrT = std::shared_ptr<DeviceCloudConstT>;
 };

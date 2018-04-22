@@ -6,6 +6,8 @@
 #include <tuple>
 #include <map>
 
+#include "type.h"
+
 using namespace pcl::io;
 using namespace telef::types;
 
@@ -26,7 +28,9 @@ namespace
     } RGBValue;
 }
 
+
 namespace telef::io {
+
     class TelefOpenNI2Grabber : public OpenNI2Grabber {
     public:
         TelefOpenNI2Grabber(const std::string &device_id, const Mode &depth_mode, const Mode &image_mode)
@@ -44,14 +48,12 @@ namespace telef::io {
             }
 
             if (point_cloud_rgba_signal_->num_slots() > 0 || image_point_cloud_rgba_signal->num_slots() > 0) {
-                pcl::PointCloud<pcl::PointXYZRGBA>::Ptr pc;
-                Uv2PointIdMapPtrT uvToPointIdMap;
-                std::tie(pc, uvToPointIdMap) = mapToXYZRGBPointCloud(image, depth_image);
+                auto deviceCloud = mapToXYZRGBPointCloud(image, depth_image);
                 if (point_cloud_rgba_signal_->num_slots() > 0) {
-                    point_cloud_rgba_signal_->operator()(pc);
+                    point_cloud_rgba_signal_->operator()(deviceCloud.cloud);
                 }
                 if (image_point_cloud_rgba_signal->num_slots() > 0) {
-                    image_point_cloud_rgba_signal->operator()(image, pc, uvToPointIdMap);
+                    image_point_cloud_rgba_signal->operator()(image, deviceCloud);
                 }
             }
 
@@ -62,12 +64,12 @@ namespace telef::io {
         }
 
         using sig_cb_openni_image_point_cloud_rgba =
-        void(const boost::shared_ptr<Image> &, const pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr &, const Uv2PointIdMapPtrT &);
+        void(const boost::shared_ptr<Image> &, const DeviceCloud &);
 
         boost::signals2::signal<sig_cb_openni_image_point_cloud_rgba>* image_point_cloud_rgba_signal;
 
 
-        std::pair<typename pcl::PointCloud<PointT>::Ptr, Uv2PointIdMapPtrT>
+        DeviceCloud
         mapToXYZRGBPointCloud (const Image::Ptr &image, const DepthImage::Ptr &depth_image) {
             boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
             auto uvToPointIdMap = std::make_shared<Uv2PointIdMapT>(image->getWidth(), image->getHeight());
@@ -190,7 +192,14 @@ namespace telef::io {
             }
             cloud->sensor_origin_.setZero ();
             cloud->sensor_orientation_.setIdentity ();
-            return std::make_pair(cloud, uvToPointIdMap);
+
+            DeviceCloud result;
+            result.cloud = cloud;
+            result.img2cloudMapping = uvToPointIdMap;
+            result.fx = fx;
+            result.fy = fy;
+
+            return result;
         }
     };
 }

@@ -24,21 +24,21 @@ int main(int ac, char* av[])
     auto grabber = std::make_unique<TelefOpenNI2Grabber>("#1", depth_mode, image_mode);
 
     auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<IdentityPipe<MappedCloudConstT>>();
+    auto cloudPipe = std::make_shared<IdentityPipe<DeviceCloudConstT>>();
     auto cloudPipe2 = std::make_shared<RemoveNaNPoints>();
-    auto cloudPipe3 = std::make_shared<IdentityPipe<MappedCloudConstT>>();
+    auto cloudPipe3 = std::make_shared<IdentityPipe<DeviceCloudConstT>>();
     auto cloudCombinedPipe = cloudPipe
-            ->then<MappedCloudConstT>(cloudPipe2)
-            ->then<MappedCloudConstT>(cloudPipe3);
+            ->then<DeviceCloudConstT>(cloudPipe2)
+            ->then<DeviceCloudConstT>(cloudPipe3);
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudCombinedPipe));
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudCombinedPipe));
 
     auto frontend = std::make_shared<DummyCloudFrontEnd>();
     auto merger = std::make_shared<DummyMappedImageCloudMerger>();
     merger->addFrontEnd(frontend);
 
-    ImagePointCloudDevice<MappedCloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
+    ImagePointCloudDevice<DeviceCloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

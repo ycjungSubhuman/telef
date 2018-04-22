@@ -221,6 +221,10 @@ namespace telef::face {
             return result;
         }
 
+        int getRank() {
+            return ShapeRank;
+        }
+
         /* Generate a random sample ColorMesh */
         ColorMesh sample() {
             std::normal_distribution<float> dist(0.0, 0.003);

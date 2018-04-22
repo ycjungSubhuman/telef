@@ -40,6 +40,8 @@ namespace telef::feature {
         std::vector<int> invalid3dLandmarks;
         ImagePtrT rawImage;
         CloudConstPtrT rawCloud;
+        float fx;
+        float fy;
     };
 
     /**

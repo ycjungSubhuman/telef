@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     auto cloudPipe = std::make_shared<RemoveNaNPoints>();
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<MappedCloudConstT>>(std::move(cloudPipe));
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudPipe));
 
 
     auto model = std::make_shared<telef::face::MorphableFaceModel<150>>(fs::path("../pcamodels/example"));
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     auto viewFrontend = std::make_shared<telef::io::align::PCARigidVisualizerFrontEnd>();
     merger->addFrontEnd(viewFrontend);
 
-    ImagePointCloudDevice<MappedCloudConstT, ImageT,
+    ImagePointCloudDevice<DeviceCloudConstT, ImageT,
             FittingSuite, telef::align::PCARigidAlignmentSuite> device{std::move(grabber)};
 
     device.setCloudChannel(cloudChannel);
