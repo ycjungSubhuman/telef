@@ -4,6 +4,40 @@
 #include <boost/shared_ptr.hpp>
 
 namespace telef::io {
+    // ---------------------------------------------------------
+// "library" part
+// ---------------------------------------------------------
+    template<typename F1, typename F2>
+    class Composite{
+    private:
+        F1  f1;
+        F2  f2;
+
+    public:
+        Composite(F1  f1,  F2  f2) : f1(f1), f2(f2) { }
+
+        template<typename IN>
+        decltype(auto) operator() (IN i)
+        {
+            return f2( f1(i) );
+        }
+    };
+
+// ---------------------------------------------------------
+// ---------------------------------------------------------
+    template<typename F1, typename F2>
+    decltype(auto) compose (F1 f, F2 g) {
+        return Composite<F1, F2> {f,g};
+    }
+
+// ---------------------------------------------------------
+// ---------------------------------------------------------
+    template<typename F1, typename... Fs>
+    decltype(auto) compose (F1  f,  Fs  ... args)
+    {
+        return compose (f, compose(args...));
+    }
+
     /**
      * A Step in Data Pipeline for Channel
      *
@@ -13,24 +47,12 @@ namespace telef::io {
     class Pipe {
     public:
         using FuncT = std::function<boost::shared_ptr<OutT>(boost::shared_ptr<InT>)>;
-        FuncT composed;
 
-        explicit Pipe() {composed=[](boost::shared_ptr<InT> in){return boost::shared_ptr<OutT>();};}
-        virtual ~Pipe() = default;
-        Pipe& operator=(const Pipe&) = delete;
-        Pipe(const Pipe&) = default;
-
-        explicit Pipe(const FuncT &processData) {
-            this->composed = processData;
+        boost::shared_ptr<OutT> operator()(boost::shared_ptr<InT> in) {
+            return _processData(in);
         }
-
-        template<class NextOutT>
-        std::shared_ptr<Pipe<InT, NextOutT>> then(std::shared_ptr<Pipe<OutT, NextOutT>> nextPipe) {
-            auto nextProcessData = [curr=*this, nextPipe=std::move(nextPipe)] (boost::shared_ptr<InT> in)-> boost::shared_ptr<NextOutT> {
-                return nextPipe->composed(curr.composed(in));
-            };
-            return std::shared_ptr<Pipe<InT, NextOutT>>{new Pipe<InT, NextOutT>{nextProcessData}};
-        }
+    private:
+        virtual boost::shared_ptr<OutT> _processData(boost::shared_ptr<InT> in) = 0;
     };
 
     /**
@@ -38,13 +60,8 @@ namespace telef::io {
      */
     template <class InT>
     class IdentityPipe : public Pipe<InT, InT> {
-    public:
-        IdentityPipe() {
-            this->composed = std::bind(&IdentityPipe::_processData, this, std::placeholders::_1);
-        }
     private:
-
-        boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) {
+        boost::shared_ptr<InT> _processData(boost::shared_ptr<InT> in) override {
             return in;
         }
     };

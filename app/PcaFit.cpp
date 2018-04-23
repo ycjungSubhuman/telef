@@ -52,19 +52,20 @@ int main(int ac, const char* const *av) {
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
-    auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<RemoveNaNPoints>();
-    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudPipe));
+    auto imagePipe = IdentityPipe<ImageT>();
+    auto cloudPipe = RemoveNaNPoints();
+    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
     auto frontend = std::make_shared<ColorMeshPlyWriteFrontEnd>(outputPath);
 
     auto model = std::make_shared<MorphableFaceModel<150>>(fs::path(modelPath.c_str()));
-    auto pipe = std::make_shared<PCARigidFittingPipe>(model)
-            ->then<PCANonRigidFittingResult>(std::make_shared<PCANonRigidFittingPipe>())
-            ->then<ProjectionSuite>(std::make_shared<Fitting2ProjectionPipe>())
-            ->then<ColorMesh>(std::make_shared<ColorProjectionPipe>());
+    auto rigid = PCARigidFittingPipe(model);
+    auto nonrigid = PCANonRigidFittingPipe();
+    auto fitting2Projection = Fitting2ProjectionPipe();
+    auto colorProjection = ColorProjectionPipe();
+    auto pipe = compose(rigid, nonrigid, fitting2Projection, colorProjection);
 
-    auto merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>(pipe);
+    auto merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe](auto in)->decltype(auto){return pipe(in);});
     merger->addFrontEnd(frontend);
 
     ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {std::move(grabber)};

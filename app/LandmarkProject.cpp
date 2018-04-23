@@ -40,11 +40,11 @@ int main(int ac, const char* const * av)
 
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
 
-    auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<RemoveNaNPoints>();
+    auto imagePipe = IdentityPipe<ImageT>();
+    auto cloudPipe = RemoveNaNPoints();
 
-    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudPipe));
+    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)->decltype(auto){return cloudPipe(in);});
 
     auto merger = std::make_shared<FittingSuiteMerger>();
     auto csvFrontend = std::make_shared<FittingSuiteWriterFrontEnd>(vm.count("include-holes")==0, vm.count("save-rgb")>0, vm.count("save-cloud")>0);

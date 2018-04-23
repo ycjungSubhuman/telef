@@ -26,8 +26,6 @@ namespace telef::align {
 
         // Save initial point cloud for rigid fitting
         initShape = telef::util::convert(meanMesh.position);
-
-        this->composed = std::bind(&PCARigidFittingPipe::_processData, this, std::placeholders::_1);
     }
 
     boost::shared_ptr<PCARigidAlignmentSuite> PCARigidFittingPipe::_processData(boost::shared_ptr<FittingSuite> in) {

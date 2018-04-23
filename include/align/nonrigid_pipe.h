@@ -18,9 +18,7 @@ namespace telef::align {
     };
 
     class PCANonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {
-    public:
-        PCANonRigidFittingPipe();
     private:
-        boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in);
+        boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in) override;
     };
 }

@@ -18,18 +18,10 @@ namespace telef::mesh {
         return result;
     }
 
-    Fitting2ProjectionPipe::Fitting2ProjectionPipe() {
-        this->composed = std::bind(&Fitting2ProjectionPipe::_processData, this, std::placeholders::_1);
-    }
-
     boost::shared_ptr<telef::mesh::ColorMesh>
     ColorProjectionPipe::_processData(boost::shared_ptr<ProjectionSuite> in)
     {
         projectColor(in->image, in->fitResult, in->fx, in->fy);
         return boost::make_shared<telef::mesh::ColorMesh>(in->fitResult);
-    }
-
-    ColorProjectionPipe::ColorProjectionPipe() {
-        this->composed = std::bind(&ColorProjectionPipe::_processData, this, std::placeholders::_1);
     }
 }

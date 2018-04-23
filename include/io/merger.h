@@ -3,6 +3,7 @@
 #include <boost/shared_ptr.hpp>
 #include <memory>
 #include <future>
+#include <functional>
 #include "type.h"
 #include "io/pipe.h"
 #include "feature/feature_detector.h"
@@ -25,9 +26,9 @@ namespace telef::io {
         using DataAPtrT = const boost::shared_ptr<DataAT>;
         using DataBPtrT = const boost::shared_ptr<DataBT>;
         using PipeOutPtrT = const boost::shared_ptr<PipeOutT>;
-        using PipeT = Pipe<OutT, PipeOutT>;
+        using FuncT = std::function<boost::shared_ptr<PipeOutT>(boost::shared_ptr<OutT>)>;
     public:
-        explicit BinaryMerger (std::shared_ptr<PipeT> pipe) {
+        explicit BinaryMerger (FuncT pipe) {
             this->pipe = pipe;
         }
         virtual ~BinaryMerger() = default;
@@ -47,10 +48,10 @@ namespace telef::io {
     private:
         PipeOutPtrT getMergeOut(DataAPtrT a, DataBPtrT b) {
             auto merged = merge(a, b);
-            return this->pipe->composed(merged);
+            return this->pipe(merged);
         }
         virtual OutPtrT merge(DataAPtrT a, DataBPtrT b)=0;
-        std::shared_ptr<PipeT> pipe;
+        FuncT pipe;
         std::vector<std::shared_ptr<FrontEnd<PipeOutT>>> frontends;
     };
 
@@ -65,7 +66,7 @@ namespace telef::io {
         using DataAPtrT = const boost::shared_ptr<DataAT>;
         using DataBPtrT = const boost::shared_ptr<DataBT>;
     public:
-        SimpleBinaryMerger() : BaseT(std::make_shared<IdentityPipe<OutT>>()) {}
+        SimpleBinaryMerger() : BaseT([](auto in)->decltype(auto){return IdentityPipe<OutT>()(in);}) {}
         OutPtrT merge (DataAPtrT a, DataBPtrT b) override = 0;
     };
 
@@ -123,12 +124,11 @@ namespace telef::io {
     private:
         using BaseT = BinaryMerger<ImageT, DeviceCloudConstT, FittingSuite, PipeOutT>;
         using OutPtrT = const boost::shared_ptr<FittingSuite>;
-        using PipeT = Pipe<FittingSuite, PipeOutT>;
-
         using DeviceCloudBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
+        using FuncT = std::function<boost::shared_ptr<PipeOutT>(boost::shared_ptr<FittingSuite>)>;
 
     public:
-        FittingSuitePipeMerger(std::shared_ptr<PipeT> pipe) : BaseT(pipe) {}
+        FittingSuitePipeMerger(FuncT pipe) : BaseT(pipe) {}
         OutPtrT merge(const ImagePtrT image, const DeviceCloudBoostPtrT deviceCloud) override {
             auto landmark3d = boost::make_shared<CloudT>();
             auto rawCloud = deviceCloud->cloud;

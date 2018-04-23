@@ -38,7 +38,7 @@ namespace telef::io {
         explicit ImagePointCloudDevice(TelefOpenNI2Grabber *grabber) {
             this->grabber = grabber;
 
-            boost::function<void(const ImagePtrT&, const DeviceCloud&)> callback =
+            boost::function<void(const ImagePtrT&, const boost::shared_ptr<DeviceCloud>)> callback =
                     boost::bind(&ImagePointCloudDevice::imageCloudCallback, this, _1, _2);
             boost::function<void(const ImagePtrT&)> dummyImageCallback = [](const ImagePtrT&){};
             boost::function<void(const CloudConstPtrT&)> dummyCloudCallback = [](const CloudConstPtrT&){};
@@ -112,10 +112,10 @@ namespace telef::io {
         }
 
 
-        void imageCloudCallback(const ImagePtrT &image, const DeviceCloud &dc) {
+        void imageCloudCallback(const ImagePtrT &image, const boost::shared_ptr<DeviceCloud> dc) {
             std::unique_lock<std::mutex> lk(dataMutex);
             if(cloudChannel) {
-                cloudChannel->grabberCallback(boost::make_shared<DeviceCloudT>(dc));
+                cloudChannel->grabberCallback(dc);
             }
             if(imageChannel) {
                 imageChannel->grabberCallback(image);

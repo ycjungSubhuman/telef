@@ -22,8 +22,9 @@ namespace telef::io {
         // Use boost shared_ptr for pcl compatibility
         using DataPtrT = boost::shared_ptr<DataT>;
         using OutDataPtrT = boost::shared_ptr<OutDataT>;
+        using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<DataT>)>;
 
-        explicit Channel(std::shared_ptr<Pipe<DataT,OutDataT>> pipe) {
+        explicit Channel(FuncT pipe) {
             this->grabberCallback = boost::bind(&Channel::_grabberCallback, this, _1);
             this->pipe = std::move(pipe);
         }
@@ -36,7 +37,7 @@ namespace telef::io {
             DataPtrT data;
             this->currentData.swap(data);
             if(data) {
-                auto outData = this->pipe->composed(data);
+                auto outData = this->pipe(data);
                 this->onOutData(outData);
                 return outData;
             }
@@ -60,7 +61,7 @@ namespace telef::io {
     private:
 
         DataPtrT currentData;
-        std::shared_ptr<Pipe<DataT, OutDataT>> pipe;
+        FuncT pipe;
 
         void _grabberCallback(const DataPtrT &fetchedInstance) {
             this->currentData = fetchedInstance;
@@ -73,8 +74,8 @@ namespace telef::io {
     template <class OutDataT>
     class CloudChannel : public Channel<DeviceCloudConstT, OutDataT> {
     public:
-        using PipeT = Pipe<DeviceCloudConstT, OutDataT>;
-        explicit CloudChannel(std::shared_ptr<PipeT> pipe) : Channel<DeviceCloudConstT, OutDataT>(std::move(pipe)) {}
+        using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<DeviceCloudConstT>)>;
+        explicit CloudChannel(FuncT pipe) : Channel<DeviceCloudConstT, OutDataT>(std::move(pipe)) {}
 
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override = 0;
@@ -86,8 +87,8 @@ namespace telef::io {
     template <class OutDataT>
     class ImageChannel : public Channel<ImageT, OutDataT> {
     public:
-        using PipeT = Pipe<ImageT, OutDataT>;
-        explicit ImageChannel(std::shared_ptr<PipeT> pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
+        using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<ImageT>)>;
+        explicit ImageChannel(FuncT pipe) : Channel<ImageT, OutDataT>(std::move(pipe)) {}
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override = 0;
     };
@@ -95,8 +96,8 @@ namespace telef::io {
     template <class OutDataT>
     class DummyCloudChannel : public CloudChannel<OutDataT> {
     public:
-        using PipeT = typename CloudChannel<OutDataT>::PipeT;
-        explicit DummyCloudChannel(std::shared_ptr<PipeT> pipe)
+        using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<DeviceCloudConstT>)>;
+        explicit DummyCloudChannel(FuncT pipe)
                 : CloudChannel<OutDataT>(std::move(pipe)) {}
 
     protected:
@@ -107,8 +108,8 @@ namespace telef::io {
     template <class OutDataT>
     class DummyImageChannel : public ImageChannel<OutDataT> {
     public:
-        using PipeT = typename ImageChannel<OutDataT>::PipeT;
-        explicit DummyImageChannel(std::shared_ptr<PipeT> pipe) : ImageChannel<OutDataT>(std::move(pipe)) {}
+        using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<ImageT>)>;
+        explicit DummyImageChannel(FuncT pipe) : ImageChannel<OutDataT>(std::move(pipe)) {}
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {
         }

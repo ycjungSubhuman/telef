@@ -11,9 +11,6 @@ namespace telef::align {
      */
     //template <int ShapeRank>
     class PCARigidFittingPipe : public telef::io::Pipe<telef::feature::FittingSuite, PCARigidAlignmentSuite> {
-    public:
-        PCARigidFittingPipe(std::shared_ptr<telef::face::MorphableFaceModel<150>> model);
-
     private:
         using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel<150>>;
         using BaseT = telef::io::Pipe<telef::feature::FittingSuite, PCARigidAlignmentSuite>;
@@ -27,6 +24,9 @@ namespace telef::align {
         // TODO: Keep last frame transformation matrix (Trans1 * Trans2)
         // or pointcloud in to optimize between frames?
 
-        boost::shared_ptr<PCARigidAlignmentSuite> _processData(boost::shared_ptr<telef::feature::FittingSuite> in);
+        boost::shared_ptr<PCARigidAlignmentSuite> _processData(boost::shared_ptr<telef::feature::FittingSuite> in) override;
+
+    public:
+        PCARigidFittingPipe(MModelTptr model);
     };
 }

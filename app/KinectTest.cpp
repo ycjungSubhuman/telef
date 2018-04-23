@@ -23,16 +23,15 @@ int main(int ac, char* av[])
 
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
 
-    auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<IdentityPipe<DeviceCloudConstT>>();
-    auto cloudPipe2 = std::make_shared<RemoveNaNPoints>();
-    auto cloudPipe3 = std::make_shared<IdentityPipe<DeviceCloudConstT>>();
-    auto cloudCombinedPipe = cloudPipe
-            ->then<DeviceCloudConstT>(cloudPipe2)
-            ->then<DeviceCloudConstT>(cloudPipe3);
+    auto imagePipe = IdentityPipe<ImageT>();
+    auto cloudPipe = IdentityPipe<DeviceCloudConstT>();
+    auto cloudPipe2 = RemoveNaNPoints();
+    auto cloudPipe3 = IdentityPipe<DeviceCloudConstT>();
+    auto cloudCombinedPipe = compose(cloudPipe, cloudPipe2, cloudPipe3);
+    auto func = [&cloudCombinedPipe](auto in)->decltype(auto){return cloudCombinedPipe.operator()(in);};
 
-    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudCombinedPipe));
+    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(func);
 
     auto frontend = std::make_shared<DummyCloudFrontEnd>();
     auto merger = std::make_shared<DummyMappedImageCloudMerger>();

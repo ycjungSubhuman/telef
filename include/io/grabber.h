@@ -50,7 +50,7 @@ namespace telef::io {
             if (point_cloud_rgba_signal_->num_slots() > 0 || image_point_cloud_rgba_signal->num_slots() > 0) {
                 auto deviceCloud = mapToXYZRGBPointCloud(image, depth_image);
                 if (point_cloud_rgba_signal_->num_slots() > 0) {
-                    point_cloud_rgba_signal_->operator()(deviceCloud.cloud);
+                    point_cloud_rgba_signal_->operator()(deviceCloud->cloud);
                 }
                 if (image_point_cloud_rgba_signal->num_slots() > 0) {
                     image_point_cloud_rgba_signal->operator()(image, deviceCloud);
@@ -64,14 +64,14 @@ namespace telef::io {
         }
 
         using sig_cb_openni_image_point_cloud_rgba =
-        void(const boost::shared_ptr<Image> &, const DeviceCloud &);
+        void(const boost::shared_ptr<Image> &, const boost::shared_ptr<DeviceCloud>);
 
         boost::signals2::signal<sig_cb_openni_image_point_cloud_rgba>* image_point_cloud_rgba_signal;
 
 
-        DeviceCloud
+        boost::shared_ptr<DeviceCloud>
         mapToXYZRGBPointCloud (const Image::Ptr &image, const DepthImage::Ptr &depth_image) {
-            boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
+            boost::shared_ptr<pcl::PointCloud<PointT>> cloud (new pcl::PointCloud<PointT>);
             auto uvToPointIdMap = std::make_shared<Uv2PointIdMapT>(image->getWidth(), image->getHeight());
 
             cloud->header.seq = depth_image->getFrameID ();
@@ -193,11 +193,11 @@ namespace telef::io {
             cloud->sensor_origin_.setZero ();
             cloud->sensor_orientation_.setIdentity ();
 
-            DeviceCloud result;
-            result.cloud = cloud;
-            result.img2cloudMapping = uvToPointIdMap;
-            result.fx = fx;
-            result.fy = fy;
+            auto result = boost::make_shared<DeviceCloud>();
+            result->cloud = cloud;
+            result->img2cloudMapping = uvToPointIdMap;
+            result->fx = fx;
+            result->fy = fy;
 
             return result;
         }

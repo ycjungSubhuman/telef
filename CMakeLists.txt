@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -fopenmp -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 -fopenmp -march=native")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -39,7 +39,6 @@ add_library(telef
         include/face/FaceAlignment.h
         include/face/XXDescriptor.h
         include/feature/feature_detector.h
-        include/image/image_pipe.h
         include/io/align/align_frontend.h
         include/io/ply/meshio.h
         include/io/ply/YaPly.h

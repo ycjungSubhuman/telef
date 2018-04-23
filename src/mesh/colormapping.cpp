@@ -29,7 +29,7 @@ namespace telef::mesh {
             Eigen::Vector2i uv = convertXyzToUv(xyz, fx, fy, cx, cy);
             int pixel_idx = 0;
             if(uv(0) >=0 && uv(0) < image->getWidth() && uv(1) >=0 && uv(1) < image->getHeight()) {
-                pixel_idx = 3 * (image->getHeight() * uv(1) + uv(0));
+                pixel_idx = 3 * (image->getWidth() * uv(1) + uv(0));
             }
 
             uint8_t r = rgb_buffer[pixel_idx];
