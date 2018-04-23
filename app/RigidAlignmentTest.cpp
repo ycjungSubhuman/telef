@@ -44,18 +44,18 @@ int main(int argc, char** argv) {
 
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
 
-    auto imagePipe = std::make_shared<IdentityPipe<ImageT>>();
-    auto cloudPipe = std::make_shared<RemoveNaNPoints>();
+    auto imagePipe = IdentityPipe<ImageT>();
+    auto cloudPipe = RemoveNaNPoints();
 
-    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>(std::move(imagePipe));
-    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(std::move(cloudPipe));
+    auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)->decltype(auto){return cloudPipe(in);});
 
 
     auto model = std::make_shared<telef::face::MorphableFaceModel<150>>(fs::path("../pcamodels/example"));
-    auto rigidFitPipe = std::make_shared<telef::align::PCARigidFittingPipe>(model);
+    auto rigidFitPipe = telef::align::PCARigidFittingPipe(model);
 
     //auto rigidFitPipe = std::make_shared<telef::align::PCARigidFittingPipe>();
-    auto merger = std::make_shared<FittingSuitePipeMerger<telef::align::PCARigidAlignmentSuite>>(rigidFitPipe);
+    auto merger = std::make_shared<FittingSuitePipeMerger<telef::align::PCARigidAlignmentSuite>>([&rigidFitPipe](auto in)->decltype(auto){return rigidFitPipe(in);});
 
 
     //auto merger = std::make_shared<RigidAlignFrontEnd>();
