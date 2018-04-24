@@ -40,8 +40,6 @@ namespace telef::io {
 
     /**
      * A Step in Data Pipeline for Channel
-     *
-     * Can be constructed from a sequence of several Pipes.
      */
     template <class InT, class OutT>
     class Pipe {

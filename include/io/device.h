@@ -35,7 +35,8 @@ namespace telef::io {
         using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
         using FrontEndT = FrontEnd<MergePipeOutT>;
     public:
-        explicit ImagePointCloudDevice(TelefOpenNI2Grabber *grabber) {
+        explicit ImagePointCloudDevice(TelefOpenNI2Grabber *grabber, bool runOnce = false)
+        :runOnce(runOnce) {
             this->grabber = grabber;
 
             boost::function<void(const ImagePtrT&, const boost::shared_ptr<DeviceCloud>)> callback =
@@ -69,11 +70,13 @@ namespace telef::io {
             this->mergers.emplace_back(merger);
         }
         void run() {
-            std::cout << "Press Q-Enter to quit" << std::endl;
             isRunning = true;
             grabber->start();
             this->runThread = std::thread(&ImagePointCloudDevice::_run, this);
-            while(getchar()!='q');
+            if(!runOnce) {
+                std::cout << "Press Q-Enter to quit" << std::endl;
+                while (getchar() != 'q');
+            }
             std::cout << "Quitting..." << std::endl;
             isRunning = false;
             runThread.join();
@@ -87,27 +90,27 @@ namespace telef::io {
          *  This call blocks thread indefinitely
          */
         void _run() {
-            while (isRunning){
+            while(isRunning) {
                 CloudOutPtrT cloudOut;
                 ImageOutPtrT imageOut;
                 Uv2PointIdMapConstPtrT map;
                 std::unique_lock<std::mutex> lk(dataMutex);
                 dataCv.wait(lk);
-                if(cloudChannel) {
+                if (cloudChannel) {
                     cloudOut = cloudChannel->onDeviceLoop();
                     assert(cloudOut != nullptr);
                 }
-                if(imageChannel) {
+                if (imageChannel) {
                     imageOut = imageChannel->onDeviceLoop();
                     assert(imageOut != nullptr);
                 }
 
                 //TODO : Make passed data const to enforce consistence btw mergers
-                for(const auto &m : mergers) {
+                for (const auto &m : mergers) {
                     m->run(imageOut, cloudOut);
                 }
                 lk.unlock();
-            };
+            }
             mergers.clear();
         }
 
@@ -124,6 +127,7 @@ namespace telef::io {
             dataCv.notify_all();
         }
 
+        bool runOnce;
         std::mutex dataMutex;
         std::condition_variable dataCv;
         std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;

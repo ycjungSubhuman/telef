@@ -12,10 +12,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 -fopenmp -march=native")
 
-find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters)
+find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree)
 find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
+find_package(Ceres REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
@@ -27,6 +28,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
 include_directories(${Eigen_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${Ceres_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
@@ -38,6 +40,7 @@ add_library(telef
         include/face/binary_model_file.h
         include/face/FaceAlignment.h
         include/face/XXDescriptor.h
+        include/face/model.h
         include/feature/feature_detector.h
         include/io/align/align_frontend.h
         include/io/ply/meshio.h
@@ -72,6 +75,7 @@ add_library(telef
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
+        ${Ceres_LIBRARIES}
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
         ${PCL_IO_LIBRARIES}
@@ -159,10 +163,12 @@ target_link_libraries(PcaFit
         telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}
+        ${PCL_KDTREE_LIBRARIES}
         opencv_core
         opencv_ml
         opencv_objdetect
         opencv_highgui
         opencv_imgproc
         opencv_flann
+        ceres
         )

@@ -35,7 +35,6 @@ namespace telef::mesh {
             uint8_t r = rgb_buffer[pixel_idx];
             uint8_t g = rgb_buffer[pixel_idx+1];
             uint8_t b = rgb_buffer[pixel_idx+2];
-            std::cout << "uv: "<< uv(0) << " " << uv(1) << "/" << "rgb: " << (int)r << " " << " " << (int)g << " " << (int)b << std::endl;
             mesh.color[i] = r;
             mesh.color[i+1] = g;
             mesh.color[i+2] = b;

@@ -113,6 +113,17 @@ namespace {
             }
             return mean + result;
         }
+
+        Eigen::VectorXf genDeform(const double * const coeff, int size) {
+            if(size != shapeBase.cols()) {
+                throw std::runtime_error("Coefficient dimension mismatch");
+            }
+            Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
+            for (long i=0; i<ShapeRank; i++) {
+                result += coeff[i] * shapeBase.col(i);
+            }
+            return mean + result;
+        }
     };
 
     template<class M>
@@ -212,6 +223,18 @@ namespace telef::face {
             return refMesh.position + deformModel.genDeform(shapeCoeff);
         }
 
+        Eigen::VectorXf genPosition(const double * const shapeCoeff, int size) {
+            return refMesh.position + deformModel.genDeform(shapeCoeff, size);
+        }
+
+        ColorMesh genMesh(const double * const shapeCoeff, int size) {
+            ColorMesh result;
+            result.position = genPosition(shapeCoeff, size);
+            result.triangles = refMesh.triangles;
+
+            return result;
+        }
+
         /* Generate a ColorMesh using given coefficients */
         ColorMesh genMesh(Eigen::VectorXf shapeCoeff) {
             ColorMesh result;
@@ -219,6 +242,10 @@ namespace telef::face {
             result.triangles = refMesh.triangles;
 
             return result;
+        }
+
+        Eigen::VectorXf getBasis(unsigned long coeffIndex) {
+            return deformModel.shapeBase.col(coeffIndex);
         }
 
         int getRank() {

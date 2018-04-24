@@ -11,16 +11,15 @@
 #include "io/frontend.h"
 #include "io/ply/meshio.h"
 #include "io/align/align_frontend.h"
+#include "cloud/cloud_pipe.h"
 
 #include "mesh/mesh.h"
 #include "mesh/color_projection_pipe.h"
-#include "cloud/cloud_pipe.h"
+#include "glog/logging.h"
 
-
-using namespace telef::feature;
+using namespace telef::io::align;
 using namespace telef::io;
 using namespace telef::cloud;
-using namespace telef::io::align;
 using namespace telef::align;
 using namespace telef::face;
 using namespace telef::mesh;
@@ -31,6 +30,9 @@ namespace fs = std::experimental::filesystem;
 namespace po = boost::program_options;
 
 int main(int ac, const char* const *av) {
+
+    google::InitGoogleLogging(av[0]);
+
     po::options_description desc("Loads an RGB image and a corresponding pointcloud. Make and write PLY face mesh out of it.");
     desc.add_options()
             ("help,H", "print help message")
@@ -68,7 +70,7 @@ int main(int ac, const char* const *av) {
     auto merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe](auto in)->decltype(auto){return pipe(in);});
     merger->addFrontEnd(frontend);
 
-    ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {std::move(grabber)};
+    ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {std::move(grabber), true};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);
