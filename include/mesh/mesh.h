@@ -5,6 +5,7 @@
 namespace telef::mesh {
     using ColorMesh = struct ColorMesh {
         Eigen::VectorXf position;
+        Eigen::VectorXf uv;
         std::vector<uint8_t> color;
         std::vector<std::vector<int>> triangles;
 

@@ -131,7 +131,7 @@ namespace {
             if (isJacobianRequired) {
                 for (unsigned long j = 0; j < CoeffRank; j++) {
                     jacobian[j] =
-                            2 * nearestCoeff * ((meshPos - nearestPts).array() * model->getBasis(j).array()).sum();
+                            2 * nearestCoeff * ((meshPos - nearestPts).array() * model->getBasis(j).array()).sum() / numValidPoint;
                 }
             }
         }
