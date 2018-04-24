@@ -17,7 +17,7 @@ int main() {
         auto sample = model.sample();
         telef::io::ply::writeMesh(fs::path("sample"+std::to_string(i)+".ply"), sample);
     }
-    model.save(fs::path("data/example"));
+    model.save(fs::path("data/example_nonscaled"));
 
     telef::face::MorphableFaceModel<150> model2(fs::path("data/example"));
 

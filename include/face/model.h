@@ -45,7 +45,7 @@ namespace {
             auto s2 = s*s;
             pairs[i] = std::make_pair(
                     s2, // propertional to eigenvalue (omitted /(n-1))
-                    bdc.matrixV().col(i)*s2); // eivenvector, which is a PCA basis
+                    bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
         }
         std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {return l.first > r.first;});
 

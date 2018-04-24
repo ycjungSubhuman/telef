@@ -6,7 +6,7 @@
 #include "align/nonrigid_pipe.h"
 #include "type.h"
 
-#define EPS 0.01
+#define EPS 0.005
 
 using namespace telef::types;
 using namespace telef::face;
@@ -100,7 +100,9 @@ namespace {
                         for (unsigned long j = 0; j < CoeffRank; j++) {
                             Eigen::Vector3f basis;
                             auto modelBasis = model->getBasis(j);
-                            basis << modelBasis[3 * i], modelBasis[3 * i + 1], modelBasis[3 * i + 2];
+                            basis << modelBasis[3 * meshLandmark3d[i]],
+                                    modelBasis[3 * meshLandmark3d[i] + 1],
+                                    modelBasis[3 * meshLandmark3d[i] + 2];
 
                             jacobian[j] += 2 * landmarkCoeff * (ptSubt.array() * basis.array()).sum();
 
@@ -210,12 +212,14 @@ namespace telef::align {
         ceres::Problem problem;
         auto cost = new FaceCostFunction<150>(in->pca_model->getLandmarks(), in->fittingSuite->landmark3d, in->rawCloud,
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
-                                          100.0, 100.0, 0.00002);
+                                          100.0, 80.0, 0.000002);
         double coeff[150] = {0,};
         problem.AddResidualBlock(cost, nullptr, coeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 100;
+        options.use_nonmonotonic_steps = true;
+        options.function_tolerance = 1e-10;
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
