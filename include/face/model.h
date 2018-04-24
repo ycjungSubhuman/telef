@@ -254,7 +254,7 @@ namespace telef::face {
 
         /* Generate a random sample ColorMesh */
         ColorMesh sample() {
-            std::normal_distribution<float> dist(0.0, 0.003);
+            std::normal_distribution<float> dist(0.0, 0.005);
 
             std::vector<float> coeff(static_cast<unsigned long>(ShapeRank));
             std::generate(coeff.begin(), coeff.end(), [this, &dist]{return dist(this->mt);});

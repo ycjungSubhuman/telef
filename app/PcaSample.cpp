@@ -13,5 +13,8 @@ int main() {
         telef::io::ply::writeMesh(fs::path("sample"+std::to_string(i)+".ply"), sample);
     }
 
+    auto sample = model.genMesh(Eigen::VectorXf::Zero(150));
+    telef::io::ply::writeMesh(fs::path("sample_mean.ply"), sample);
+
     return 0;
 }
