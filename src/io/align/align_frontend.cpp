@@ -61,6 +61,8 @@ namespace telef::io::align {
     {
         std::cout << "Saved" << std::endl;
         fs::path p{outputPath.c_str()};
-        ply::writeMesh(p, *input);
+        ply::writePlyMesh(p, *input);
+        auto stripped = p.parent_path()/p.stem();
+        ply::writeObjMesh(stripped.string()+".obj", *input);
     }
 }

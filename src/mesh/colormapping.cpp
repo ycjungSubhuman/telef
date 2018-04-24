@@ -18,10 +18,11 @@ namespace telef::mesh {
         const uint8_t *rgb_buffer = (const uint8_t*)image->getData();
 
         mesh.color.resize(static_cast<unsigned long>(mesh.position.rows()));
-        for (int i=0; i<mesh.position.rows(); i+=3) {
-            float x = mesh.position(i);
-            float y = mesh.position(i+1);
-            float z = mesh.position(i+2);
+        mesh.uv.resize(mesh.position.rows()/3*2);
+        for (int i=0; i<mesh.position.rows()/3; i++) {
+            float x = mesh.position(3*i);
+            float y = mesh.position(3*i+1);
+            float z = mesh.position(3*i+2);
 
             Eigen::Vector3f xyz;
             xyz << x,y,z;
@@ -35,9 +36,12 @@ namespace telef::mesh {
             uint8_t r = rgb_buffer[pixel_idx];
             uint8_t g = rgb_buffer[pixel_idx+1];
             uint8_t b = rgb_buffer[pixel_idx+2];
-            mesh.color[i] = r;
-            mesh.color[i+1] = g;
-            mesh.color[i+2] = b;
+            mesh.color[3*i] = r;
+            mesh.color[3*i+1] = g;
+            mesh.color[3*i+2] = b;
+            mesh.uv[2*i] = (static_cast<float>(uv(0)) / image->getWidth());
+            mesh.uv[2*i+1] = 1.0f - (static_cast<float>(uv(1)) / image->getHeight());
+            mesh.image = image;
         }
     }
 }

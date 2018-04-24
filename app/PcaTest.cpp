@@ -15,7 +15,7 @@ int main() {
 
     for(int i=1; i<10; i++) {
         auto sample = model.sample();
-        telef::io::ply::writeMesh(fs::path("sample"+std::to_string(i)+".ply"), sample);
+        telef::io::ply::writePlyMesh(fs::path("sample" + std::to_string(i) + ".ply"), sample);
     }
     model.save(fs::path("data/example_nonscaled"));
 
@@ -23,7 +23,7 @@ int main() {
 
     for(int i=1; i<10; i++) {
         auto sample = model2.sample();
-        telef::io::ply::writeMesh(fs::path("newsample"+std::to_string(i)+".ply"), sample);
+        telef::io::ply::writePlyMesh(fs::path("newsample" + std::to_string(i) + ".ply"), sample);
     }
 
     return 0;

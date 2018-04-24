@@ -66,7 +66,7 @@ namespace {
 
     ColorMesh read(fs::path f) {
         if (f.extension().string() == ".ply") {
-            return ColorMesh(telef::io::ply::readMesh(f));
+            return ColorMesh(telef::io::ply::readPlyMesh(f));
         }
         else {
             throw std::runtime_error("File " + f.string() + " is not supported");
@@ -198,7 +198,7 @@ namespace telef::face {
 
         /** Load from existing model file */
         MorphableFaceModel(fs::path fileName): mt(rd()) {
-            refMesh = telef::io::ply::readMesh(fileName.string()+".ref.ply");
+            refMesh = telef::io::ply::readPlyMesh(fileName.string() + ".ref.ply");
 
             Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase;
             Eigen::VectorXf mean;
@@ -214,7 +214,7 @@ namespace telef::face {
         void save(fs::path fileName) {
             writeMat((fileName.string()+".deform.base").c_str(), deformModel.shapeBase);
             writeMat((fileName.string()+".deform.mean").c_str(), deformModel.mean);
-            telef::io::ply::writeMesh(fileName.string()+".ref.ply", refMesh);
+            telef::io::ply::writePlyMesh(fileName.string() + ".ref.ply", refMesh);
             writeLmk((fileName.string()+".lmk").c_str(), landmarks);
         }
 

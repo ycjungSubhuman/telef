@@ -1,10 +1,13 @@
+#include <iomanip>
+
 #include "io/ply/meshio.h"
+#include "io/bmp.h"
 
 using namespace telef::mesh;
 namespace fs = std::experimental::filesystem;
 
 namespace telef::io::ply {
-    ColorMesh readMesh(fs::path f) {
+    ColorMesh readPlyMesh(fs::path f) {
         yaply::PlyFile plyFile {f.c_str()};
         auto vertexElem = plyFile["vertex"];
         auto faceElem = plyFile["face"];
@@ -50,7 +53,7 @@ namespace telef::io::ply {
         return colorMesh;
     }
 
-    void writeMesh(fs::path f, ColorMesh &mesh) {
+    void writePlyMesh(fs::path f, ColorMesh &mesh) {
         yaply::PlyFile plyFile;
 
         assert(mesh.position.size() % 3 == 0);
@@ -62,5 +65,47 @@ namespace telef::io::ply {
         plyFile["face"].nrElements = static_cast<size_t>(mesh.triangles.size());
         plyFile["face"].setList("vertex_indices", mesh.triangles);
         plyFile.save(f.c_str(), false);
+    }
+
+    void writeObjMesh(fs::path f, ColorMesh &mesh) {
+        if(mesh.image != nullptr) {
+            auto stripped = f.parent_path() / f.stem();
+            std::ofstream of(f.c_str());
+            of << "mtllib " << f.stem().string() << ".mtl\n";
+            of << "usemtl material0" << "\n";
+            of << std::fixed;
+            for (int i = 0; i < mesh.position.size() / 3; i++) {
+                of << "v " << mesh.position[3 * i] << " " << mesh.position[3 * i + 1] << " " << mesh.position[3 * i + 2]
+                   << "\n";
+            }
+
+            for (int i = 0; i < mesh.position.size() / 3; i++) {
+                of << "vt " << mesh.uv[2 * i] << " " << mesh.uv[2 * i + 1] << "\n";
+            }
+
+            for (int i = 0; i < mesh.triangles.size(); i++) {
+                auto tri = mesh.triangles[i];
+                of << "f " << (tri[0] + 1) << "/" << (tri[0] + 1) << " "
+                   << (tri[1] + 1) << "/" << (tri[1] + 1) << " "
+                   << (tri[2] + 1) << "/" << (tri[2] + 1) << "\n";
+            }
+            of.close();
+
+            std::ofstream mtl(stripped.string() + ".mtl");
+            mtl << "newmtl material0\n";
+            mtl << "Ka 1.000000 1.000000 1.000000\n";
+            mtl << "Kd 1.000000 1.000000 1.000000\n";
+            mtl << "Ks 0.000000 0.000000 0.000000\n";
+            mtl << "Tr 1.000000\n";
+            mtl << "illum 1\n";
+            mtl << "Ns 0.000000\n";
+            mtl << "map_Kd " << f.stem().string() << ".bmp\n";
+            mtl.close();
+
+            saveBMPFile(stripped.string() + ".bmp", *mesh.image);
+        }
+        else {
+            throw std::runtime_error("mesh does not have texture");
+        }
     }
 }
