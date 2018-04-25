@@ -21,7 +21,7 @@ int main() {
 
     telef::face::MorphableFaceModel<150> model2(fs::path("data/example"));
 
-    for(int i=1; i<10; i++) {
+    for(int i=1; i<100; i++) {
         auto sample = model2.sample();
         telef::io::ply::writePlyMesh(fs::path("newsample" + std::to_string(i) + ".ply"), sample);
     }

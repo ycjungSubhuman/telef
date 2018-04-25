@@ -120,10 +120,25 @@ target_link_libraries(FaceFeatureDetect
         )
 
 add_executable(PcaTest app/PcaTest.cpp)
-target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
+target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
+        )
 
 add_executable(PcaSample app/PcaSample.cpp)
-target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
+target_link_libraries(PcaSample stdc++fs telef
+        ${Boost_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_highgui
+        opencv_imgproc
+        opencv_flann
+        )
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)
 target_link_libraries(RigidAlighnment
