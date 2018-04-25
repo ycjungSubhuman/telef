@@ -12,7 +12,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 -fopenmp -march=native")
 
-find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree)
+find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
@@ -186,4 +186,39 @@ target_link_libraries(PcaFit
         opencv_highgui
         opencv_flann
         ceres
+        )
+
+add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
+target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(ConvertPlyUV
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        ${PCL_KDTREE_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
+        )
+
+add_executable(MakePcaModel app/MakePcaModel.cpp src/io/modelio.cpp)
+target_link_libraries(MakePcaModel ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(MakePcaModel
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        ${PCL_KDTREE_LIBRARIES}
+        ${PCL_REGISTRATION_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
         )

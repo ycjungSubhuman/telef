@@ -11,12 +11,14 @@
 #include <random>
 #include <ctime>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 #include "io/ply/meshio.h"
 #include "type.h"
+#include "util/eigen_pcl.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -42,13 +44,16 @@ namespace {
             std::cout << "Exact match" << std::endl;
             pairs.resize(static_cast<unsigned long>(d.cols()));
         }
+        std::cout << "Singluar Value **2" << std::endl;
         for(unsigned long i=0; i<pairs.size(); i++) {
             auto s = bdc.singularValues()(i);
             auto s2 = s*s;
+            std::cout << s2 << ", ";
             pairs[i] = std::make_pair(
                     s2, // propertional to eigenvalue (omitted /(n-1))
                     bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
         }
+        std::cout << std::endl;
         std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {return l.first > r.first;});
 
         Eigen::Matrix<float, Eigen::Dynamic, Rank> result(d.cols(), Rank);
@@ -186,7 +191,7 @@ namespace telef::face {
         std::mt19937 mt;
     public:
         /** Construct PCA Model using a list of mesh files */
-        MorphableFaceModel(std::vector<fs::path> &f)
+        MorphableFaceModel(std::vector<fs::path> &f, bool rigidAlignRequired=false)
         :mt(rd())
         {
             assert(f.size() > 0);
@@ -194,6 +199,16 @@ namespace telef::face {
             std::transform(f.begin(), f.end(), meshes.begin(), [](auto &a){return read(a);});
 
             refMesh = meshes[0];
+            if(rigidAlignRequired) {
+                auto refCloud = util::convert(refMesh.position);
+                auto reg = pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ, float>();
+                for (unsigned long i = 0; i < f.size(); i++) {
+                    auto cloud = util::convert(meshes[i].position);
+                    Eigen::Matrix4f trans;
+                    reg.estimateRigidTransformation(*cloud, *refCloud, trans);
+                    meshes[i].applyTransform(trans);
+                }
+            }
             deformModel = PCADeformationModel<ShapeRank>(meshes, refMesh);
             landmarks = std::vector<int>{1, 2, 3, 4, 5};
         };
@@ -260,8 +275,15 @@ namespace telef::face {
 
             std::vector<float> coeff(static_cast<unsigned long>(ShapeRank));
             std::generate(coeff.begin(), coeff.end(), [this, &dist]{return dist(this->mt);});
+            float sum = 0.0f;
             for (auto &a : coeff) {
-                std::cout << a << ", ";
+                sum += a;
+            }
+
+            assert(sum != 0.0f);
+            for (int i=0; i<ShapeRank; i++) {
+                coeff[i] /= sum;
+                std::cout << coeff[i] << ", ";
             }
             std::cout << std::endl;
 
