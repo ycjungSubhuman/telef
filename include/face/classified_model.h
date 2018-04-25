@@ -9,6 +9,7 @@
 
 #include "face/model.h"
 #include "align/rigid_pipe.h"
+#include "feature/feature_detector.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -17,13 +18,18 @@ namespace telef::face {
     template <int ShapeRank>
     class ClassifiedMorphableModel {
     public:
+        using ModelPairT = struct ModelPairT {
+            std::string name;
+            std::shared_ptr<MorphableFaceModel<ShapeRank>> model;
+        };
         using InPairT = std::pair<std::string, std::vector<fs::path>>;
-        using ModelPairT = std::pair<std::string, MorphableFaceModel<ShapeRank>>;
 
-        using MeshPairT = std::pair<std::string, Eigen::VectorXf>;
         ClassifiedMorphableModel(std::vector<InPairT> paths) {
-            std::transform(paths.begin(), paths.end(), models.begin(), [](const auto & p)->decltype(auto) {
-                return std::make_pair(p.first, MorphableFaceModel<ShapeRank>(p.second));
+            std::transform(paths.begin(), paths.end(), models.begin(), [](auto & p)->decltype(auto) {
+                ModelPairT result;
+                result.name = p.first;
+                result.model = std::make_shared<MorphableFaceModel<ShapeRank>>(p.second);
+                return result;
             });
         }
 
@@ -37,33 +43,39 @@ namespace telef::face {
          * frontal part of scanned face. It includes some backgrounds or body, too. But we can cut them out by rejecting
          * them with some distance threshold.
          */
-        MorphableFaceModel<ShapeRank> getClosestModel(boost::shared_ptr<telef::feature::FittingSuite> fittingSuite) {
+        std::shared_ptr<MorphableFaceModel<ShapeRank>> getClosestModel(boost::shared_ptr<telef::feature::FittingSuite> fittingSuite) {
             std::vector<double> dists;
 
             std::transform(models.begin(), models.end(), dists.begin(), [fittingSuite](const auto &p)->decltype(auto) {
-                auto name = p.first;
+                auto name = p.name;
                 // We first align mean mesh of current MM with the scan
-                auto mean = p.second.genPosition(Eigen::VectorXf::Zero(ShapeRank));
-                telef::align::PCARigidFittingPipe rigidPipe(p.second);
+                auto meanMesh = p.model->genMesh(Eigen::VectorXf::Zero(ShapeRank));
+                telef::align::PCARigidFittingPipe rigidPipe(p.model);
                 auto alignment = rigidPipe(fittingSuite);
-                mean.applyTransform(alignment->transformation);
+                meanMesh.applyTransform(alignment->transformation);
+                auto mean = meanMesh.position;
 
                 auto meshCloud = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
                 meshCloud->resize(mean.size());
                 for(unsigned long i=0; i<mean.size()/3; i++) {
-                    meshCloud->points[3*i] = mean[3*i];
-                    meshCloud->points[3*i+1] = mean[3*i+1];
-                    meshCloud->points[3*i+2] = mean[3*i+2];
+                    meshCloud->points[3*i].x = mean[3*i];
+                    meshCloud->points[3*i].y = mean[3*i+1];
+                    meshCloud->points[3*i].z = mean[3*i+2];
                 }
 
                 // Find the closest point for each point in scanned cloud
-                pcl::KdTreeFLANN kdtree;
+                pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
                 kdtree.setInputCloud(meshCloud);
 
                 double distSum = 0.0f;
                 int totalNearestPoint = 0;
                 for(unsigned long i=0; i<fittingSuite->rawCloud->points.size(); i++) {
-                    auto point = fittingSuite->rawCloud->points[i];
+                    auto xyzrgb = fittingSuite->rawCloud->points[i];
+                    pcl::PointXYZ point;
+                    point.x = xyzrgb.x;
+                    point.y = xyzrgb.y;
+                    point.z = xyzrgb.z;
+
 
                     std::vector<int> nearestPointInds;
                     std::vector<float> nearestPointDists;
@@ -84,9 +96,9 @@ namespace telef::face {
             auto min = std::min_element(dists.begin(), dists.end());
             auto argmin = std::distance(dists.begin(), min);
 
-            std::cout << "Selection : " << models[argmin].first << std ::endl;
+            std::cout << "Selection : " << models[argmin].name << std ::endl;
 
-            return models[argmin].second;
+            return models[argmin].model;
         }
 
     private:
