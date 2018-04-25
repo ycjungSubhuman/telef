@@ -1,5 +1,6 @@
 #include <ceres/ceres.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/io/ply_io.h>
 #include <Eigen/Core>
 #include <cmath>
 
@@ -12,6 +13,7 @@ using namespace telef::types;
 using namespace telef::face;
 
 namespace {
+    /** Convertes mesh points to nearest points in pointcloud of RGB-D scan */
     Eigen::VectorXf getNearestPoints(const Eigen::VectorXf &meshPoints, CloudConstPtrT scanCloud, int &numValidPoints) {
         auto posCloud = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
         posCloud->resize(scanCloud->size());
@@ -46,6 +48,7 @@ namespace {
         return result;
     }
 
+    /** Cost function defining ceres::Problem */
     template<int CoeffRank>
     class FaceCostFunction : public ceres::SizedCostFunction<1, CoeffRank> {
     private:
@@ -61,6 +64,7 @@ namespace {
         float nearestCoeff;
         float regularizerCoeff;
 
+        /** Convert full mesh position to landmark poisitions */
         Eigen::VectorXf lmkInd2Pos(const Eigen::VectorXf &fullMeshPos) const {
             Eigen::VectorXf result(meshLandmark3d.size()*3);
 
@@ -73,6 +77,11 @@ namespace {
             return result;
         }
 
+        /**
+         * Compute landmark term
+         *
+         * The residual is sum of seuqred 2-norm of distances of each lanmark pair
+         */
         void getLandmarkRes(const Eigen::VectorXf &meshPos, const double * const params, double *residual,
                             double *jacobian, bool isJacobianRequired) const {
             Eigen::VectorXf meshLmk3d = lmkInd2Pos(meshPos);
@@ -123,6 +132,12 @@ namespace {
             }
         }
 
+        /**
+         * Compute point cloud data term
+         *
+         * For each point on the mesh, find the nearest point on the scan.
+         * The residual is sum of squared 2-norm of distances of each point pair
+         * */
         void getNearestRes(const Eigen::VectorXf &meshPos, const double * const params, double *residual,
                            double *jacobian, bool isJacobianRequired) const {
             int numValidPoint;
@@ -136,6 +151,11 @@ namespace {
             }
         }
 
+        /**
+         * Compute residual and jacobian of regularization term
+         *
+         * Give panelty to the size of coefficients
+         * */
         void getRegularizerRes(const Eigen::VectorXf &meshPos, const double * const params, double *residual,
                                double *jacobian, bool isJacobianRequired) const {
             double res = 0.0;
@@ -172,6 +192,12 @@ namespace {
         }
 
         virtual ~FaceCostFunction() {}
+
+        /** Evaluate Residue and jacobians
+         *
+         *  In this case, the size of rediduals is 150 and for jacobians, it is (1,150)
+         **/
+
         bool Evaluate(double const* const* parameters, double *residuals, double **jacobians) const override {
             std::cout << parameters[0][0] << std::endl;
             double lmkRes = 0;
@@ -180,6 +206,8 @@ namespace {
             double lmkJ[CoeffRank] = {0,};
             double nearJ[CoeffRank] = {0,};
             double regJ[CoeffRank] = {0,};
+            // According to ceres-solver documentation, jacobians and jacobians[i] can be null depending on
+            // optimization methods. if either is null, we don't have to compute jacobian
             bool isJacobianRequired = jacobians != nullptr && jacobians[0] != nullptr;
 
             auto m = model->genMesh(parameters[0], CoeffRank);
@@ -207,6 +235,7 @@ namespace telef::align {
     PCANonRigidFittingPipe::_processData(boost::shared_ptr<telef::align::PCARigidAlignmentSuite> in)
     {
         auto result = boost::make_shared<PCANonRigidFittingResult>();
+        pcl::io::savePLYFile("captured.ply", *in->rawCloud);
         result->pca_model = in->pca_model;
 
         ceres::Problem problem;
@@ -214,6 +243,7 @@ namespace telef::align {
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
                                           100.0, 80.0, 0.000002);
         double coeff[150] = {0,};
+        // The ownership of 'cost' is moved to 'probelm'. So we don't delete cost outsideof 'problem'.
         problem.AddResidualBlock(cost, nullptr, coeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
