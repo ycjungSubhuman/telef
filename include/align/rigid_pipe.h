@@ -4,7 +4,6 @@
 #include "io/pipe.h"
 #include "mesh/mesh.h"
 
-
 namespace telef::align {
     /**
      * Rigid alignment of PCA Template to FittingSuite data
@@ -29,4 +28,7 @@ namespace telef::align {
     public:
         PCARigidFittingPipe(MModelTptr model);
     };
+
+    Eigen::VectorXf alignLandmark(telef::types::CloudConstPtrT scanCloud, telef::types::CloudConstPtrT landmarkCloud,
+                       Eigen::VectorXf meshPosition, std::vector<int> landmarkIndices);
 }

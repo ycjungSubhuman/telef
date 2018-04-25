@@ -10,11 +10,13 @@
 #include <functional>
 #include <random>
 #include <ctime>
+#include <pcl/kdtree/kdtree_flann.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 #include "io/ply/meshio.h"
+#include "type.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -270,4 +272,6 @@ namespace telef::face {
             return landmarks;
         }
     };
+
+
 };
