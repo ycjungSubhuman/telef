@@ -1,3 +1,4 @@
+#include <boost/make_shared.hpp>
 #include "mesh/color_projection_pipe.h"
 #include "mesh/colormapping.h"
 

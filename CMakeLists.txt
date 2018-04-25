@@ -182,8 +182,8 @@ target_link_libraries(PcaFit
         opencv_core
         opencv_ml
         opencv_objdetect
-        opencv_highgui
         opencv_imgproc
+        opencv_highgui
         opencv_flann
         ceres
         )

@@ -1,3 +1,4 @@
+#include <boost/make_shared.hpp>
 #include <ceres/ceres.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/io/ply_io.h>
