@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include <pcl/registration/transformation_estimation_svd.h>
+#include <pcl/registration/transformation_estimation_svd_scale.h>
 
 #include "align/rigid_pipe.h"
 #include "util/eigen_pcl.h"
@@ -22,7 +22,7 @@ namespace telef::align {
         //pca_model = std::make_shared<telef::face::MorphableFaceModel<150>>(fs::path("../pcamodels/example"));
 
         // Generate Mean Face Template
-        meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(150));
+        meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(RANK));
 
         // Save initial point cloud for rigid fitting
         initShape = telef::util::convert(meanMesh.position);
@@ -51,14 +51,14 @@ namespace telef::align {
             //cout << "PCA Lmks: " << pca_lmks.size() << " - Detected: " << in_lmks->points.size();
 
             Eigen::Matrix4f currentTransform;
-            pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZRGBA> svd;
+            pcl::registration::TransformationEstimationSVDScale<pcl::PointXYZ, pcl::PointXYZRGBA> svd;
             svd.estimateRigidTransformation(*initShape, pca_lmks, *in_lmks, corr_tgt, currentTransform);
             this->transformation = currentTransform;
         } else {
             std::cout << "\n Didn't detect all landmarks, using last transformation:" << std::endl;
         }
 
-        //std::cout << "\n Transformtion Matrix: \n" << this->transformation << std::endl;
+        std::cout << "\n Transformtion Matrix: \n" << this->transformation << std::endl;
         auto alignment = boost::shared_ptr<PCARigidAlignmentSuite>(new PCARigidAlignmentSuite());
         alignment->fittingSuite = in;
         alignment->pca_model = pca_model;

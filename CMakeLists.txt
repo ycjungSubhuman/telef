@@ -170,6 +170,24 @@ target_link_libraries(RigidAlignmentTest
         opencv_flann
         )
 
+add_executable(PcaTargetFit app/PcaTargetFit.cpp src/io/modelio.cpp)
+target_link_libraries(PcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(PcaTargetFit
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        ${PCL_KDTREE_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
+        ceres
+        )
+
 add_executable(PcaFit app/PcaFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(PcaFit
@@ -222,3 +240,4 @@ target_link_libraries(MakePcaModel
         opencv_highgui
         opencv_flann
         )
+

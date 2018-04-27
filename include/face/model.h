@@ -19,12 +19,15 @@
 #include "io/ply/meshio.h"
 #include "type.h"
 #include "util/eigen_pcl.h"
+#define RANK 5
 
 namespace fs = std::experimental::filesystem;
 
 using namespace telef::mesh;
 
 namespace {
+
+
     template <int Rank>
     Eigen::Matrix<float, Eigen::Dynamic, Rank> getPCABase(Eigen::MatrixXf data) {
 
@@ -290,10 +293,12 @@ namespace telef::face {
             return genMesh(Eigen::Map<Eigen::Matrix<float, ShapeRank, 1>>(coeff.data(), coeff.size()));
         }
 
+        void setLandmarks(std::vector<int> lmk) {
+            landmarks = lmk;
+        }
+
         std::vector<int> getLandmarks() {
             return landmarks;
         }
     };
-
-
 };

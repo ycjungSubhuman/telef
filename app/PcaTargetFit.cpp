@@ -70,7 +70,7 @@ int main(int ac, const char* const *av) {
     po::options_description desc("Captures RGB-D from camera. Generate and write face mesh as ply and obj");
     desc.add_options()
             ("help,H", "print help message")
-            ("groups,K", po::value<std::string>(), "specify group file path")
+            ("model,M", po::value<std::string>(), "specify PCA model path")
             ("output,O", po::value<std::string>(), "specify output PLY file path");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -86,15 +86,10 @@ int main(int ac, const char* const *av) {
         return 1;
     }
 
-    if (vm.count("groups") == 0) {
-        std::cout << "Please specify 'groups'"  << std::endl;
-        return 1;
-    }
-
-    std::string groupPath;
+    std::string modelPath;
     std::string outputPath;
 
-    groupPath = vm["groups"].as<std::string>();
+    modelPath = vm["model"].as<std::string>();
     outputPath = vm["output"].as<std::string>();
 
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
@@ -110,18 +105,13 @@ int main(int ac, const char* const *av) {
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
-    std::shared_ptr<ClassifiedMorphableModel<RANK>> cmodel;
-    auto groups = readGroups(fs::path(groupPath.c_str()));
-    cmodel = std::make_shared<ClassifiedMorphableModel<RANK>>(groups);
+    std::shared_ptr<MorphableFaceModel<RANK>> model;
+    model = std::make_shared<MorphableFaceModel<RANK>>(fs::path(modelPath.c_str()));
 
-    auto classify = ClassifyMorphableModelPipe<RANK>(*cmodel);
-    auto crigid = ClassifiedRigidFittingPipe<RANK>();
-
+    PCARigidFittingPipe rigid = PCARigidFittingPipe(model);
     std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;
-    auto pipe2 = compose(classify, crigid, nonrigid, fitting2Projection, colorProjection);
-
-    merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe2](auto in)->decltype(auto){return pipe2(in);});
-
+    auto pipe1 = compose(rigid, nonrigid, fitting2Projection, colorProjection);
+    merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
 
     ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {std::move(grabber), true};

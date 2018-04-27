@@ -171,7 +171,7 @@ namespace {
         }
 
     public:
-        FaceCostFunction(
+        FaceCostFunction(classify, crigid,
                 std::vector<int> meshLandmark3d, CloudConstPtrT scanLandmark3d,
                 CloudConstPtrT scanPc, std::shared_ptr<MorphableFaceModel<CoeffRank>> model,
                 std::vector<int> badLmkInds, Eigen::Matrix4f transformation,
@@ -240,10 +240,10 @@ namespace telef::align {
         result->pca_model = in->pca_model;
 
         ceres::Problem problem;
-        auto cost = new FaceCostFunction<150>(in->pca_model->getLandmarks(), in->fittingSuite->landmark3d, in->rawCloud,
+        auto cost = new FaceCostFunction<RANK>(in->pca_model->getLandmarks(), in->fittingSuite->landmark3d, in->rawCloud,
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
                                           100.0, 80.0, 0.000002);
-        double coeff[150] = {0,};
+        double coeff[RANK] = {0,};
         // The ownership of 'cost' is moved to 'probelm'. So we don't delete cost outsideof 'problem'.
         problem.AddResidualBlock(cost, nullptr, coeff);
         ceres::Solver::Options options;
@@ -257,7 +257,7 @@ namespace telef::align {
         std::cout << coeff[0] << std::endl;
         std::cout << "wat??" << std::endl;
 
-        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, 150).cast<float>();
+        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, RANK).cast<float>();
         std::cout << result->fitCoeff << std::endl;
         result->image = in->image;
         result->fx = in->fx;

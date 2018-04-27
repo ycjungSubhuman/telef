@@ -22,15 +22,15 @@ namespace telef::face {
             std::string name;
             std::shared_ptr<MorphableFaceModel<ShapeRank>> model;
         };
-        using InPairT = std::pair<std::string, std::vector<fs::path>>;
+        using InPairT = std::pair<std::string, fs::path>;
 
-        ClassifiedMorphableModel(std::vector<InPairT> paths) {
-            std::transform(paths.begin(), paths.end(), models.begin(), [](auto & p)->decltype(auto) {
+        ClassifiedMorphableModel(std::vector<InPairT> &paths) {
+            for (unsigned long i=0; i<paths.size(); i++) {
                 ModelPairT result;
-                result.name = p.first;
-                result.model = std::make_shared<MorphableFaceModel<ShapeRank>>(p.second);
-                return result;
-            });
+                result.name = std::string(paths[i].first);
+                result.model = std::make_shared<MorphableFaceModel<ShapeRank>>(paths[i].second);
+                models.push_back(result);
+            }
         }
 
         /**
@@ -46,7 +46,8 @@ namespace telef::face {
         std::shared_ptr<MorphableFaceModel<ShapeRank>> getClosestModel(boost::shared_ptr<telef::feature::FittingSuite> fittingSuite) {
             std::vector<double> dists;
 
-            std::transform(models.begin(), models.end(), dists.begin(), [fittingSuite](const auto &p)->decltype(auto) {
+            for (unsigned long i=0; i<models.size(); i++) {
+                auto p = models[i];
                 auto name = p.name;
                 // We first align mean mesh of current MM with the scan
                 auto meanMesh = p.model->genMesh(Eigen::VectorXf::Zero(ShapeRank));
@@ -90,8 +91,8 @@ namespace telef::face {
                 if(totalNearestPoint==0) totalNearestPoint = 1;
 
                 std::cout << "name : " << name << " dist : " << distSum / totalNearestPoint << std ::endl;
-                return distSum / totalNearestPoint;
-            });
+                dists.push_back( distSum / totalNearestPoint);
+            }
 
             auto min = std::min_element(dists.begin(), dists.end());
             auto argmin = std::distance(dists.begin(), min);
