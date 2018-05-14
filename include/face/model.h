@@ -19,7 +19,7 @@
 #include "io/ply/meshio.h"
 #include "type.h"
 #include "util/eigen_pcl.h"
-#define RANK 5
+#define RANK 150
 
 namespace fs = std::experimental::filesystem;
 
