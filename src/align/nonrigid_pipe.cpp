@@ -171,7 +171,7 @@ namespace {
         }
 
     public:
-        FaceCostFunction(classify, crigid,
+        FaceCostFunction(
                 std::vector<int> meshLandmark3d, CloudConstPtrT scanLandmark3d,
                 CloudConstPtrT scanPc, std::shared_ptr<MorphableFaceModel<CoeffRank>> model,
                 std::vector<int> badLmkInds, Eigen::Matrix4f transformation,
