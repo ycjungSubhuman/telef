@@ -54,7 +54,7 @@ int main(int ac, const char* const * av)
         merger->addFrontEnd(viewFrontend);
     }
 
-    ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, FittingSuite> device {std::move(grabber)};
+    ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, FittingSuite> device {std::move(grabber)};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

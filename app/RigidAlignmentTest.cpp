@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     auto viewFrontend = std::make_shared<telef::io::align::PCARigidVisualizerFrontEnd>();
     merger->addFrontEnd(viewFrontend);
 
-    ImagePointCloudDevice<DeviceCloudConstT, ImageT,
+    ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT,
             FittingSuite, telef::align::PCARigidAlignmentSuite> device{std::move(grabber)};
 
     device.setCloudChannel(cloudChannel);

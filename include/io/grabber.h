@@ -8,11 +8,11 @@
 
 #include "type.h"
 
-using namespace pcl::io;
-using namespace telef::types;
-
 namespace
 {
+    using namespace pcl::io;
+    using namespace telef::types;
+
     // Treat color as chars, float32, or uint32
     typedef union
     {
@@ -31,6 +31,16 @@ namespace
 
 namespace telef::io {
 
+    /**
+     * A Modified OpenNI2Grabber in PCL library
+     *
+     * The main purpose of this class is to provide point cloud callbacks with
+     *
+     *   (Point ID) ->  (UV Coordinate) mapping
+     *   Pre-defined camera focal lengthes
+     *
+     * These data is in DeviceCloud structure
+     */
     class TelefOpenNI2Grabber : public OpenNI2Grabber {
     public:
         TelefOpenNI2Grabber(const std::string &device_id, const Mode &depth_mode, const Mode &image_mode)

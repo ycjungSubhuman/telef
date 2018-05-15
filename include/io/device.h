@@ -4,6 +4,7 @@
 #include <boost/function.hpp>
 #include <memory>
 #include <condition_variable>
+#include <experimental/filesystem>
 #include <algorithm>
 #include <stdio.h>
 
@@ -14,7 +15,38 @@
 #include "type.h"
 using namespace telef::types;
 
+namespace {
+    namespace fs = std::experimental::filesystem;
+}
+
 namespace telef::io {
+
+    template <class CloudOutT, class ImageOutT, class MergeOutT, class MergePipeOutT>
+    class ImagePointCloudDevice {
+    private:
+        using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
+        using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
+        using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
+        using FrontEndT = FrontEnd<MergePipeOutT>;
+    public:
+        void setCloudChannel(std::shared_ptr<CloudChannel<CloudOutT>> channel) {
+            this->cloudChannel = std::move(channel);
+        }
+        void setImageChannel(std::shared_ptr<ImageChannel<ImageOutT>> channel) {
+            this->imageChannel = std::move(channel);
+        }
+        void addMerger(std::shared_ptr<MergerT> merger) {
+            if(!cloudChannel || !imageChannel) {
+                throw std::runtime_error("Tried to add merger without either CloudChannel or ImageChannel");
+            }
+            this->mergers.emplace_back(merger);
+        }
+        virtual void run() = 0;
+    protected:
+        std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
+        std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
+        std::vector<std::shared_ptr<MergerT>> mergers;
+    };
 
 
     /**
@@ -28,19 +60,19 @@ namespace telef::io {
      * @tparam MergePipeOutT Merger Final Output Processed by Pipe in Merger
      */
     template <class CloudOutT, class ImageOutT, class MergeOutT, class MergePipeOutT>
-    class ImagePointCloudDevice {
+    class ImagePointCloudDeviceImpl : public ImagePointCloudDevice<CloudOutT, ImageOutT, MergeOutT, MergePipeOutT> {
     private:
         using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
         using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
         using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
         using FrontEndT = FrontEnd<MergePipeOutT>;
     public:
-        explicit ImagePointCloudDevice(TelefOpenNI2Grabber *grabber, bool runOnce = false)
+        explicit ImagePointCloudDeviceImpl(TelefOpenNI2Grabber *grabber, bool runOnce = false)
         :runOnce(runOnce) {
             this->grabber = grabber;
 
             boost::function<void(const ImagePtrT&, const boost::shared_ptr<DeviceCloud>)> callback =
-                    boost::bind(&ImagePointCloudDevice::imageCloudCallback, this, _1, _2);
+                    boost::bind(&ImagePointCloudDeviceImpl::imageCloudCallback, this, _1, _2);
             boost::function<void(const ImagePtrT&)> dummyImageCallback = [](const ImagePtrT&){};
             boost::function<void(const CloudConstPtrT&)> dummyCloudCallback = [](const CloudConstPtrT&){};
             this->grabber->registerCallback(callback);
@@ -50,29 +82,10 @@ namespace telef::io {
             this->grabber->registerCallback(dummyCloudCallback);
         }
 
-        /** After added, channels will be started from the next run() */
-        void setCloudChannel(std::shared_ptr<CloudChannel<CloudOutT>> channel) {
-            this->cloudChannel = std::move(channel);
-        }
-        void setImageChannel(std::shared_ptr<ImageChannel<ImageOutT>> channel) {
-            this->imageChannel = std::move(channel);
-        }
-
-        /**
-         * Add Merger to Merge CloudChannel Output and Image Channel Output into One Data
-         *
-         * CloudChannel and ImageChannel should be added before this being called
-         */
-        void addMerger(std::shared_ptr<MergerT> merger) {
-            if(!cloudChannel || !imageChannel) {
-                throw std::runtime_error("Tried to add merger without either CloudChannel or ImageChannel");
-            }
-            this->mergers.emplace_back(merger);
-        }
         void run() {
             isRunning = true;
             grabber->start();
-            this->runThread = std::thread(&ImagePointCloudDevice::_run, this);
+            this->runThread = std::thread(&ImagePointCloudDeviceImpl::_run, this);
             if(!runOnce) {
                 std::cout << "Press Q-Enter to quit" << std::endl;
                 while (getchar() != 'q');
@@ -130,11 +143,61 @@ namespace telef::io {
         bool runOnce;
         std::mutex dataMutex;
         std::condition_variable dataCv;
-        std::shared_ptr<ImageChannel<ImageOutT>> imageChannel;
-        std::shared_ptr<CloudChannel<CloudOutT>> cloudChannel;
-        std::vector<std::shared_ptr<MergerT>> mergers;
         TelefOpenNI2Grabber *grabber;
         std::thread runThread;
         volatile bool isRunning;
+    };
+
+    /** Mock class for testing */
+    template <class CloudOutT, class ImageOutT, class MergeOutT, class MergePipeOutT>
+    class MockImagePointCloudDevice : public ImagePointCloudDevice<CloudOutT, ImageOutT, MergeOutT, MergePipeOutT> {
+    private:
+        using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
+        using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
+        using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
+        using FrontEndT = FrontEnd<MergePipeOutT>;
+    public:
+        enum PlayMode {
+            FIRST_FRAME_ONLY,       // Use the first frame only and terminate
+            ONE_FRAME_PER_ENTER,    // Proceed to the next frame every time you press enter
+            FPS_30                  // Play at 30 FPS
+        };
+
+        /**
+         * Create a Mock device from previous records
+         *
+         * @param recordPath    recordPath is a directory that contains a list of tuples of files
+         *                      (*.png, *.ply, *.meta) eg) 1.png, 1.ply, 1.meta, 2.png, 2.ply, 2.meta ...
+         *                      These records can be recorded using ImageCloudRecordFrontend
+         */
+        MockImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FPS_30) {
+            this->mode = mode;
+            for(int i=1; ; i++) {
+                fs::path prefix = recordPath/(fs::path(std::to_string(i)));
+                auto imagePath = prefix.replace_extension(".png");
+                auto cloudPath = prefix.replace_extension(".ply");
+                auto metaPath = prefix.replace_extension(".meta");
+                auto exists = fs::exists(imagePath) & fs::exists(cloudPath) & fs::exists(metaPath);
+
+                if(!exists) {
+                    break;
+                }
+
+                ImageT image()
+
+
+                if(mode == PlayMode::FIRST_FRAME_ONLY) {
+                    break;
+                }
+            }
+        }
+
+        void run() override {
+
+        }
+
+    private:
+        PlayMode mode;
+        std::vector<DeviceCloud> frames;
     };
 }

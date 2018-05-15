@@ -37,7 +37,7 @@ int main(int ac, char* av[])
     auto merger = std::make_shared<DummyMappedImageCloudMerger>();
     merger->addFrontEnd(frontend);
 
-    ImagePointCloudDevice<DeviceCloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
+    ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, CloudConstT, CloudConstT> device {std::move(grabber)};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

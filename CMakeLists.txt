@@ -71,7 +71,7 @@ add_library(telef
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h)
+        include/face/classified_model.h include/face/classify_pipe.h include/io/png.h src/io/png.cpp)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -206,7 +206,7 @@ target_link_libraries(PcaFit
         ceres
         )
 
-add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
+add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp include/io/png.h)
 target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(ConvertPlyUV
         stdc++fs
