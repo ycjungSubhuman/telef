@@ -41,9 +41,8 @@ namespace telef::util {
 
             f.read((char*)(&imageWidth), sizeof(size_t));
             f.read((char*)(&imageHeight), sizeof(size_t));
-            f.read((char*)(&len), sizeof(size_t));
-            mapping ->
-            f.read((char*)mapping);
+            mapping = std::make_shared<std::vector<long>>(imageWidth * imageHeight);
+            f.read((char*)mapping->data(), (imageWidth*imageHeight)*sizeof(long));
         }
 
         /**
@@ -111,6 +110,7 @@ namespace telef::util {
             f.write((char*)(&imageWidth), sizeof(size_t));
             f.write((char*)(&imageHeight), sizeof(size_t));
             f.write((char*)(&mappingSize), sizeof(size_t));
+            assert(mappingSize == imageWidth*imageHeight);
 
             f.write((char*)mapping->data(), mapping->size()*sizeof(long));
             f.close();
