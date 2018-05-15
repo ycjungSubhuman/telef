@@ -167,24 +167,19 @@ namespace telef::io {
          * Create a Mock device from previous records
          *
          * @param recordPath    recordPath is a directory that contains a list of tuples of files
-         *                      (*.png, *.ply, *.meta) eg) 1.png, 1.ply, 1.meta, 2.png, 2.ply, 2.meta ...
-         *                      These records can be recorded using ImageCloudRecordFrontend
+         *                      (*.ply, *.mapping) eg) 1.ply, 1.mapping, 2.ply, 2.mapping ...
+         *                      These records can be recorded using ImagePointCloudDevice
          */
         MockImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FPS_30) {
             this->mode = mode;
             for(int i=1; ; i++) {
-                fs::path prefix = recordPath/(fs::path(std::to_string(i)));
-                auto imagePath = prefix.replace_extension(".png");
-                auto cloudPath = prefix.replace_extension(".ply");
-                auto metaPath = prefix.replace_extension(".meta");
-                auto exists = fs::exists(imagePath) & fs::exists(cloudPath) & fs::exists(metaPath);
+                fs::path dcPath = recordPath/(fs::path(std::to_string(i)));
+
+                auto exists = fs::exists(dcPath.replace_extension(".meta"));
 
                 if(!exists) {
                     break;
                 }
-
-                ImageT image()
-
 
                 if(mode == PlayMode::FIRST_FRAME_ONLY) {
                     break;
