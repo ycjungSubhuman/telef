@@ -12,10 +12,10 @@ namespace telef::cloud {
         auto cloudIn = in->cloud;
         std::vector<int> mappingChange;
         pcl::removeNaNFromPointCloud(*cloudIn, cloudOut, mappingChange);
-        in->img2cloudMapping->updateMapping(std::move(mappingChange));
 
         auto result = boost::make_shared<DeviceCloudT>();
         result->img2cloudMapping = in->img2cloudMapping;
+        result->img2cloudMapping->updateMapping(std::move(mappingChange));
         result->cloud = boost::make_shared<CloudConstT>(cloudOut);
         result->fx = in->fx;
         result->fy = in->fy;

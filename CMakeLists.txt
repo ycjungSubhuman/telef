@@ -57,7 +57,7 @@ add_library(telef
         include/mesh/colormapping.h
         include/mesh/mesh.h
         include/util/eigen_pcl.h
-        include/util/UvPointMapping.h
+        include/util/uv_point_mapping.h
         include/camera.h
         include/type.h
 
@@ -71,7 +71,7 @@ add_library(telef
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp)
+        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -241,3 +241,11 @@ target_link_libraries(MakePcaModel
         opencv_flann
         )
 
+add_executable(PngTest app/PngTest.cpp)
+target_link_libraries(PngTest)
+target_link_libraries(PngTest
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        )

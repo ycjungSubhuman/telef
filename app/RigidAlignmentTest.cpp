@@ -9,10 +9,12 @@
 //#include "align/rigid.h"
 #include "face/model.h"
 
-using namespace telef::io;
-using namespace telef::types;
-using namespace telef::cloud;
-using namespace telef::feature;
+namespace {
+    using namespace telef::io;
+    using namespace telef::types;
+    using namespace telef::cloud;
+    using namespace telef::feature;
+}
 
 /**
  * Project IntraFace landmark points onto captured pointcloud and Rigid Fit a PCA model

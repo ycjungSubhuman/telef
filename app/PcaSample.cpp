@@ -6,7 +6,9 @@
 
 #define RANK 5
 
-namespace fs = std::experimental::filesystem;
+namespace {
+    namespace fs = std::experimental::filesystem;
+}
 
 int main() {
     telef::face::MorphableFaceModel<RANK> model(fs::path("data/pcamodel"));

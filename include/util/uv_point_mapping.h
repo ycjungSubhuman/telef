@@ -14,7 +14,7 @@ namespace telef::util {
     /**
      * Mapping from UV point ({0 ~ imageWidth}, {0 ~ imageHeight}) -> size_t
      */
-    class UvPointMapping {
+    class uv_point_mapping {
     private:
         size_t uvToInd(int u, int v) {
             return v*imageWidth + u;
@@ -29,14 +29,15 @@ namespace telef::util {
         }
 
     public:
-        UvPointMapping(int imageWidth, int imageHeight) {
+        uv_point_mapping() = default;
+        uv_point_mapping(int imageWidth, int imageHeight) {
             this->imageWidth = (size_t) imageWidth;
             this->imageHeight = (size_t) imageHeight;
             mapping = std::make_shared<std::vector<long>>(this->imageWidth * this->imageHeight, None);
         }
 
-        UvPointMapping(fs::path p) {
-            std::ifstream f(p);
+        uv_point_mapping(fs::path p) {
+            std::ifstream f(p, std::ios_base::binary);
             size_t len;
 
             f.read((char*)(&imageWidth), sizeof(size_t));

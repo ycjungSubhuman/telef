@@ -5,10 +5,12 @@
 #include "io/device.h"
 #include "cloud/cloud_pipe.h"
 
-using namespace telef::io;
-using namespace telef::types;
-using namespace telef::cloud;
-using namespace telef::feature;
+namespace {
+    using namespace telef::io;
+    using namespace telef::types;
+    using namespace telef::cloud;
+    using namespace telef::feature;
+}
 
 /**
  * Project IntraFace landmark points onto captured pointcloud

@@ -21,12 +21,10 @@
 #include "util/eigen_pcl.h"
 #define RANK 150
 
-namespace fs = std::experimental::filesystem;
-
-using namespace telef::mesh;
 
 namespace {
-
+    namespace fs = std::experimental::filesystem;
+    using namespace telef::mesh;
 
     template <int Rank>
     Eigen::Matrix<float, Eigen::Dynamic, Rank> getPCABase(Eigen::MatrixXf data) {

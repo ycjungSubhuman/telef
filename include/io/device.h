@@ -48,7 +48,6 @@ namespace telef::io {
         std::vector<std::shared_ptr<MergerT>> mergers;
     };
 
-
     /**
      * Manages and Executes Channels for Image and PointCloud
      *
@@ -109,32 +108,32 @@ namespace telef::io {
                 Uv2PointIdMapConstPtrT map;
                 std::unique_lock<std::mutex> lk(dataMutex);
                 dataCv.wait(lk);
-                if (cloudChannel) {
-                    cloudOut = cloudChannel->onDeviceLoop();
+                if (this->cloudChannel) {
+                    cloudOut = this->cloudChannel->onDeviceLoop();
                     assert(cloudOut != nullptr);
                 }
-                if (imageChannel) {
-                    imageOut = imageChannel->onDeviceLoop();
+                if (this->imageChannel) {
+                    imageOut = this->imageChannel->onDeviceLoop();
                     assert(imageOut != nullptr);
                 }
 
-                //TODO : Make passed data const to enforce consistence btw mergers
-                for (const auto &m : mergers) {
+                //TODO : Make passed data const to enforce consistence btw this->mergers
+                for (const auto &m : this->mergers) {
                     m->run(imageOut, cloudOut);
                 }
                 lk.unlock();
             }
-            mergers.clear();
+            this->mergers.clear();
         }
 
 
         void imageCloudCallback(const ImagePtrT &image, const boost::shared_ptr<DeviceCloud> dc) {
             std::unique_lock<std::mutex> lk(dataMutex);
-            if(cloudChannel) {
-                cloudChannel->grabberCallback(dc);
+            if(this->cloudChannel) {
+                this->cloudChannel->grabberCallback(dc);
             }
-            if(imageChannel) {
-                imageChannel->grabberCallback(image);
+            if(this->imageChannel) {
+                this->imageChannel->grabberCallback(image);
             }
             lk.unlock();
             dataCv.notify_all();
@@ -148,9 +147,9 @@ namespace telef::io {
         volatile bool isRunning;
     };
 
-    /** Mock class for testing */
+    /** Fake device for easy experiments */
     template <class CloudOutT, class ImageOutT, class MergeOutT, class MergePipeOutT>
-    class MockImagePointCloudDevice : public ImagePointCloudDevice<CloudOutT, ImageOutT, MergeOutT, MergePipeOutT> {
+    class FakeImagePointCloudDevice : public ImagePointCloudDevice<CloudOutT, ImageOutT, MergeOutT, MergePipeOutT> {
     private:
         using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
         using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
@@ -164,13 +163,13 @@ namespace telef::io {
         };
 
         /**
-         * Create a Mock device from previous records
+         * Create a Fake device from previous records
          *
          * @param recordPath    recordPath is a directory that contains a list of tuples of files
          *                      (*.ply, *.mapping) eg) 1.ply, 1.mapping, 2.ply, 2.mapping ...
          *                      These records can be recorded using ImagePointCloudDevice
          */
-        MockImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FPS_30) {
+        FakeImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FPS_30) {
             this->mode = mode;
             for(int i=1; ; i++) {
                 fs::path dcPath = recordPath/(fs::path(std::to_string(i)));
@@ -180,6 +179,7 @@ namespace telef::io {
                 if(!exists) {
                     break;
                 }
+                //TODO : Finish this part
 
                 if(mode == PlayMode::FIRST_FRAME_ONLY) {
                     break;

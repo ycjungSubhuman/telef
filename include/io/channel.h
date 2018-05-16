@@ -10,7 +10,9 @@
 #include "io/pipe.h"
 #include "type.h"
 
-using namespace telef::types;
+namespace {
+    using namespace telef::types;
+}
 
 namespace telef::io {
     /**

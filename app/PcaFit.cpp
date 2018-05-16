@@ -19,17 +19,18 @@
 #include "mesh/color_projection_pipe.h"
 #include "glog/logging.h"
 
-using namespace telef::io::align;
-using namespace telef::io;
-using namespace telef::cloud;
-using namespace telef::align;
-using namespace telef::face;
-using namespace telef::mesh;
+namespace {
+    using namespace telef::io::align;
+    using namespace telef::io;
+    using namespace telef::cloud;
+    using namespace telef::align;
+    using namespace telef::face;
+    using namespace telef::mesh;
 
-namespace fs = std::experimental::filesystem;
+    namespace fs = std::experimental::filesystem;
 
-/** Loads an RGB image and a corresponding pointcloud. Make and write PLY face mesh out of it. */
-namespace po = boost::program_options;
+    namespace po = boost::program_options;
+}
 
 /**
  *   -name1
@@ -63,6 +64,7 @@ std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
     return result;
 }
 
+/** Loads an RGB image and a corresponding pointcloud. Make and write PLY face mesh out of it. */
 int main(int ac, const char* const *av) {
 
     google::InitGoogleLogging(av[0]);

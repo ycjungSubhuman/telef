@@ -3,8 +3,6 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/image.h>
-#include <unordered_map>
-#include "util/UvPointMapping.h"
 #include "io/devicecloud.h"
 
 namespace telef::types {
@@ -18,7 +16,7 @@ namespace telef::types {
     using ImagePtrT = pcl::io::Image::Ptr;
     using ImageConstPtrT = pcl::io::Image::ConstPtr;
 
-    using Uv2PointIdMapT = telef::util::UvPointMapping;
+    using Uv2PointIdMapT = telef::util::uv_point_mapping;
     using Uv2PointIdMapConstT = const Uv2PointIdMapT;
     using Uv2PointIdMapPtrT = std::shared_ptr<Uv2PointIdMapT>;
     using Uv2PointIdMapConstPtrT = std::shared_ptr<Uv2PointIdMapConstT>;

@@ -18,9 +18,11 @@
 #include "bmp.h"
 #include "feature/feature_detector.h"
 
-using namespace telef::types;
-using namespace telef::feature;
-namespace vis = pcl::visualization;
+namespace {
+    using namespace telef::types;
+    using namespace telef::feature;
+    namespace vis = pcl::visualization;
+}
 
 namespace telef::io {
     /**

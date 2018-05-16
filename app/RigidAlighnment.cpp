@@ -46,10 +46,12 @@
 #include "util/eigen_pcl.h"
 #include "align/rigid.h"
 
-namespace fs = std::experimental::filesystem;
+namespace {
+    namespace fs = std::experimental::filesystem;
 
-using namespace std;
-using namespace cv;
+    using namespace std;
+    using namespace cv;
+}
 
 bool fileExists(const string& name) {
     struct stat buffer;

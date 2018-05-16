@@ -9,8 +9,10 @@
 #include "feature/feature_detector.h"
 #include "io/frontend.h"
 
-using namespace telef::types;
-using namespace telef::feature;
+namespace {
+    using namespace telef::types;
+    using namespace telef::feature;
+}
 
 namespace telef::io {
 

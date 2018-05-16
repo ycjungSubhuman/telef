@@ -3,8 +3,10 @@
 #include "io/ply/meshio.h"
 #include "io/bmp.h"
 
-using namespace telef::mesh;
-namespace fs = std::experimental::filesystem;
+namespace {
+    using namespace telef::mesh;
+    namespace fs = std::experimental::filesystem;
+}
 
 namespace telef::io::ply {
     ColorMesh readPlyMesh(fs::path f) {

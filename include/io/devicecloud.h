@@ -1,18 +1,23 @@
 #pragma once
 
 #include <experimental/filesystem>
-
-#include "type.h"
+#include "util/uv_point_mapping.h"
 
 namespace {
-    namespace fs =
+    namespace fs = std::experimental::filesystem;
 }
 
 namespace telef::io {
-    /** Point cloud with metadata */
+    /**
+     * Point cloud with metadata.
+     *
+     * Used as the first input of ImagePointCloudDevice
+     * Also, used as a frame in recoding in MockImagePointCLoudDevice.
+     *
+     **/
     using DeviceCloud = struct DeviceCloud {
         pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud;
-        telef::util::UvPointMapping img2cloudMapping;
+        std::shared_ptr<telef::util::uv_point_mapping> img2cloudMapping;
         float fx;
         float fy;
     };

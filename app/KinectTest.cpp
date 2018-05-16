@@ -4,10 +4,11 @@
 #include "io/device.h"
 #include "cloud/cloud_pipe.h"
 
-using namespace telef::io;
-using namespace telef::types;
-using namespace telef::cloud;
-
+namespace {
+    using namespace telef::io;
+    using namespace telef::types;
+    using namespace telef::cloud;
+}
 /**
  * Continuously get frames of point cloud and image.
  *

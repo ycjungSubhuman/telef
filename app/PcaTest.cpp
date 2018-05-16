@@ -4,7 +4,9 @@
 #include "io/ply/meshio.h"
 #include "face/model.h"
 
-namespace fs = std::experimental::filesystem;
+namespace {
+    namespace fs = std::experimental::filesystem;
+}
 
 int main() {
     std::vector<fs::path> files;

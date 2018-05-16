@@ -11,7 +11,9 @@
 #include "align/rigid_pipe.h"
 #include "feature/feature_detector.h"
 
-namespace fs = std::experimental::filesystem;
+namespace {
+    namespace fs = std::experimental::filesystem;
+}
 
 namespace telef::face {
     /** Select from a collection of morphable model */

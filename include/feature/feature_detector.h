@@ -6,7 +6,9 @@
 #include <cxcore.h>
 #include "type.h"
 
-using namespace telef::types;
+namespace {
+    using namespace telef::types;
+}
 
 namespace telef::feature {
 

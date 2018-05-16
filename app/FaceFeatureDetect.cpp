@@ -18,9 +18,11 @@
 #include "io/opencv_metadata_wrapper.h"
 #include "feature/feature_detector.h"
 
-using namespace std;
-using namespace telef::feature;
-using namespace telef::io;
+namespace {
+    using namespace std;
+    using namespace telef::feature;
+    using namespace telef::io;
+}
 
 void draw_box(cv::Mat &img, cv::Rect rect) {
 	cv::rectangle(img, rect, cv::Scalar(0, 255, 0));

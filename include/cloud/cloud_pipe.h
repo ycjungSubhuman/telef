@@ -5,8 +5,10 @@
 #include "io/channel.h"
 #include "type.h"
 
-using namespace telef::io;
-using namespace telef::types;
+namespace {
+    using namespace telef::io;
+    using namespace telef::types;
+}
 namespace telef::cloud {
     /** Remove NaN Positioned Points from PointCloud */
     class RemoveNaNPoints : public Pipe<DeviceCloudConstT, DeviceCloudConstT> {
