@@ -4,19 +4,42 @@
 #include <unitypes.h>
 
 #include "io/devicecloud.h"
+#include "io/png.h"
 #include "type.h"
 
 namespace {
     namespace fs = std::experimental::filesystem;
     using namespace telef::types;
     using namespace telef::util;
+    using namespace telef::io;
 }
 
 namespace telef::io {
 
     void saveDeviceCloud(fs::path p, const DeviceCloud &dc) {
-        //TODO : FInish
+        auto metaPath = p.replace_extension(".meta");
+        auto cloudPath = p.replace_extension(".ply");
+        auto mappingPath = p.replace_extension(".mapping");
+        auto imagePath = p.replace_extension(".png");
 
+        size_t width = dc.cloud->width;
+        size_t height = dc.cloud->height;
+        float fx = dc.fx;
+        float fy = dc.fy;
+
+        // Write Metadata
+        std::ofstream metaf(metaPath, std::ios_base::binary);
+        metaf.write((char*)(&width), sizeof(size_t));
+        metaf.write((char*)(&height), sizeof(size_t));
+        metaf.write((char*)(&fx), sizeof(float));
+        metaf.write((char*)(&fy), sizeof(float));
+        metaf.close();
+
+        // Write PointCloud
+        pcl::io::savePLYFile(cloudPath, *dc.cloud);
+
+        // Write Mapping
+        dc.img2cloudMapping->save(mappingPath);
     }
 
     void loadDeviceCloud(fs::path p, DeviceCloud &dc) {
@@ -45,9 +68,11 @@ namespace telef::io {
         cloud->height = static_cast<uint32_t>(height);
 
         // Read Mapping
-        Uv2PointIdMapT mapping(mappingPath);
+        auto mapping = std::make_shared<Uv2PointIdMapT>(mappingPath);
 
-        // Read Image
-        //TODO : FInish
+        dc.cloud = cloud;
+        dc.img2cloudMapping = mapping;
+        dc.fx = fx;
+        dc.fy = fy;
     }
 }
