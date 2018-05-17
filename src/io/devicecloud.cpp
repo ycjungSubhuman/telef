@@ -34,7 +34,7 @@ namespace telef::io {
         metaf.close();
 
         // Write PointCloud
-        pcl::io::savePLYFile(cloudPath, *dc.cloud);
+        pcl::io::savePLYFile(cloudPath, *dc.cloud, true);
 
         // Write Mapping
         dc.img2cloudMapping->save(mappingPath);

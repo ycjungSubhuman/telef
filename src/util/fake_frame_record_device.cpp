@@ -19,9 +19,7 @@ namespace telef::io {
         ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FakeFrame, FakeFrame>(grabber, false)
     {
         auto removeNaN = std::make_shared<RemoveNaNPoints>();
-        this->cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(
-                [removeNaN](auto in)->decltype(auto){return (*removeNaN)(in);}
-                );
+        this->cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>();
         this->imageChannel = std::make_shared<DummyImageChannel<ImageT>>();
         auto merger = std::make_shared<FakeFrameMerger>();
         auto frontend = std::make_shared<RecordFakeFrameFrontEnd>(recordRoot);
