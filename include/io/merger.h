@@ -33,12 +33,16 @@ namespace telef::io {
         explicit BinaryMerger (FuncT pipe) {
             this->pipe = pipe;
         }
-        virtual ~BinaryMerger() = default;
+        virtual ~BinaryMerger() {
+            for(auto &f : this->frontends) {
+                f->stop();
+            }
+        }
         BinaryMerger& operator=(const BinaryMerger&) = delete;
         BinaryMerger (const BinaryMerger&) = default;
 
         void addFrontEnd(std::shared_ptr<FrontEnd<PipeOutT>> frontend) {
-            this->frontends.emplace_back(frontend);
+            this->frontends.push_back(frontend);
         }
 
         void run(DataAPtrT a, DataBPtrT b) {

@@ -99,6 +99,7 @@ namespace telef::io {
     class DummyCloudChannel : public CloudChannel<OutDataT> {
     public:
         using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<DeviceCloudConstT>)>;
+        DummyCloudChannel(): CloudChannel<OutDataT>([](auto in)->decltype(auto){return in;}) {}
         explicit DummyCloudChannel(FuncT pipe)
                 : CloudChannel<OutDataT>(std::move(pipe)) {}
 
@@ -111,6 +112,7 @@ namespace telef::io {
     class DummyImageChannel : public ImageChannel<OutDataT> {
     public:
         using FuncT = std::function<boost::shared_ptr<OutDataT>(boost::shared_ptr<ImageT>)>;
+        DummyImageChannel(): ImageChannel<OutDataT>([](auto in)->decltype(auto){return in;}) {}
         explicit DummyImageChannel(FuncT pipe) : ImageChannel<OutDataT>(std::move(pipe)) {}
     protected:
         void onOutData(boost::shared_ptr<OutDataT> data) override {

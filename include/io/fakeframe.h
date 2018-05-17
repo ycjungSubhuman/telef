@@ -17,11 +17,11 @@ namespace telef::io {
      **/
     class FakeFrame {
     private:
-        DeviceCloudPtrT dc;
+        boost::shared_ptr<DeviceCloud> dc;
         ImagePtrT image;
 
     public:
-        FakeFrame(DeviceCloudPtrT dc, ImagePtrT image);
+        FakeFrame(boost::shared_ptr<DeviceCloudConstT> dc, ImagePtrT image);
 
         /** Load from existing file */
         FakeFrame(fs::path p);

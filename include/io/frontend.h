@@ -37,6 +37,7 @@ namespace telef::io {
         using InputPtrT = const boost::shared_ptr<InputT>;
         virtual ~FrontEnd() = default;
         virtual void process(InputPtrT input)=0;
+        virtual void stop() {}
     };
 
     class DummyCloudFrontEnd : public FrontEnd<CloudConstT> {
@@ -74,7 +75,7 @@ namespace telef::io {
     /**
      * Frontend with asynchronous processing logic
      *
-     * A call to process() will return immediately. The computation is queued and processed FIFO way.
+     * A call to process() will return immediately. The inputs of type T are queued and processed FIFO way.
      **/
     template<class T>
     class AsyncFrontEnd : public FrontEnd<T> {
@@ -120,7 +121,7 @@ namespace telef::io {
                 jobThread(std::thread(&AsyncFrontEnd::jobLoop, this)),
                 isJobGranted(true)
         {}
-        virtual ~AsyncFrontEnd() {
+        void stop() override {
             isJobGranted = false;
             nonempty.notify_all();
             jobThread.join();
@@ -153,6 +154,7 @@ namespace telef::io {
         void _process(InputPtrT input) override;
 
     public:
+
         explicit FittingSuiteWriterFrontEnd (bool ignoreIncomplete=true, bool saveRGB=false,
                                              bool saveRawCloud=false, int expectedPointsCount=49);
     };

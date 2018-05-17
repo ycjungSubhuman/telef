@@ -71,7 +71,7 @@ add_library(telef
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp)
+        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp include/util/fake_frame_record_device.h src/util/fake_frame_record_device.cpp)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -251,12 +251,18 @@ target_link_libraries(PngTest
         ${PCL_IO_LIBRARIES}
         )
 
-add_executable(RecordDeviceCloud app/RecordDeviceCloud.cpp)
-target_link_libraries(RecordDeviceCloud)
-target_link_libraries(RecordDeviceCloud
+add_executable(RecordFakeFrame app/RecordFakeFrame.cpp)
+target_link_libraries(RecordFakeFrame)
+target_link_libraries(RecordFakeFrame
         stdc++fs
         ${Boost_LIBRARIES}
         telef
         ${PCL_IO_LIBRARIES}
         ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
         )

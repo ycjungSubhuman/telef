@@ -1,4 +1,5 @@
 #include "io/fakeframe.h"
+#include <boost/shared_ptr.hpp>
 
 namespace {
     namespace fs = std::experimental::filesystem;
@@ -6,12 +7,12 @@ namespace {
 
 namespace telef::io {
 
-    FakeFrame::FakeFrame(std::shared_ptr<DeviceCloud> dc, ImagePtrT image) :
-        dc(dc),
+    FakeFrame::FakeFrame(boost::shared_ptr<DeviceCloudConstT> dc, ImagePtrT image) :
+        dc(boost::make_shared<DeviceCloud>(*dc)),
         image(image) {}
 
     FakeFrame::FakeFrame(fs::path p) {
-        dc = std::make_shared<DeviceCloud>();
+        dc = boost::make_shared<DeviceCloud>();
         loadDeviceCloud(p, *dc);
         image = loadPNG(p.replace_extension(".png"));
     }
