@@ -57,7 +57,7 @@ add_library(telef
         include/mesh/colormapping.h
         include/mesh/mesh.h
         include/util/eigen_pcl.h
-        include/util/uv_point_mapping.h
+        include/util/UvPointMapping.h
         include/camera.h
         include/type.h
 
@@ -71,10 +71,11 @@ add_library(telef
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp)
+        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
+        stdc++fs
         ${Ceres_LIBRARIES}
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
@@ -248,4 +249,14 @@ target_link_libraries(PngTest
         ${Boost_LIBRARIES}
         telef
         ${PCL_IO_LIBRARIES}
+        )
+
+add_executable(RecordDeviceCloud app/RecordDeviceCloud.cpp)
+target_link_libraries(RecordDeviceCloud)
+target_link_libraries(RecordDeviceCloud
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
         )

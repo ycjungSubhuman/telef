@@ -1,7 +1,5 @@
 #include <pcl/io/ply_io.h>
-#include <pcl/compression/libpng_wrapper.h>
 #include <iostream>
-#include <unitypes.h>
 
 #include "io/devicecloud.h"
 #include "io/png.h"

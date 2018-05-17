@@ -17,6 +17,7 @@
 #include "camera.h"
 #include "bmp.h"
 #include "feature/feature_detector.h"
+#include "io/fakeframe.h"
 
 namespace {
     using namespace telef::types;
@@ -32,17 +33,15 @@ namespace telef::io {
      */
     template<class InputT>
     class FrontEnd {
-    private:
-        using InputPtrT = const boost::shared_ptr<InputT>;
     public:
+        using InputPtrT = const boost::shared_ptr<InputT>;
         virtual ~FrontEnd() = default;
         virtual void process(InputPtrT input)=0;
     };
 
     class DummyCloudFrontEnd : public FrontEnd<CloudConstT> {
-    private:
-        using InputPtrT = const CloudConstPtrT;
     public:
+        using InputPtrT = const CloudConstPtrT;
         void process(InputPtrT input) override {
             std::cout << "DummyCloudFrontEnd : " << input->size() << std::endl;
         }
@@ -52,9 +51,9 @@ namespace telef::io {
     class Landmark3DVisualizerFrontEnd : public FrontEnd<FittingSuite> {
     private:
         std::unique_ptr<vis::PCLVisualizer> visualizer;
-        using InputPtrT = const boost::shared_ptr<FittingSuite>;
 
     public:
+        using InputPtrT = const boost::shared_ptr<FittingSuite>;
         void process(InputPtrT input) override {
             auto cloud = input->landmark3d;
             if (!visualizer) {
@@ -72,105 +71,101 @@ namespace telef::io {
         }
     };
 
-    /** Export received points in Pointcloud as csv */
-    class FittingSuiteWriterFrontEnd : public FrontEnd<FittingSuite> {
+    /**
+     * Frontend with asynchronous processing logic
+     *
+     * A call to process() will return immediately. The computation is queued and processed FIFO way.
+     **/
+    template<class T>
+    class AsyncFrontEnd : public FrontEnd<T> {
+    public:
+        using InputPtrT = const boost::shared_ptr<T>;
     private:
-        using InputPtrT = const boost::shared_ptr<FittingSuite>;
-        bool ignoreIncomplete;
-        bool saveRGB;
-        bool saveRawCloud;
-        int expectedPointsCount;
-        int frameCount;
 
-        std::mutex dataMutex;
-        std::condition_variable nonempty;
-        std::queue<boost::shared_ptr<FittingSuite>> pendingData;
-
-        std::experimental::filesystem::path folder;
-
-        std::thread saveThread;
-        volatile bool isSaveRunning;
-
-        void saveLoop() {
-            while(isSaveRunning) {
+        void jobLoop() {
+            while(isJobGranted) {
                 std::unique_lock ul{dataMutex};
                 nonempty.wait(ul);
                 InputPtrT data = pendingData.front();
                 pendingData.pop();
                 ul.unlock();
 
-                save(data);
+                _process(data);
             }
-            std::cout << "Finishing up Save..." << std::endl;
+            std::cout << "Finishing up Job..." << std::endl;
             while(!pendingData.empty()) {
                 std::cout << pendingData.size() << "frames to go" << std::endl;
-                save(pendingData.front());
+                _process(pendingData.front());
                 pendingData.pop();
             }
-            std::cout << "Save Complete" << std::endl;
+            std::cout << "Job Complete" << std::endl;
         }
 
-        void save(InputPtrT input) {
-            // point order is preserved from 0 to 48(see LandMarkMerger::merge)
-            // So it is safe to just put every points in order
-            std::stringstream sstream;
-            for(const auto &p :input->landmark3d->points) {
-                sstream << p.x << ",";
-                sstream << p.y << ",";
-                sstream << p.z << "\n";
-            }
+        virtual void _process(InputPtrT input)=0;
 
-            auto pathPrefix = folder/("frame_" + std::to_string(frameCount));
-            std::ofstream outCsv;
-            outCsv.open(pathPrefix.replace_extension(std::string(".csv")));
-            outCsv << sstream.str();
-            outCsv.close();
-            if(saveRGB) {
-                telef::io::saveBMPFile(pathPrefix.replace_extension(std::string(".bmp")), *input->rawImage);
-            }
-            if(saveRawCloud) {
-                pcl::io::savePLYFile(pathPrefix.replace_extension(std::string(".ply")), *input->rawCloud);
-            }
-
-            frameCount++;
-            std::cout << "Captured" << std::endl;
+        // Check if to queue up the data
+        // If any input does not require processing, return false
+        virtual bool checkProcessNeeded(InputPtrT input) {
+            return true;
         }
+
+        std::mutex dataMutex;
+        std::condition_variable nonempty;
+        std::queue<boost::shared_ptr<T>> pendingData;
+        std::thread jobThread;
+        volatile bool isJobGranted; // Controlled by the thread 'process()' is on.
 
     public:
-        explicit FittingSuiteWriterFrontEnd (bool ignoreIncomplete=true, bool saveRGB=false, bool saveRawCloud=false, int expectedPointsCount=49):
-                ignoreIncomplete(ignoreIncomplete),
-                saveRGB(saveRGB),
-                saveRawCloud(saveRawCloud),
-                expectedPointsCount(expectedPointsCount),
-                saveThread(std::thread(&FittingSuiteWriterFrontEnd::saveLoop, this)),
-                isSaveRunning(true),
-                frameCount(0) {
-            std::time_t t= std::time(nullptr);
-            auto localTime = std::localtime(&t);
-            std::stringstream folderNameStream;
-            folderNameStream << "capture_" << localTime->tm_mday << "-"
-                             << localTime->tm_mon+1 << "-"
-                             << localTime->tm_year+1900 << "-"
-                             << localTime->tm_hour << "-"
-                             << localTime->tm_min << "-"
-                             << localTime->tm_sec;
-            folder=folderNameStream.str();
-            std::experimental::filesystem::create_directory(folder);
-        }
-        ~FittingSuiteWriterFrontEnd() {
-            isSaveRunning = false;
+        AsyncFrontEnd():
+                jobThread(std::thread(&AsyncFrontEnd::jobLoop, this)),
+                isJobGranted(true)
+        {}
+        virtual ~AsyncFrontEnd() {
+            isJobGranted = false;
             nonempty.notify_all();
-            saveThread.join();
+            jobThread.join();
         }
-        void process(InputPtrT input) override {
-            if(ignoreIncomplete && (input->landmark3d->size() != expectedPointsCount)) {
-                return;
+        virtual void process(InputPtrT input) {
+            if(checkProcessNeeded(input)) {
+                std::unique_lock<std::mutex> ul{dataMutex};
+                pendingData.push(input);
+                ul.unlock();
+                nonempty.notify_all();
             }
-
-            std::unique_lock<std::mutex> ul {dataMutex};
-            pendingData.push(input);
-            ul.unlock();
-            nonempty.notify_all();
         }
+    };
+
+    /** Export received points in Pointcloud as csv */
+    class FittingSuiteWriterFrontEnd : public AsyncFrontEnd<FittingSuite> {
+    public:
+        using InputPtrT = const boost::shared_ptr<FittingSuite>;
+    private:
+        bool ignoreIncomplete;
+        bool saveRGB;
+        bool saveRawCloud;
+        int expectedPointsCount;
+        int frameCount;
+
+        std::experimental::filesystem::path folder;
+
+        bool checkProcessNeeded(InputPtrT input) override;
+
+        void _process(InputPtrT input) override;
+
+    public:
+        explicit FittingSuiteWriterFrontEnd (bool ignoreIncomplete=true, bool saveRGB=false,
+                                             bool saveRawCloud=false, int expectedPointsCount=49);
+    };
+
+    /** Record Fake Frames */
+    class RecordFakeFrameFrontEnd : public AsyncFrontEnd<FakeFrame> {
+    public:
+        using InputPtrT = const boost::shared_ptr<FakeFrame>;
+        RecordFakeFrameFrontEnd(fs::path recordRoot);
+
+        void _process(InputPtrT input) override;
+    private:
+        fs::path recordRoot;
+        int frameCount;
     };
 }

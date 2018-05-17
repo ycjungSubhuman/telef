@@ -1,7 +1,9 @@
 #pragma once
 
 #include <experimental/filesystem>
-#include "util/uv_point_mapping.h"
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include "util/UvPointMapping.h"
 
 namespace {
     namespace fs = std::experimental::filesystem;
@@ -17,7 +19,7 @@ namespace telef::io {
      **/
     using DeviceCloud = struct DeviceCloud {
         pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr cloud;
-        std::shared_ptr<telef::util::uv_point_mapping> img2cloudMapping;
+        std::shared_ptr<telef::util::UvPointMapping> img2cloudMapping;
         float fx;
         float fy;
     };
