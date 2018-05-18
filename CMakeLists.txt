@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 -fopenmp -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -254,6 +254,22 @@ target_link_libraries(PngTest
 add_executable(RecordFakeFrame app/RecordFakeFrame.cpp)
 target_link_libraries(RecordFakeFrame)
 target_link_libraries(RecordFakeFrame
+        stdc++fs
+        ${Boost_LIBRARIES}
+        telef
+        ${PCL_IO_LIBRARIES}
+        ${PCL_VISUALIZATION_LIBRARIES}
+        opencv_core
+        opencv_ml
+        opencv_objdetect
+        opencv_imgproc
+        opencv_highgui
+        opencv_flann
+        )
+
+add_executable(FakeDeviceTest app/FakeDeviceTest.cpp src/io/modelio.cpp)
+target_link_libraries(FakeDeviceTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(FakeDeviceTest
         stdc++fs
         ${Boost_LIBRARIES}
         telef

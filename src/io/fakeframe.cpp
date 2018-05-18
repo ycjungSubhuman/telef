@@ -21,4 +21,12 @@ namespace telef::io {
         saveDeviceCloud(p, *dc);
         savePNG(p.replace_extension(".png"), *image);
     }
+
+    boost::shared_ptr<DeviceCloud> FakeFrame::getDeviceCloud() {
+        return this->dc;
+    }
+
+    ImagePtrT FakeFrame::getImage() {
+        return this->image;
+    }
 }

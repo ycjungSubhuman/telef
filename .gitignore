@@ -1,6 +1,9 @@
 build
 cmake-build*
 .idea/
+\#*\#
+.\#*
+*~
 src/io/modelio.cpp
 include/face/binary_model_file.h
 include/face/FaceAlignment.h

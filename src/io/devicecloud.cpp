@@ -1,4 +1,4 @@
-#include <pcl/io/ply_io.h>
+#include <pcl/io/pcd_io.h>
 #include <iostream>
 
 #include "io/devicecloud.h"
@@ -16,7 +16,7 @@ namespace telef::io {
 
     void saveDeviceCloud(fs::path p, const DeviceCloud &dc) {
         auto metaPath = p.replace_extension(".meta");
-        auto cloudPath = p.replace_extension(".ply");
+        auto cloudPath = p.replace_extension(".pcd");
         auto mappingPath = p.replace_extension(".mapping");
         auto imagePath = p.replace_extension(".png");
 
@@ -34,7 +34,7 @@ namespace telef::io {
         metaf.close();
 
         // Write PointCloud
-        pcl::io::savePLYFile(cloudPath, *dc.cloud, true);
+        pcl::io::savePCDFileBinary(cloudPath, *dc.cloud);
 
         // Write Mapping
         dc.img2cloudMapping->save(mappingPath);
@@ -42,7 +42,7 @@ namespace telef::io {
 
     void loadDeviceCloud(fs::path p, DeviceCloud &dc) {
         auto metaPath = p.replace_extension(".meta");
-        auto cloudPath = p.replace_extension(".ply");
+        auto cloudPath = p.replace_extension(".pcd");
         auto mappingPath = p.replace_extension(".mapping");
         auto imagePath = p.replace_extension(".png");
 
@@ -61,7 +61,7 @@ namespace telef::io {
 
         // Read PointCloud
         CloudPtrT cloud = boost::make_shared<CloudT>();
-        pcl::io::loadPLYFile(cloudPath, *cloud);
+        pcl::io::loadPCDFile(cloudPath, *cloud);
         cloud->width = static_cast<uint32_t>(width);
         cloud->height = static_cast<uint32_t>(height);
 

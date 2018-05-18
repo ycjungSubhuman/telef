@@ -2,7 +2,9 @@
 
 #include <pcl/io/grabber.h>
 #include <boost/function.hpp>
+#include <chrono>
 #include <memory>
+#include <queue>
 #include <condition_variable>
 #include <experimental/filesystem>
 #include <algorithm>
@@ -12,11 +14,13 @@
 #include "io/grabber.h"
 #include "io/merger.h"
 #include "io/frontend.h"
+#include "io/fakeframe.h"
 #include "type.h"
-using namespace telef::types;
 
 namespace {
+    using namespace telef::types;
     namespace fs = std::experimental::filesystem;
+    using namespace std::chrono_literals;
 }
 
 namespace telef::io {
@@ -166,20 +170,24 @@ namespace telef::io {
          * Create a Fake device from previous records
          *
          * @param recordPath    recordPath is a directory that contains a list of tuples of files
-         *                      (*.ply, *.mapping) eg) 1.ply, 1.mapping, 2.ply, 2.mapping ...
-         *                      These records can be recorded using ImagePointCloudDevice
+         *                      (*.ply, *.meta, *mapping, *.png)
+         *                      These records can be recorded using FakeFrameRecordDevice
          */
         FakeImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FPS_30) {
+            std::cout << "Loading Fake Frames..." << std::endl;
             this->mode = mode;
             for(int i=1; ; i++) {
-                fs::path dcPath = recordPath/(fs::path(std::to_string(i)));
+                fs::path framePath = recordPath/(fs::path(std::to_string(i)));
 
-                auto exists = fs::exists(dcPath.replace_extension(".meta"));
+                auto exists = fs::exists(framePath.replace_extension(".pcd"));
 
                 if(!exists) {
                     break;
                 }
-                //TODO : Finish this part
+
+                auto frame = std::make_shared<FakeFrame>(framePath);
+                frames.push(frame);
+                std::cout << "Loaded frame " << std::to_string(i) << std::endl;
 
                 if(mode == PlayMode::FIRST_FRAME_ONLY) {
                     break;
@@ -188,11 +196,42 @@ namespace telef::io {
         }
 
         void run() override {
+            while (!frames.empty()) {
+		auto frameProcessStartTime = std::chrono::system_clock::now();
+                auto frame = frames.front();
+                frames.pop();
 
+                this->cloudChannel->grabberCallback(frame->getDeviceCloud());
+                this->imageChannel->grabberCallback(frame->getImage());
+
+                auto cloudOut = this->cloudChannel->onDeviceLoop();
+                auto imageOut = this->imageChannel->onDeviceLoop();
+
+                for(auto &m : this->mergers) {
+                    m->run(imageOut, cloudOut);
+                }
+		auto frameProcessEndTime = std::chrono::system_clock::now();
+
+		auto frameProcessTime = frameProcessEndTime - frameProcessStartTime;
+
+                if(mode==PlayMode::FIRST_FRAME_ONLY) {
+                    break;
+                }
+                else if (mode==PlayMode::ONE_FRAME_PER_ENTER) {
+                    std::cout << "Press Enter to proceed to the next frame.." << std::endl;
+                    getchar();
+                }
+                else if (mode==PlayMode::FPS_30) {
+		    auto sleepTime = 33ms - frameProcessTime;
+		    if (sleepTime.count() >= 0) {
+			std::this_thread::sleep_for(sleepTime);
+		    }
+                }
+            }
         }
 
     private:
         PlayMode mode;
-        std::vector<DeviceCloud> frames;
+        std::queue<std::shared_ptr<FakeFrame>> frames;
     };
 }

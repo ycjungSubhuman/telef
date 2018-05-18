@@ -23,6 +23,9 @@ namespace telef::io {
     public:
         FakeFrame(boost::shared_ptr<DeviceCloudConstT> dc, ImagePtrT image);
 
+        boost::shared_ptr<DeviceCloud> getDeviceCloud();
+        ImagePtrT getImage();
+
         /** Load from existing file */
         FakeFrame(fs::path p);
         /** Save as a file */
