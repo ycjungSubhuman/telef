@@ -19,15 +19,13 @@
 #include "io/ply/meshio.h"
 #include "type.h"
 #include "util/eigen_pcl.h"
-#define RANK 150
 
 
 namespace {
     namespace fs = std::experimental::filesystem;
     using namespace telef::mesh;
 
-    template <int Rank>
-    Eigen::Matrix<float, Eigen::Dynamic, Rank> getPCABase(Eigen::MatrixXf data) {
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> getPCABase(Eigen::MatrixXf data, int rank) {
 
         // Each row is a data. This is to match data matrix dimensions with formulas in Wikipedia.
         auto d = data.transpose();
@@ -57,15 +55,15 @@ namespace {
         std::cout << std::endl;
         std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {return l.first > r.first;});
 
-        Eigen::Matrix<float, Eigen::Dynamic, Rank> result(d.cols(), Rank);
-        for (int i = 0; i < std::min(Rank, static_cast<int>(bdc.singularValues().rows())); i++) {
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> result(d.cols(), rank);
+        for (int i = 0; i < std::min(rank, static_cast<int>(bdc.singularValues().rows())); i++) {
             result.col(i).swap(pairs[i].second);
         }
 
         // Fill in empty basis if given PCA rank is higher than the rank of the data matrix
-        if (Rank > d.cols()) {
+        if (rank > d.cols()) {
             std::cout << "WARNING : given rank is higher than number of singular values" << std::endl;
-            for (long i = d.cols(); i < Rank; i++) {
+            for (long i = d.cols(); i < rank; i++) {
                 result.col(i) = Eigen::VectorXf::Zero(d.cols());
             }
         }
@@ -81,58 +79,6 @@ namespace {
         }
     }
 
-    /** PCA model for deformations */
-    template <int ShapeRank>
-    class PCADeformationModel {
-    public:
-        Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase;
-        Eigen::VectorXf mean;
-
-        PCADeformationModel() = default;
-        PCADeformationModel(Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase, Eigen::VectorXf mean)
-        : shapeBase(shapeBase), mean(mean) {}
-
-
-        explicit PCADeformationModel(std::vector<ColorMesh> &samples, ColorMesh &refMesh)
-        {
-            shapeBase.resize(samples.size(), ShapeRank);
-            auto numData = samples.size();
-            auto dataDim = refMesh.position.size();
-            Eigen::MatrixXf positions(dataDim, numData);
-            Eigen::MatrixXf colors(dataDim, numData);
-
-            for(unsigned long i=0; i<samples.size(); i++) {
-                auto mesh = samples[i];
-                positions.col(i) = mesh.position.col(0) - refMesh.position.col(0);
-            }
-
-
-            shapeBase = getPCABase<ShapeRank>(positions);
-            mean = positions.rowwise().mean();
-        }
-
-        Eigen::VectorXf genDeform(Eigen::Matrix<float, ShapeRank, 1> coeff) {
-            if(coeff.rows() != shapeBase.cols()) {
-                throw std::runtime_error("Coefficient dimension mismatch");
-            }
-            Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
-            for (long i=0; i<ShapeRank; i++) {
-                result += coeff(i) * shapeBase.col(i);
-            }
-            return mean + result;
-        }
-
-        Eigen::VectorXf genDeform(const double * const coeff, int size) {
-            if(size != shapeBase.cols()) {
-                throw std::runtime_error("Coefficient dimension mismatch");
-            }
-            Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
-            for (long i=0; i<ShapeRank; i++) {
-                result += coeff[i] * shapeBase.col(i);
-            }
-            return mean + result;
-        }
-    };
 
     template<class M>
     void writeMat(const char *filename, const M &mat) {
@@ -146,6 +92,11 @@ namespace {
         f.close();
     }
     template<class M>
+    /** 
+     * Read a matrix from file
+     * 
+     * mat should be pre-allocated
+     */
     void readMat(const char *filename, M &mat) {
         std::ifstream f(filename, std::ios::binary);
         typename M::Index rows, cols;
@@ -171,7 +122,6 @@ namespace {
         std::ifstream f(filename);
         std::string c;
         f >> c;
-        int count = std::stoi(c);
         std::string pt;
         while(f >> pt) {
             lmk.push_back(std::stoi(pt));
@@ -181,19 +131,73 @@ namespace {
 
 namespace telef::face {
 
+    /** PCA model for deformations */
+    class PCADeformationModel {
+    private:
+	int shapeRank;
+    public:
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase;
+        Eigen::VectorXf mean;
+
+        PCADeformationModel() = default;
+        PCADeformationModel(Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase, Eigen::VectorXf mean)
+        : shapeBase(shapeBase), mean(mean) {}
+
+
+        explicit PCADeformationModel(std::vector<ColorMesh> &samples, ColorMesh &refMesh, int shapeRank):
+	    shapeRank(shapeRank)
+        {
+            auto numData = samples.size();
+            auto dataDim = refMesh.position.size();
+            Eigen::MatrixXf positions(dataDim, numData);
+            Eigen::MatrixXf colors(dataDim, numData);
+
+            for(unsigned long i=0; i<samples.size(); i++) {
+                auto mesh = samples[i];
+                positions.col(i) = mesh.position.col(0) - refMesh.position.col(0);
+            }
+
+            shapeBase = getPCABase(positions, shapeRank);
+            mean = positions.rowwise().mean();
+        }
+
+        Eigen::VectorXf genDeform(Eigen::Matrix<float, Eigen::Dynamic, 1> coeff) {
+            if(coeff.rows() != shapeBase.cols()) {
+                throw std::runtime_error("Coefficient dimension mismatch");
+            }
+            Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
+            for (long i=0; i<shapeRank; i++) {
+                result += coeff(i) * shapeBase.col(i);
+            }
+            return mean + result;
+        }
+
+        Eigen::VectorXf genDeform(const double * const coeff, int size) {
+            if(size != shapeBase.cols()) {
+                throw std::runtime_error("Coefficient dimension mismatch");
+            }
+            Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
+            for (long i=0; i<shapeRank; i++) {
+                result += coeff[i] * shapeBase.col(i);
+            }
+            return mean + result;
+        }
+    };
+
     /** PCA face model using PCA model of deformation btw reference mesh and samples*/
-    template <int ShapeRank>
     class MorphableFaceModel {
     private:
-        PCADeformationModel<ShapeRank> deformModel;
+        PCADeformationModel deformModel;
         ColorMesh refMesh;
         std::vector<int> landmarks;
         std::random_device rd;
         std::mt19937 mt;
+	int shapeRank;
     public:
         /** Construct PCA Model using a list of mesh files */
-        MorphableFaceModel(std::vector<fs::path> &f, bool rigidAlignRequired=false)
-        :mt(rd())
+        MorphableFaceModel(std::vector<fs::path> &f, int shapeRank, bool rigidAlignRequired=false):
+	    mt(rd()),
+	    shapeRank(shapeRank)
         {
             assert(f.size() > 0);
             std::vector<ColorMesh> meshes(f.size());
@@ -210,21 +214,22 @@ namespace telef::face {
                     meshes[i].applyTransform(trans);
                 }
             }
-            deformModel = PCADeformationModel<ShapeRank>(meshes, refMesh);
-            landmarks = std::vector<int>{1, 2, 3, 4, 5};
+            deformModel = PCADeformationModel(meshes, refMesh, shapeRank);
+	    // TODO : make landmarks detected upon construction of Morphable Model
+            landmarks = std::vector<int>{1}; // landmark placeholder
         };
 
         /** Load from existing model file */
         MorphableFaceModel(fs::path fileName): mt(rd()) {
             refMesh = telef::io::ply::readPlyMesh(fileName.string() + ".ref.ply");
 
-            Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase;
+            Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase;
             Eigen::VectorXf mean;
-            shapeBase.resize(refMesh.position.rows(), ShapeRank);
+            shapeBase.resize(refMesh.position.rows(), shapeRank);
             mean.resize(refMesh.position.rows());
             readMat((fileName.string()+".deform.base").c_str(), shapeBase);
             readMat((fileName.string()+".deform.mean").c_str(), mean);
-            deformModel = PCADeformationModel<ShapeRank>(shapeBase, mean);
+            deformModel = PCADeformationModel(shapeBase, mean);
             readLmk((fileName.string()+".lmk").c_str(), landmarks);
         }
 
@@ -267,14 +272,14 @@ namespace telef::face {
         }
 
         int getRank() {
-            return ShapeRank;
+            return shapeRank;
         }
 
         /* Generate a random sample ColorMesh */
         ColorMesh sample() {
             std::normal_distribution<float> dist(0.0, 0.005);
 
-            std::vector<float> coeff(static_cast<unsigned long>(ShapeRank));
+            std::vector<float> coeff(static_cast<unsigned long>(shapeRank));
             std::generate(coeff.begin(), coeff.end(), [this, &dist]{return dist(this->mt);});
             float sum = 0.0f;
             for (auto &a : coeff) {
@@ -282,13 +287,13 @@ namespace telef::face {
             }
 
             assert(sum != 0.0f);
-            for (int i=0; i<ShapeRank; i++) {
+            for (int i=0; i<shapeRank; i++) {
                 coeff[i] /= sum;
                 std::cout << coeff[i] << ", ";
             }
             std::cout << std::endl;
 
-            return genMesh(Eigen::Map<Eigen::Matrix<float, ShapeRank, 1>>(coeff.data(), coeff.size()));
+            return genMesh(Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, 1>>(coeff.data(), coeff.size()));
         }
 
         void setLandmarks(std::vector<int> lmk) {
