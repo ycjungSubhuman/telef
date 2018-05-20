@@ -1,3 +1,6 @@
+#include <fstream>
+#include <boost/make_shared.hpp>
+
 #include <pcl/compression/libpng_wrapper.h>
 #include <pcl/io/image.h>
 #include <pcl/io/image_rgb24.h>

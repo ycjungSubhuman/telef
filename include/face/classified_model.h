@@ -5,7 +5,7 @@
 #include <vector>
 #include <Eigen/Core>
 #include <experimental/filesystem>
-#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 #include "face/model.h"
 #include "align/rigid_pipe.h"

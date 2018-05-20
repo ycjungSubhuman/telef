@@ -1,5 +1,6 @@
 #include <pcl/io/pcd_io.h>
 #include <iostream>
+#include <boost/make_shared.hpp>
 
 #include "io/devicecloud.h"
 #include "io/png.h"
