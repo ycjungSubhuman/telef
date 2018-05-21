@@ -5,24 +5,22 @@
 
 namespace telef::face {
 
-    template <int ShapeRank>
     class ClassifiedFittingSuiteT {
     public:
-        std::shared_ptr<telef::face::MorphableFaceModel<ShapeRank>> model;
+        std::shared_ptr<telef::face::MorphableFaceModel> model;
         boost::shared_ptr<telef::feature::FittingSuite> fittingSuite;
     };
 
-    template <int ShapeRank>
     class ClassifyMorphableModelPipe :
-            public telef::io::Pipe<telef::feature::FittingSuite, ClassifiedFittingSuiteT<ShapeRank>>{
+            public telef::io::Pipe<telef::feature::FittingSuite, ClassifiedFittingSuiteT>{
     private:
-        using InT = ClassifiedFittingSuiteT<ShapeRank>;
+        using InT = ClassifiedFittingSuiteT;
     public:
         using OutPtrT = boost::shared_ptr<InT>;
-        ClassifyMorphableModelPipe(ClassifiedMorphableModel<ShapeRank> model)
+        ClassifyMorphableModelPipe(ClassifiedMorphableModel model)
         : model(model) {}
     private:
-        ClassifiedMorphableModel<ShapeRank> model;
+        ClassifiedMorphableModel model;
 
         OutPtrT
         _processData(boost::shared_ptr<telef::feature::FittingSuite> in) override
@@ -35,11 +33,10 @@ namespace telef::face {
         }
     };
 
-    template <int ShapeRank>
-    class ClassifiedRigidFittingPipe : public telef::io::Pipe<ClassifiedFittingSuiteT<ShapeRank>, telef::align::PCARigidAlignmentSuite> {
+    class ClassifiedRigidFittingPipe : public telef::io::Pipe<ClassifiedFittingSuiteT, telef::align::PCARigidAlignmentSuite> {
     private:
         boost::shared_ptr<telef::align::PCARigidAlignmentSuite>
-        _processData(boost::shared_ptr<ClassifiedFittingSuiteT<ShapeRank>> in ) override {
+        _processData(boost::shared_ptr<ClassifiedFittingSuiteT> in ) override {
 
             telef::align::PCARigidFittingPipe rigidPipe(in->model);
             return rigidPipe(in->fittingSuite);

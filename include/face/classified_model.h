@@ -17,12 +17,11 @@ namespace {
 
 namespace telef::face {
     /** Select from a collection of morphable model */
-    template <int ShapeRank>
     class ClassifiedMorphableModel {
     public:
         using ModelPairT = struct ModelPairT {
             std::string name;
-            std::shared_ptr<MorphableFaceModel<ShapeRank>> model;
+            std::shared_ptr<MorphableFaceModel> model;
         };
         using InPairT = std::pair<std::string, fs::path>;
 
@@ -30,7 +29,7 @@ namespace telef::face {
             for (unsigned long i=0; i<paths.size(); i++) {
                 ModelPairT result;
                 result.name = std::string(paths[i].first);
-                result.model = std::make_shared<MorphableFaceModel<ShapeRank>>(paths[i].second);
+                result.model = std::make_shared<MorphableFaceModel>(paths[i].second);
                 models.push_back(result);
             }
         }
@@ -45,14 +44,14 @@ namespace telef::face {
          * frontal part of scanned face. It includes some backgrounds or body, too. But we can cut them out by rejecting
          * them with some distance threshold.
          */
-        std::shared_ptr<MorphableFaceModel<ShapeRank>> getClosestModel(boost::shared_ptr<telef::feature::FittingSuite> fittingSuite) {
+        std::shared_ptr<MorphableFaceModel> getClosestModel(boost::shared_ptr<telef::feature::FittingSuite> fittingSuite) {
             std::vector<double> dists;
 
             for (unsigned long i=0; i<models.size(); i++) {
                 auto p = models[i];
                 auto name = p.name;
                 // We first align mean mesh of current MM with the scan
-                auto meanMesh = p.model->genMesh(Eigen::VectorXf::Zero(ShapeRank));
+                auto meanMesh = p.model->genMesh(Eigen::VectorXf::Zero(p.model->getRank()));
                 telef::align::PCARigidFittingPipe rigidPipe(p.model);
                 auto alignment = rigidPipe(fittingSuite);
                 meanMesh.applyTransform(alignment->transformation);

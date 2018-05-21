@@ -15,7 +15,7 @@ namespace telef::mesh {
 
     using ProjectionSuite = struct ProjectionSuite {
         ColorMesh fitResult;
-        std::shared_ptr<telef::face::MorphableFaceModel<RANK>> pca_model;
+        std::shared_ptr<telef::face::MorphableFaceModel> pca_model;
         telef::types::ImagePtrT image;
         float fx;
         float fy;

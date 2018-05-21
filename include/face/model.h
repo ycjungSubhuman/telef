@@ -75,7 +75,7 @@ namespace telef::face {
         int getRank();
 
         /* Generate a random sample ColorMesh */
-        ColorMesh sample();
+        ColorMesh sample(bool printDebug=false);
 
         void setLandmarks(std::vector<int> lmk);
 

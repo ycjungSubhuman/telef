@@ -74,16 +74,15 @@ namespace {
     /**
      * Read a matrix from file
      *
-     * mat should be pre-allocated
+     * mat is allocated in this function
      */
     void readMat(const char *filename, M &mat) {
         std::ifstream f(filename, std::ios::binary);
         typename M::Index rows, cols;
         f.read((char*)(&rows), sizeof(typename M::Index));
         f.read((char*)(&cols), sizeof(typename M::Index));
-        if (mat.rows() != rows || mat.cols() != cols) {
-            throw std::runtime_error("Load Fail (" + std::string(filename) + "): dimension mismatch");
-        }
+        mat.resize(rows, cols);
+
         f.read((char*)mat.data(), rows*cols*sizeof(typename M::Scalar));
         f.close();
     }
@@ -112,7 +111,10 @@ namespace telef::face {
 
     PCADeformationModel::PCADeformationModel(Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase,
                                              Eigen::VectorXf mean)
-            : shapeBase(shapeBase), mean(mean) {}
+            : shapeBase(shapeBase), mean(mean)
+    {
+        this->shapeRank = static_cast<int>(shapeBase.cols());
+    }
 
     PCADeformationModel::PCADeformationModel(std::vector<ColorMesh> &samples, ColorMesh &refMesh, int shapeRank) :
             shapeRank(shapeRank)
@@ -182,10 +184,11 @@ namespace telef::face {
 
         Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase;
         Eigen::VectorXf mean;
-        shapeBase.resize(refMesh.position.rows(), shapeRank);
-        mean.resize(refMesh.position.rows());
+
         readMat((fileName.string()+".deform.base").c_str(), shapeBase);
         readMat((fileName.string()+".deform.mean").c_str(), mean);
+        this->shapeRank = static_cast<int>(shapeBase.cols());
+
         deformModel = PCADeformationModel(shapeBase, mean);
         readLmk((fileName.string()+".lmk").c_str(), landmarks);
     }
@@ -229,7 +232,7 @@ namespace telef::face {
         return shapeRank;
     }
 
-    ColorMesh MorphableFaceModel::sample() {
+    ColorMesh MorphableFaceModel::sample(bool printDebug) {
         std::normal_distribution<float> dist(0.0, 0.005);
 
         std::vector<float> coeff(static_cast<unsigned long>(shapeRank));
@@ -242,9 +245,13 @@ namespace telef::face {
         assert(sum != 0.0f);
         for (int i=0; i<shapeRank; i++) {
             coeff[i] /= sum;
-            std::cout << coeff[i] << ", ";
+            if(printDebug) {
+                std::cout << coeff[i] << ", ";
+            }
         }
-        std::cout << std::endl;
+        if(printDebug) {
+            std::cout << std::endl;
+        }
 
         return genMesh(Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, 1>>(coeff.data(), coeff.size()));
     }

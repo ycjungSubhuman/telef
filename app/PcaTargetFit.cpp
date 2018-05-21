@@ -32,38 +32,6 @@ namespace {
     namespace po = boost::program_options;
 }
 
-/**
- *   -name1
- *   path1
- *   path2
- *   ...
- *
- *   -name2
- *   path1
- *   path2
- *   ...
- *
- */
-std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
-    std::ifstream file(p);
-
-    std::vector<std::pair<std::string, fs::path>> result;
-
-    while(!file.eof()) {
-        std::string word;
-        file >> word;
-        if (*word.begin() == '-') // name of group
-        {
-            std::string p;
-            file >> p;
-            result.push_back(std::make_pair(word, p));
-        }
-    }
-
-    file.close();
-    return result;
-}
-
 /** Loads an RGB image and a corresponding pointcloud. Make and write PLY face mesh out of it. */
 int main(int ac, const char* const *av) {
 
@@ -72,6 +40,7 @@ int main(int ac, const char* const *av) {
     po::options_description desc("Captures RGB-D from camera. Generate and write face mesh as ply and obj");
     desc.add_options()
             ("help,H", "print help message")
+            ("device,D", "specify face frame directory(if not specified, use kinect hardware device)")
             ("model,M", po::value<std::string>(), "specify PCA model path")
             ("output,O", po::value<std::string>(), "specify output PLY file path");
     po::variables_map vm;
@@ -96,7 +65,6 @@ int main(int ac, const char* const *av) {
 
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
-    auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     auto imagePipe = IdentityPipe<ImageT>();
     auto cloudPipe = RemoveNaNPoints();
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
@@ -107,8 +75,8 @@ int main(int ac, const char* const *av) {
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
-    std::shared_ptr<MorphableFaceModel<RANK>> model;
-    model = std::make_shared<MorphableFaceModel<RANK>>(fs::path(modelPath.c_str()));
+    std::shared_ptr<MorphableFaceModel> model;
+    model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
 
     PCARigidFittingPipe rigid = PCARigidFittingPipe(model);
     std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;
@@ -116,11 +84,19 @@ int main(int ac, const char* const *av) {
     merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
 
-    ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {std::move(grabber), true};
-    device.setCloudChannel(cloudChannel);
-    device.setImageChannel(imageChannel);
-    device.addMerger(merger);
-    device.run();
+    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>> device;
+
+    if(vm.count("device") > 0) { // use fake device
+        device = std::make_shared<FakeImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(vm["device"].as<std::string>(), PlayMode::FIRST_FRAME_ONLY);
+    }
+    else {
+        auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
+        device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(std::move(grabber), true);
+    }
+    device->setCloudChannel(cloudChannel);
+    device->setImageChannel(imageChannel);
+    device->addMerger(merger);
+    device->run();
 
     return 0;
 }

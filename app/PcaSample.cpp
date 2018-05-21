@@ -4,22 +4,19 @@
 #include "io/ply/meshio.h"
 #include "face/model.h"
 
-#define RANK 5
-
 namespace {
     namespace fs = std::experimental::filesystem;
 }
 
 int main() {
-    telef::face::MorphableFaceModel<RANK> model(fs::path("data/pcamodel"));
-    Eigen::VectorXf coeff = Eigen::VectorXf::Zero(RANK);
-    for(int i=1; i<=10; i++) {
+    telef::face::MorphableFaceModel model(fs::path("data/example"));
+    for(int i=1; i<=100; i++) {
         auto m = model.sample();
-        telef::io::ply::writePlyMesh(fs::path("samples/")/fs::path(std::to_string(i)+".ply"), m);
+        //telef::io::ply::writePlyMesh(fs::path("samples/")/fs::path(std::to_string(i)+".ply"), m);
     }
 
-    auto sample = model.genMesh(Eigen::VectorXf::Zero(RANK));
-    telef::io::ply::writePlyMesh(fs::path("samples/sample_mean.ply"), sample);
+    auto sample = model.genMesh(Eigen::VectorXf::Zero(150));
+    //telef::io::ply::writePlyMesh(fs::path("samples/sample_mean.ply"), sample);
 
     return 0;
 }

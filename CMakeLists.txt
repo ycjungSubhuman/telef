@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-project (telef)
+project (telef CXX CUDA)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -pg")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -60,6 +61,12 @@ add_library(telef
         include/util/UvPointMapping.h
         include/camera.h
         include/type.h
+        include/face/classified_model.h
+        include/face/classify_pipe.h
+        include/io/devicecloud.h
+        include/io/png.h
+        include/io/fakeframe.h
+        include/util/fake_frame_record_device.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -68,10 +75,17 @@ add_library(telef
         src/io/ply/meshio.cpp
         src/io/bmp.cpp
         src/mesh/color_projection_pipe.cpp
-        src/align/nonrigid_pipe.cpp
+#        src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp include/util/fake_frame_record_device.h src/util/fake_frame_record_device.cpp src/face/model.cpp)
+        src/io/devicecloud.cpp
+        src/io/png.cpp
+        src/io/frontend.cpp
+        src/io/fakeframe.cpp
+        src/util/UvPointMapping.cpp
+        src/util/fake_frame_record_device.cpp
+        src/face/model.cpp
+        )
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -133,12 +147,6 @@ target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
 add_executable(PcaSample app/PcaSample.cpp)
 target_link_libraries(PcaSample stdc++fs telef
         ${Boost_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_highgui
-        opencv_imgproc
-        opencv_flann
         )
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)

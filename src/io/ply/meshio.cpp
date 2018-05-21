@@ -114,7 +114,8 @@ namespace telef::io::ply {
         mtl.close();
 
         if(mesh.image != nullptr) {
-            saveBMPFile(stripped.string() + ".jpg", *mesh.image);
+            throw std::runtime_error("Not Implemented");
+//            saveBMPFile(stripped.string() + ".jpg", *mesh.image);
         }
     }
 }
