@@ -255,6 +255,7 @@ namespace {
         bool operator()(const T* pcaCoeff, T* residuals) const {
 
             //std::vector<T> pcaCoeff(x0, x0 + sizeof x0 / sizeof x0[0]);
+            T lmkRes = T(0);
 
             auto m = model->genPositionCeres(pcaCoeff, CoeffRank);
             auto meshPos = applyTransform(m, transformation);
@@ -280,14 +281,14 @@ namespace {
                             meshLmk3d[3 * i + 1] - T(scanLandmark3d->points[validPointCount].y),
                             meshLmk3d[3 * i + 2] - T(scanLandmark3d->points[validPointCount].z);
 
-                    *residuals = *residuals + (T(landmarkCoeff) * ptSubt.squaredNorm());
+                    lmkRes = lmkRes + (T(landmarkCoeff) * ptSubt.squaredNorm());
                     validPointCount++;
                 }
             }
 
             if(validPointCount == 0) validPointCount = 1;
 
-            *residuals = *residuals / T(validPointCount);
+            *residuals = lmkRes / T(validPointCount);
         }
 
 
@@ -328,8 +329,8 @@ namespace {
         Eigen::Matrix<T, Eigen::Dynamic, 1> applyTransform(Eigen::Matrix<T, Eigen::Dynamic, 1> &meshPos,
                                                            Eigen::Matrix4f transform) const
         {
-            Eigen::Map<Eigen::Matrix<T, 3, 1>> v(meshPos.data(), 3, meshPos.size()/3);
-            Eigen::Matrix<T, 3, 1> result = (transform * v.colwise().homogeneous()).colwise().hnormalized();
+            Eigen::Map<Eigen::Matrix<T, 3, Eigen::Dynamic>> v(meshPos.data(), 3, meshPos.size()/3);
+            Eigen::Matrix<T, 3, Eigen::Dynamic> result = (transform.cast<T>() * v.colwise().homogeneous()).colwise().hnormalized();
             return Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, 1>>{result.data(), result.size()};
         }
     };

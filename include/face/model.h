@@ -142,13 +142,13 @@ namespace {
          */
         template <typename T>
         Eigen::Matrix<T, Eigen::Dynamic, 1> genDeformCeres(const T* const coeff, int size) {
-            auto shapeBaseT = shapeBase.cast<T>();
-            if(size != shapeBase.cols()) {
+            auto shapeBaseT = shapeBase.template cast<T>();
+            if(size != shapeBaseT.cols()) {
                 throw std::runtime_error("Coefficient dimension mismatch");
             }
-            Eigen::Matrix<T, Eigen::Dynamic, 1> result = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(shapeBase.rows());
+            Eigen::Matrix<T, Eigen::Dynamic, 1> result = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(shapeBaseT.rows());
             for (long i=0; i<ShapeRank; i++) {
-                result = result + (coeff[i] * shapeBase.col(i));
+                result = result + (coeff[i] * shapeBaseT.col(i));
             }
 
             //cast to T
