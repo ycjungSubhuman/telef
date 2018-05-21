@@ -71,7 +71,7 @@ add_library(telef
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp include/util/fake_frame_record_device.h src/util/fake_frame_record_device.cpp)
+        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp include/util/fake_frame_record_device.h src/util/fake_frame_record_device.cpp src/face/model.cpp)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
