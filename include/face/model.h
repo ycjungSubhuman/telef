@@ -132,6 +132,28 @@ namespace {
             }
             return mean + result;
         }
+
+        /**
+         * Templated for Ceres AutoDiff, T is eiter a double or Jet
+         * @tparam T
+         * @param coeff
+         * @param size
+         * @return
+         */
+        template <typename T>
+        Eigen::Matrix<T, Eigen::Dynamic, 1> genDeformCeres(const T* const coeff, int size) {
+            auto shapeBaseT = shapeBase.cast<T>();
+            if(size != shapeBase.cols()) {
+                throw std::runtime_error("Coefficient dimension mismatch");
+            }
+            Eigen::Matrix<T, Eigen::Dynamic, 1> result = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(shapeBase.rows());
+            for (long i=0; i<ShapeRank; i++) {
+                result = result + (coeff[i] * shapeBase.col(i));
+            }
+
+            //cast to T
+            return mean.cast<T>() + result;
+        }
     };
 
     template<class M>
@@ -243,6 +265,15 @@ namespace telef::face {
 
         Eigen::VectorXf genPosition(const double * const shapeCoeff, int size) {
             return refMesh.position + deformModel.genDeform(shapeCoeff, size);
+        }
+
+        /**
+         * Generate a xyzxyz... position vector using given coefficients
+         * Templated for Ceres
+         */
+        template <typename T>
+        Eigen::Matrix<T, Eigen::Dynamic, 1> genPositionCeres(const T* const shapeCoeff, int size) {
+            return refMesh.position.cast<T>() + deformModel.genDeformCeres(shapeCoeff, size);
         }
 
         ColorMesh genMesh(const double * const shapeCoeff, int size) {
