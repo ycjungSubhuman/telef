@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-project (telef CXX CUDA)
+project (telef LANGUAGES CXX CUDA)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
@@ -21,7 +22,6 @@ find_package(Ceres REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
 
 link_directories(${OpenCV_LIBRARY_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -30,6 +30,8 @@ include_directories(${PCL_INCLUDE_DIRS})
 include_directories(${Eigen_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${Ceres_INCLUDE_DIRS})
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}/crt)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
@@ -85,11 +87,22 @@ add_library(telef
         src/util/UvPointMapping.cpp
         src/util/fake_frame_record_device.cpp
         src/face/model.cpp
+        include/util/linear_sum.h
+        src/util/linear_sum.cpp
         )
+
+add_library(cutelef STATIC
+        include/util/linear_sum_gpu.h
+        src/util/linear_sum_gpu.cu
+        )
+
+set_target_properties(cutelef
+        PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         stdc++fs
+        cutelef
         ${Ceres_LIBRARIES}
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
@@ -147,6 +160,12 @@ target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
 add_executable(PcaSample app/PcaSample.cpp)
 target_link_libraries(PcaSample stdc++fs telef
         ${Boost_LIBRARIES}
+        )
+
+add_executable(PcaCudaSampleTest app/PcaCudaSampleTest.cpp)
+target_link_libraries(PcaCudaSampleTest
+        stdc++fs
+        telef
         )
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)
@@ -215,7 +234,7 @@ target_link_libraries(PcaFit
         ceres
         )
 
-add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
+add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp include/util/linear_sum.h)
 target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(ConvertPlyUV
         stdc++fs

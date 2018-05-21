@@ -110,13 +110,19 @@ namespace {
 namespace telef::face {
 
     PCADeformationModel::PCADeformationModel(Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase,
-                                             Eigen::VectorXf mean)
-            : shapeBase(shapeBase), mean(mean)
+                                             Eigen::VectorXf mean, bool useGPU):
+            mean(mean)
     {
+        if(useGPU) {
+            this->linearSumGen = std::make_shared<GPULinearSumVectorGenerator>(shapeBase);
+        }
+        else {
+            this->linearSumGen = std::make_shared<CPULinearSumVectorGenerator>(shapeBase);
+        }
         this->shapeRank = static_cast<int>(shapeBase.cols());
     }
 
-    PCADeformationModel::PCADeformationModel(std::vector<ColorMesh> &samples, ColorMesh &refMesh, int shapeRank) :
+    PCADeformationModel::PCADeformationModel(std::vector<ColorMesh> &samples, ColorMesh &refMesh, int shapeRank, bool useGPU) :
             shapeRank(shapeRank)
     {
         auto numData = samples.size();
@@ -129,33 +135,33 @@ namespace telef::face {
             positions.col(i) = mesh.position.col(0) - refMesh.position.col(0);
         }
 
-        shapeBase = getPCABase(positions, shapeRank);
+        auto shapeBase = getPCABase(positions, shapeRank);
+        if(useGPU) {
+            this->linearSumGen = std::make_shared<GPULinearSumVectorGenerator>(shapeBase);
+        }
+        else {
+            this->linearSumGen = std::make_shared<CPULinearSumVectorGenerator>(shapeBase);
+        }
         mean = positions.rowwise().mean();
     }
 
-    Eigen::VectorXf PCADeformationModel::genDeform(Eigen::Matrix<float, Eigen::Dynamic, 1> coeff) {
-        if(coeff.rows() != shapeBase.cols()) {
-            throw std::runtime_error("Coefficient dimension mismatch");
-        }
-        Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
-        for (long i=0; i<shapeRank; i++) {
-            result += coeff(i) * shapeBase.col(i);
-        }
-        return mean + result;
+    Eigen::VectorXf PCADeformationModel::genDeform(Eigen::Matrix<float, Eigen::Dynamic, 1> coeff) const {
+        return mean + linearSumGen->genVector(coeff);
     }
 
-    Eigen::VectorXf PCADeformationModel::genDeform(const double *const coeff, int size) {
-        if(size != shapeBase.cols()) {
-            throw std::runtime_error("Coefficient dimension mismatch");
-        }
-        Eigen::VectorXf result = Eigen::VectorXf::Zero(shapeBase.rows());
-        for (long i=0; i<shapeRank; i++) {
-            result += coeff[i] * shapeBase.col(i);
-        }
-        return mean + result;
+    Eigen::VectorXf PCADeformationModel::genDeform(const float *const coeff, int size) const {
+        return mean + linearSumGen->genVector(coeff, size);
     }
 
-    MorphableFaceModel::MorphableFaceModel(std::vector<fs::path> &f, int shapeRank, bool rigidAlignRequired) :
+    int PCADeformationModel::getRank() const {
+        return linearSumGen->getRank();
+    }
+
+    Eigen::MatrixXf PCADeformationModel::getBasisMatrix() const {
+        return linearSumGen->getBasisMatrix();
+    }
+
+    MorphableFaceModel::MorphableFaceModel(std::vector<fs::path> &f, int shapeRank, bool rigidAlignRequired, bool useGPU) :
             mt(rd()),
             shapeRank(shapeRank)
     {
@@ -174,12 +180,12 @@ namespace telef::face {
                 meshes[i].applyTransform(trans);
             }
         }
-        deformModel = PCADeformationModel(meshes, refMesh, shapeRank);
+        deformModel = PCADeformationModel(meshes, refMesh, shapeRank, useGPU);
         // TODO : make landmarks detected upon construction of Morphable Model
         landmarks = std::vector<int>{1}; // landmark placeholder
     }
 
-    MorphableFaceModel::MorphableFaceModel(fs::path fileName) : mt(rd()) {
+    MorphableFaceModel::MorphableFaceModel(fs::path fileName, bool useGPU) : mt(rd()) {
         refMesh = telef::io::ply::readPlyMesh(fileName.string() + ".ref.ply");
 
         Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> shapeBase;
@@ -189,26 +195,26 @@ namespace telef::face {
         readMat((fileName.string()+".deform.mean").c_str(), mean);
         this->shapeRank = static_cast<int>(shapeBase.cols());
 
-        deformModel = PCADeformationModel(shapeBase, mean);
+        deformModel = PCADeformationModel(shapeBase, mean, useGPU);
         readLmk((fileName.string()+".lmk").c_str(), landmarks);
     }
 
     void MorphableFaceModel::save(fs::path fileName) {
-        writeMat((fileName.string()+".deform.base").c_str(), deformModel.shapeBase);
+        writeMat((fileName.string()+".deform.base").c_str(), deformModel.getBasisMatrix());
         writeMat((fileName.string()+".deform.mean").c_str(), deformModel.mean);
         telef::io::ply::writePlyMesh(fileName.string() + ".ref.ply", refMesh);
         writeLmk((fileName.string()+".lmk").c_str(), landmarks);
     }
 
-    Eigen::VectorXf MorphableFaceModel::genPosition(Eigen::VectorXf shapeCoeff) {
+    Eigen::VectorXf MorphableFaceModel::genPosition(Eigen::VectorXf shapeCoeff) const {
         return refMesh.position + deformModel.genDeform(shapeCoeff);
     }
 
-    Eigen::VectorXf MorphableFaceModel::genPosition(const double *const shapeCoeff, int size) {
+    Eigen::VectorXf MorphableFaceModel::genPosition(const float *const shapeCoeff, int size) const {
         return refMesh.position + deformModel.genDeform(shapeCoeff, size);
     }
 
-    ColorMesh MorphableFaceModel::genMesh(const double *const shapeCoeff, int size) {
+    ColorMesh MorphableFaceModel::genMesh(const float *const shapeCoeff, int size) const {
         ColorMesh result;
         result.position = genPosition(shapeCoeff, size);
         result.triangles = refMesh.triangles;
@@ -216,7 +222,7 @@ namespace telef::face {
         return result;
     }
 
-    ColorMesh MorphableFaceModel::genMesh(Eigen::VectorXf shapeCoeff) {
+    ColorMesh MorphableFaceModel::genMesh(Eigen::VectorXf shapeCoeff) const {
         ColorMesh result;
         result.position = genPosition(shapeCoeff);
         result.triangles = refMesh.triangles;
@@ -224,11 +230,11 @@ namespace telef::face {
         return result;
     }
 
-    Eigen::VectorXf MorphableFaceModel::getBasis(unsigned long coeffIndex) {
-        return deformModel.shapeBase.col(coeffIndex);
+    Eigen::VectorXf MorphableFaceModel::getBasis(unsigned long coeffIndex) const {
+        return deformModel.getBasisMatrix().col(coeffIndex);
     }
 
-    int MorphableFaceModel::getRank() {
+    int MorphableFaceModel::getRank() const {
         return shapeRank;
     }
 
@@ -260,7 +266,7 @@ namespace telef::face {
         landmarks = lmk;
     }
 
-    std::vector<int> MorphableFaceModel::getLandmarks() {
+    std::vector<int> MorphableFaceModel::getLandmarks() const {
         return landmarks;
     }
 }
