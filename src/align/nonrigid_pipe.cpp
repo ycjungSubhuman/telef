@@ -255,7 +255,7 @@ namespace {
         bool operator()(const T* pcaCoeff, T* residuals) const {
 
             //std::vector<T> pcaCoeff(x0, x0 + sizeof x0 / sizeof x0[0]);
-            T lmkRes = T(0);
+            residuals[0] = T(0.0);
 
             auto m = model->genPositionCeres(pcaCoeff, CoeffRank);
             auto meshPos = applyTransform(m, transformation);
@@ -281,14 +281,20 @@ namespace {
                             meshLmk3d[3 * i + 1] - T(scanLandmark3d->points[validPointCount].y),
                             meshLmk3d[3 * i + 2] - T(scanLandmark3d->points[validPointCount].z);
 
-                    lmkRes = lmkRes + (T(landmarkCoeff) * ptSubt.squaredNorm());
+                    // TODO: multiply by landmarkWeight
+                    //auto squaredNormDist = ptSubt.squaredNorm();
+                    //residuals[0] = residuals[0] + (squaredNormDist);
+                    auto normDist = ptSubt.norm();
+                    residuals[0] = residuals[0] + (normDist);
                     validPointCount++;
                 }
             }
 
             if(validPointCount == 0) validPointCount = 1;
 
-            *residuals = lmkRes / T(validPointCount);
+            // Cost is Average error
+            residuals[0] = residuals[0] / T(validPointCount);
+            return true;
         }
 
 
@@ -309,7 +315,7 @@ namespace {
         std::shared_ptr<MorphableFaceModel<CoeffRank>> model;
         Eigen::Matrix4f transformation;
 
-        float landmarkCoeff;
+        double landmarkCoeff;
 
         /** Convert full mesh position to landmark poisitions */
         template <class T>
@@ -359,7 +365,7 @@ namespace telef::align {
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 100;
         options.use_nonmonotonic_steps = true;
-        options.function_tolerance = 1e-10;
+        //options.function_tolerance = 1e-10;
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
