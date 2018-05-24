@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-project (telef)
+project (telef LANGUAGES CXX CUDA)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie -pg")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)

@@ -173,7 +173,7 @@ namespace telef::io {
          *                      (*.ply, *.meta, *mapping, *.png)
          *                      These records can be recorded using FakeFrameRecordDevice
          */
-        FakeImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FPS_30) {
+        FakeImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FIRST_FRAME_ONLY) {
             std::cout << "Loading Fake Frames..." << std::endl;
             this->mode = mode;
             for(int i=1; ; i++) {

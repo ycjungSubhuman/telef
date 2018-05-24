@@ -96,7 +96,6 @@ int main(int ac, const char* const *av) {
 
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
-    auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     auto imagePipe = IdentityPipe<ImageT>();
     auto cloudPipe = RemoveNaNPoints();
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
@@ -116,7 +115,7 @@ int main(int ac, const char* const *av) {
     merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
 
-    ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {std::move(grabber), true};
+    FakeImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {fs::path("./test2")};
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);
