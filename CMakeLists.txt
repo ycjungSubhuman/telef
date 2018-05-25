@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie -pg")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
@@ -20,7 +20,6 @@ find_package(Ceres REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
 
 link_directories(${OpenCV_LIBRARY_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -73,9 +72,16 @@ add_library(telef
         src/mesh/mesh.cpp
         include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp include/util/fake_frame_record_device.h src/util/fake_frame_record_device.cpp)
 
+add_library(cutelef STATIC
+ 	include/align/cu_cost_func.h
+ 	src/align/cu_cost_func.cu
+	)
+set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         stdc++fs
+#	cutelef
         ${Ceres_LIBRARIES}
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
@@ -118,6 +124,7 @@ target_link_libraries(FaceFeatureDetect
         opencv_highgui
         opencv_imgproc
         opencv_flann
+	-lstdc++
         )
 
 add_executable(PcaTest app/PcaTest.cpp)
@@ -128,6 +135,7 @@ target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
         opencv_highgui
         opencv_imgproc
         opencv_flann
+	-lstdc++
         )
 
 add_executable(PcaSample app/PcaSample.cpp)
@@ -139,6 +147,7 @@ target_link_libraries(PcaSample stdc++fs telef
         opencv_highgui
         opencv_imgproc
         opencv_flann
+	-lstdc++
         )
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)
@@ -154,6 +163,7 @@ target_link_libraries(RigidAlighnment
         opencv_highgui
         opencv_imgproc
         opencv_flann
+	-lstdc++
         )
 
 add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
@@ -169,6 +179,7 @@ target_link_libraries(RigidAlignmentTest
         opencv_imgproc
         opencv_highgui
         opencv_flann
+	-lstdc++
         )
 
 add_executable(PcaTargetFit app/PcaTargetFit.cpp src/io/modelio.cpp)
@@ -187,6 +198,7 @@ target_link_libraries(PcaTargetFit
         opencv_highgui
         opencv_flann
         ceres
+	-lstdc++
         )
 
 add_executable(PcaFit app/PcaFit.cpp src/io/modelio.cpp)
@@ -205,6 +217,7 @@ target_link_libraries(PcaFit
         opencv_highgui
         opencv_flann
         ceres
+	-lstdc++
         )
 
 add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
@@ -222,6 +235,7 @@ target_link_libraries(ConvertPlyUV
         opencv_imgproc
         opencv_highgui
         opencv_flann
+	-lstdc++
         )
 
 add_executable(MakePcaModel app/MakePcaModel.cpp src/io/modelio.cpp)
@@ -240,6 +254,7 @@ target_link_libraries(MakePcaModel
         opencv_imgproc
         opencv_highgui
         opencv_flann
+	-lstdc++
         )
 
 add_executable(PngTest app/PngTest.cpp)
@@ -249,6 +264,7 @@ target_link_libraries(PngTest
         ${Boost_LIBRARIES}
         telef
         ${PCL_IO_LIBRARIES}
+	-lstdc++
         )
 
 add_executable(RecordFakeFrame app/RecordFakeFrame.cpp)
@@ -265,6 +281,7 @@ target_link_libraries(RecordFakeFrame
         opencv_imgproc
         opencv_highgui
         opencv_flann
+	-lstdc++
         )
 
 add_executable(FakeDeviceTest app/FakeDeviceTest.cpp src/io/modelio.cpp)
@@ -281,4 +298,5 @@ target_link_libraries(FakeDeviceTest
         opencv_imgproc
         opencv_highgui
         opencv_flann
+	-lstdc++
         )
