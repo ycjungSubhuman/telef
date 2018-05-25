@@ -19,7 +19,10 @@
 #include "io/ply/meshio.h"
 #include "type.h"
 #include "util/eigen_pcl.h"
-#define RANK 150
+
+#ifndef RANK
+#define RANK 40
+#endif
 
 
 namespace {
@@ -85,11 +88,11 @@ namespace {
     template <int ShapeRank>
     class PCADeformationModel {
     public:
-        Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase;
+        Eigen::MatrixXf shapeBase;
         Eigen::VectorXf mean;
 
         PCADeformationModel() = default;
-        PCADeformationModel(Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase, Eigen::VectorXf mean)
+        PCADeformationModel(Eigen::MatrixXf shapeBase, Eigen::VectorXf mean)
         : shapeBase(shapeBase), mean(mean) {}
 
 
@@ -173,10 +176,24 @@ namespace {
         typename M::Index rows, cols;
         f.read((char*)(&rows), sizeof(typename M::Index));
         f.read((char*)(&cols), sizeof(typename M::Index));
-        if (mat.rows() != rows || mat.cols() != cols) {
+        if (mat.rows() != rows || mat.cols() > cols) {
             throw std::runtime_error("Load Fail (" + std::string(filename) + "): dimension mismatch");
         }
+	bool resizeRequired = mat.cols() < cols; // If the shape rank of the matrix is smaller than the file
+	auto shapeRank = mat.cols();
+
+	if (resizeRequired) {
+	    // temporarily increase dimensions of the matrix
+	    mat.resize(rows, cols);
+	}
         f.read((char*)mat.data(), rows*cols*sizeof(typename M::Scalar));
+
+	if (resizeRequired) {
+	    Eigen::MatrixXf temp = mat.block(0, 0, rows, shapeRank);
+	    mat.resize(rows, shapeRank);
+	    mat = temp;
+	}
+
         f.close();
     }
 
@@ -240,7 +257,7 @@ namespace telef::face {
         MorphableFaceModel(fs::path fileName): mt(rd()) {
             refMesh = telef::io::ply::readPlyMesh(fileName.string() + ".ref.ply");
 
-            Eigen::Matrix<float, Eigen::Dynamic, ShapeRank> shapeBase;
+            Eigen::MatrixXf shapeBase;
             Eigen::VectorXf mean;
             shapeBase.resize(refMesh.position.rows(), ShapeRank);
             mean.resize(refMesh.position.rows());

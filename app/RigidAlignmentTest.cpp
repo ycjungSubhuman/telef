@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)->decltype(auto){return cloudPipe(in);});
 
 
-    auto model = std::make_shared<telef::face::MorphableFaceModel<150>>(fs::path("../pcamodels/example"));
+    auto model = std::make_shared<telef::face::MorphableFaceModel<RANK>>(fs::path("../pcamodels/example"));
     auto rigidFitPipe = telef::align::PCARigidFittingPipe(model);
 
     //auto rigidFitPipe = std::make_shared<telef::align::PCARigidFittingPipe>();
