@@ -28,5 +28,7 @@ namespace telef::align {
 
         float fx;
         float fy;
+    public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 }

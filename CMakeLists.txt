@@ -59,6 +59,7 @@ add_library(telef
         include/util/UvPointMapping.h
         include/camera.h
         include/type.h
+		include/align/cost_func.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp

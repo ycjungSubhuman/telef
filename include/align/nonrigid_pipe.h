@@ -15,6 +15,8 @@ namespace telef::align {
         Eigen::Matrix4f transformation;
         float fx;
         float fy;
+    public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
     class PCANonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {

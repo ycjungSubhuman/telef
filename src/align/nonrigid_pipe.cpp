@@ -31,13 +31,14 @@ namespace telef::align {
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
                                           1.0);
         double coeff[RANK] = {0,};
+	double rigidCoeff[7] = {0,0,0,0,0,0,1.0}; // yaw, pitch, roll, tx, ty, tz, scale
         // The ownership of 'cost' is moved to 'probelm'. So we don't delete cost outsideof 'problem'.
-        problem.AddResidualBlock(cost, loss_function, coeff);
+        problem.AddResidualBlock(cost, loss_function, coeff, rigidCoeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
-	//options.trust_region_strategy_type = ceres::TrustRegionStrategyType::DOGLEG;
-        options.function_tolerance = 1e-3;
+	options.trust_region_strategy_type = ceres::TrustRegionStrategyType::DOGLEG;
+        options.function_tolerance = 1e-4;
         //options.use_nonmonotonic_steps = true;
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);

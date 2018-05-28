@@ -18,7 +18,7 @@ namespace telef::align{
     public:
         explicit PCALandmarkDistanceFunctor(std::vector<int> meshLandmark3d, CloudConstPtrT scanLandmark3d,
                                             std::shared_ptr<MorphableFaceModel<CoeffRank>> model,
-                                            std::vector<int> badLmkInds, Eigen::Matrix4f transformation,
+                                            std::vector<int> badLmkInds, Eigen::Matrix4f &transformation,
                                             double landmarkWeight) :
         meshLandmark3d(meshLandmark3d),
         scanLandmark3d(scanLandmark3d),
@@ -34,11 +34,13 @@ namespace telef::align{
         }
 
         template <typename T>
-        bool operator()(const T* pcaCoeff, T* residuals) const {
+        bool operator()(const T* pcaCoeff, const T* rigidCoeff, T* residuals) const {
             residuals[0] = T(0.0);
 
             auto m = model->genPositionCeres(pcaCoeff, CoeffRank);
-            auto meshPos = applyTransform(m, transformation);
+	    Eigen::Matrix<T, 4, 4> rigidFineTune = buildTransform(rigidCoeff);
+	    Eigen::Matrix<T, 4, 4> totalTransform = rigidFineTune * transformation.cast<T>();
+            auto meshPos = applyTransform<T>(m, totalTransform);
 
             //Eigen::VectorXf
             Eigen::Matrix<T, Eigen::Dynamic, 1> meshLmk3d = lmkInd2Pos(meshPos);
@@ -69,17 +71,23 @@ namespace telef::align{
 
             if(validPointCount == 0) validPointCount = 1;
 
+	    // Calculate L2 norm
+	    T l2norm = T(0.0);
+	    for (int i=0; i<CoeffRank; i++) {
+		l2norm += pcaCoeff[i] * pcaCoeff[i];
+	    }
+
             // Cost is Average error
-            residuals[0] = residuals[0] / T(validPointCount);
+            residuals[0] = residuals[0] / T(validPointCount) + T(0.1) * l2norm;
             return true;
         }
 
 
         static ceres::CostFunction* create(std::vector<int> meshLandmark3d, CloudConstPtrT scanLandmark3d,
                                            std::shared_ptr<MorphableFaceModel<CoeffRank>> model,
-                                           std::vector<int> badLmkInds, Eigen::Matrix4f transformation,
+                                           std::vector<int> badLmkInds, Eigen::Matrix4f &transformation,
                                            float landmarkWeight) {
-            return new ceres::AutoDiffCostFunction<PCALandmarkDistanceFunctor, /*ResDim*/ 1, /*Param1Dim*/ CoeffRank>(
+            return new ceres::AutoDiffCostFunction<PCALandmarkDistanceFunctor, /*ResDim*/ 1, /*Param1Dim*/ CoeffRank, /*Param2Dim*/ 7>(
                     new PCALandmarkDistanceFunctor<CoeffRank>(meshLandmark3d,scanLandmark3d,model,
                                                               badLmkInds,transformation,landmarkWeight));
         }
@@ -109,17 +117,41 @@ namespace telef::align{
         }
 
 	template <typename T>
-	Eigen::Matrix<T, 4, 4> mkTransform(T yaw, T pitch, T roll, T tx, T ty, T tz) {
+	//T yaw, T pitch, T roll, T tx, T ty, T tz, T scale
+	Eigen::Matrix<T, 4, 4> buildTransform(const T *rigidCoeff) const {
+	    T yaw = rigidCoeff[0];
+	    T pitch = rigidCoeff[1];
+	    T roll = rigidCoeff[2];
+	    T tx = rigidCoeff[3];
+	    T ty = rigidCoeff[4];
+	    T tz = rigidCoeff[5];
+	    T scale = rigidCoeff[6];
+
+	    Eigen::Matrix<T, 3, 1> xAxis;
+	    Eigen::Matrix<T, 3, 1> yAxis;
+	    Eigen::Matrix<T, 3, 1> zAxis;
+	    xAxis << T(1.0f), T(0.0f), T(0.0f);
+	    yAxis << T(0.0f), T(1.0f), T(0.0f);
+	    zAxis << T(0.0f), T(0.0f), T(1.0f);
+
+	    Eigen::Transform<T, 3, Eigen::Affine> t( Eigen::AngleAxis<T>(yaw, xAxis)
+				    * Eigen::AngleAxis<T>(pitch, yAxis)
+				    * Eigen::AngleAxis<T>(roll, zAxis) );
 	    
+	    Eigen::Matrix<T, 3, 1> translateVector;
+	    translateVector << tx, ty, tz;
+	    return t.translate(translateVector).scale(scale).matrix();
 	}
 
         template <typename T>
         Eigen::Matrix<T, Eigen::Dynamic, 1> applyTransform(Eigen::Matrix<T, Eigen::Dynamic, 1> &meshPos,
-                                                           Eigen::Matrix4f transform) const
+                                                           Eigen::Matrix<T, 4, 4> &transform) const
         {
             Eigen::Map<Eigen::Matrix<T, 3, Eigen::Dynamic>> v(meshPos.data(), 3, meshPos.size()/3);
-            Eigen::Matrix<T, 3, Eigen::Dynamic> result = (transform.cast<T>() * v.colwise().homogeneous()).colwise().hnormalized();
+            Eigen::Matrix<T, 3, Eigen::Dynamic> result = (transform * v.colwise().homogeneous()).colwise().hnormalized();
             return Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, 1>>{result.data(), result.size()};
         }
+    public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     };
 }
