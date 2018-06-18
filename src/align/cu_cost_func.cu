@@ -1,5 +1,4 @@
-
-__global__ void wow(int a, int b)
+__global__ void test(int a, int b)
 {
     return;
 }

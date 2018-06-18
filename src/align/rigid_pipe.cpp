@@ -1,4 +1,3 @@
-
 #include <iostream>
 
 #include <pcl/registration/transformation_estimation_svd_scale.h>
@@ -19,8 +18,6 @@ namespace telef::align {
             pca_model(model),
             transformation(Eigen::Matrix4f::Identity(4,4))
     {
-        //pca_model = std::make_shared<telef::face::MorphableFaceModel<150>>(fs::path("../pcamodels/example"));
-
         // Generate Mean Face Template
         meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(RANK));
 

@@ -42,7 +42,6 @@ namespace telef::align{
 	    Eigen::Matrix<T, 4, 4> totalTransform = rigidFineTune * transformation.cast<T>();
             auto meshPos = applyTransform<T>(m, totalTransform);
 
-            //Eigen::VectorXf
             Eigen::Matrix<T, Eigen::Dynamic, 1> meshLmk3d = lmkInd2Pos(meshPos);
 
             int validPointCount = 0;
@@ -73,12 +72,13 @@ namespace telef::align{
 
 	    // Calculate L2 norm
 	    T l2norm = T(0.0);
+	    
 	    for (int i=0; i<CoeffRank; i++) {
 		l2norm += pcaCoeff[i] * pcaCoeff[i];
 	    }
 
             // Cost is Average error
-            residuals[0] = residuals[0] / T(validPointCount) + T(0.1) * l2norm;
+            residuals[0] = residuals[0] / T(validPointCount) + T(0.01) * l2norm;
             return true;
         }
 

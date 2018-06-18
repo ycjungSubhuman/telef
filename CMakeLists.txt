@@ -82,7 +82,7 @@ set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         stdc++fs
-#	cutelef
+    	cutelef
         ${Ceres_LIBRARIES}
         ${PCL_COMMON_LIBRARIES}
         ${PCL_FILTERS_LIBRARIES}
