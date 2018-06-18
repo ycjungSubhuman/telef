@@ -23,4 +23,15 @@ namespace telef::align {
     private:
         boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in) override;
     };
+
+    class PCAGPUNonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {
+    public:
+        explicit PCAGPUNonRigidFittingPipe(telef::face::MorphableFaceModel<RANK> model);
+    private:
+        int rank;
+        int dim;
+        double **deformBasis_d;
+        double *ref_d;
+        boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in) override;
+    };
 }

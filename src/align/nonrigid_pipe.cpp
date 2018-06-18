@@ -37,7 +37,7 @@ namespace telef::align {
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
-	options.trust_region_strategy_type = ceres::TrustRegionStrategyType::DOGLEG;
+        options.trust_region_strategy_type = ceres::TrustRegionStrategyType::DOGLEG;
         options.function_tolerance = 1e-4;
         //options.use_nonmonotonic_steps = true;
         auto summary = ceres::Solver::Summary();
@@ -54,5 +54,14 @@ namespace telef::align {
         result->transformation = in->transformation;
 
         return result;
+    }
+
+    PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(MorphableFaceModel<RANK> model) {
+    }
+
+    boost::shared_ptr<PCANonRigidFittingResult>
+    PCAGPUNonRigidFittingPipe::_processData(boost::shared_ptr<PCARigidAlignmentSuite> in) {
+
+        /* Setup Optimizer */
     }
 }

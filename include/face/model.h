@@ -121,8 +121,12 @@ namespace telef::face {
             return result;
         }
 
-        Eigen::VectorXf getBasis(unsigned long coeffIndex) {
-            return deformModel.shapeBase.col(coeffIndex);
+        Eigen::VectorXf getBasisMatrix() {
+            return deformModel.shapeBase;
+        }
+
+        Eigen::VectorXf getReferenceVector() {
+            return deformModel.mean;
         }
 
         int getRank() {
