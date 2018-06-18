@@ -60,6 +60,13 @@ add_library(telef
         include/camera.h
         include/type.h
 		include/align/cost_func.h
+        include/face/classified_model.h 
+        include/face/classify_pipe.h 
+        include/face/deformation_model.h
+        include/io/devicecloud.h 
+        include/io/png.h 
+        include/io/fakeframe.h 
+        include/util/fake_frame_record_device.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -71,11 +78,19 @@ add_library(telef
         src/align/nonrigid_pipe.cpp
         src/mesh/colormapping.cpp
         src/mesh/mesh.cpp
-        include/face/classified_model.h include/face/classify_pipe.h include/io/devicecloud.h src/io/devicecloud.cpp include/io/png.h src/io/png.cpp src/io/frontend.cpp include/io/fakeframe.h src/io/fakeframe.cpp src/util/UvPointMapping.cpp include/util/fake_frame_record_device.h src/util/fake_frame_record_device.cpp)
+        src/io/devicecloud.cpp 
+        src/io/png.cpp 
+        src/io/frontend.cpp 
+        src/io/fakeframe.cpp 
+        src/util/UvPointMapping.cpp 
+        src/util/fake_frame_record_device.cpp
+		include/io/matrix.h include/io/landmark.h src/io/landmark.cpp)
 
 add_library(cutelef STATIC
  	include/align/cu_cost_func.h
  	src/align/cu_cost_func.cu
+    include/face/cu_model.h
+    src/face/cu_model.cu
 	)
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 

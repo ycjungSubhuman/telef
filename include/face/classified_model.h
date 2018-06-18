@@ -6,6 +6,7 @@
 #include <Eigen/Core>
 #include <experimental/filesystem>
 #include <boost/make_shared.hpp>
+#include <pcl/kdtree/kdtree_flann.h>
 
 #include "face/model.h"
 #include "align/rigid_pipe.h"
