@@ -68,6 +68,9 @@ add_library(telef
         include/io/png.h 
         include/io/fakeframe.h 
         include/util/fake_frame_record_device.h
+		include/io/matrix.h
+		include/io/landmark.h
+		include/util/convert_arr.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -85,12 +88,11 @@ add_library(telef
         src/io/fakeframe.cpp 
         src/util/UvPointMapping.cpp 
         src/util/fake_frame_record_device.cpp
-		include/io/matrix.h include/io/landmark.h src/io/landmark.cpp)
+		src/io/landmark.cpp
+		)
 
 add_library(cutelef STATIC
- 	include/align/cu_cost_func.h
- 	src/align/cu_cost_func.cu
-    include/face/cu_model.h
+		include/face/cu_model.h
     src/face/cu_model.cu
 	)
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

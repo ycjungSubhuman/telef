@@ -31,7 +31,7 @@ void freeModelCUDA(C_PcaDeformModel deformModel) {
 }
 
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
-                          std::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB>> scan) {
+                          boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan) {
 
     cudaMalloc((void**)(&scanPointCloud->scanPoints_d), scan->points.size()*3*sizeof(float));
 
@@ -50,17 +50,29 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
     cudaFree(scanPointCloud.scanPoints_d);
 }
 
-void loadParamsToCUDADevice(C_Params *params, const float * const paramsIn, int numParams, bool update) {
-    if(!update) {
-        cudaMalloc((void **)(&params->params_d), numParams*sizeof(float));
-    }
+void allocParamsToCUDADevice(C_Params *params, int numParams) {
+    cudaMalloc((void **)(&params->params_d), numParams*sizeof(float));
+    float *zero = new float[numParams]{0,};
     params->numParams = numParams;
 
-    cudaMemcpy((void*)params->params_d, paramsIn, numParams*sizeof(float), cudaMemcpyHostToDevice);
+    updateParamsInCUDADevice(*params, zero, numParams);
+    delete[] zero;
 }
 
-void freeParamsCUDA(C_Params *params) {
-    cudaFree(params->params_d);
+void updateParamsInCUDADevice(const C_Params params, const float * const paramsIn, int numParams) {
+    cudaMemcpy((void*)params.params_d, paramsIn, numParams*sizeof(float), cudaMemcpyHostToDevice);
+}
+
+void freeParamsCUDA(C_Params params) {
+    cudaFree(params.params_d);
+}
+
+void allocPositionCUDA(float **position_d, int dim) {
+    cudaMalloc((void**)(position_d), dim*sizeof(float));
+}
+
+void freePositionCUDA(float *position_d) {
+    cudaFree(position_d);
 }
 
 __global__
@@ -82,3 +94,8 @@ void calculateVertexPosition(float *position_d, const C_Params params, const C_P
     _calculateVertexPosition<<<dimGrid, dimBlock>>>(position_d, params, deformModel);
 }
 
+void calculateLoss(float *residual, float *jacobian,
+                   const float *position_d, const C_Params params,
+                   const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud) {
+
+}

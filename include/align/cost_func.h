@@ -5,11 +5,14 @@
 #include <ceres/ceres.h>
 
 #include "face/model.h"
+#include "face/cu_model.h"
 #include "type.h"
+#include "util/convert_arr.h"
 
 namespace {
     using namespace telef::face;
     using namespace telef::types;
+    using namespace telef::util;
 }
 
 namespace telef::align{
@@ -153,5 +156,48 @@ namespace telef::align{
         }
     public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
+    };
+
+    template<unsigned long CoeffRank>
+    class PCAGPULandmarkDistanceFunctor : public ceres::SizedCostFunction<1, CoeffRank> {
+    public:
+        PCAGPULandmarkDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud) :
+                c_deformModel(c_deformModel),
+                c_scanPointCloud(c_scanPointCloud)
+        {
+            allocParamsToCUDADevice(&c_params, CoeffRank);
+            allocPositionCUDA(&position_d, c_deformModel.dim);
+        }
+
+        virtual ~PCAGPULandmarkDistanceFunctor() {
+            freeParamsCUDA(c_params);
+            freePositionCUDA(position_d);
+        }
+
+        virtual bool Evaluate(double const* const* parameters,
+                              double* residuals,
+                              double** jacobians) const {
+            float fresiduals[1];
+            float fparams[CoeffRank];
+            float fjacobians[CoeffRank];
+
+            // Copy to float array
+            convertArray(parameters[0], fparams, CoeffRank);
+            updateParamsInCUDADevice(c_params, fparams, CoeffRank);
+
+            calculateLoss(fresiduals, fjacobians, position_d, c_params, c_deformModel, c_scanPointCloud);
+
+            // Copy back to double array
+            convertArray(fresiduals, residuals, 1);
+            convertArray(fjacobians, jacobians[0], CoeffRank);
+
+            return true;
+        }
+    private:
+
+        C_PcaDeformModel c_deformModel;
+        C_ScanPointCloud c_scanPointCloud;
+        C_Params c_params;
+        float *position_d;
     };
 }
