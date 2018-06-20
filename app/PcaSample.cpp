@@ -4,8 +4,6 @@
 #include "io/ply/meshio.h"
 #include "face/model.h"
 
-#define RANK 5
-
 namespace {
     namespace fs = std::experimental::filesystem;
 }

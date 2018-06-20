@@ -5,7 +5,8 @@
 #include <ceres/ceres.h>
 
 #include "face/model.h"
-#include "face/cu_model.h"
+#include "face/model_cudahelper.h"
+#include "face/cu_model_kernel.h"
 #include "type.h"
 #include "util/convert_arr.h"
 

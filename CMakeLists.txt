@@ -18,6 +18,7 @@ find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 find_package(Ceres REQUIRED)
+find_package(CUDA)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
@@ -25,6 +26,7 @@ link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 
+include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
 include_directories(${Eigen_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
@@ -60,7 +62,7 @@ add_library(telef
         include/util/UvPointMapping.h
         include/camera.h
         include/type.h
-		include/align/cost_func.h
+	include/align/cost_func.h
         include/face/classified_model.h 
         include/face/classify_pipe.h 
         include/face/deformation_model.h
@@ -68,9 +70,10 @@ add_library(telef
         include/io/png.h 
         include/io/fakeframe.h 
         include/util/fake_frame_record_device.h
-		include/io/matrix.h
-		include/io/landmark.h
-		include/util/convert_arr.h
+	include/io/matrix.h
+	include/io/landmark.h
+	include/util/convert_arr.h
+		include/face/model_cudahelper.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -88,13 +91,13 @@ add_library(telef
         src/io/fakeframe.cpp 
         src/util/UvPointMapping.cpp 
         src/util/fake_frame_record_device.cpp
-		src/io/landmark.cpp
+	src/io/landmark.cpp
+		src/face/model_cudahelper.cpp
 		)
 
 add_library(cutelef STATIC
-		include/face/cu_model.h
-    src/face/cu_model.cu
-	)
+		src/face/cu_model_kernel.cu
+		include/face/cu_model_kernel.h)
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
@@ -239,7 +242,7 @@ target_link_libraries(PcaFit
 	-lstdc++
         )
 
-add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
+add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp include/face/raw_model.h)
 target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(ConvertPlyUV
         stdc++fs

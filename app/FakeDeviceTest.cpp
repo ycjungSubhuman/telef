@@ -28,12 +28,10 @@ int main(int argc, char** argv)
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)->decltype(auto){return cloudPipe(in);});
 
     auto merger = std::make_shared<FittingSuiteMerger>();
-    auto csvFrontend = std::make_shared<FittingSuiteWriterFrontEnd>(false, true, true);
-    merger->addFrontEnd(csvFrontend);
     auto viewFrontend = std::make_shared<Landmark3DVisualizerFrontEnd>();
     merger->addFrontEnd(viewFrontend);
 
-    FakeImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, FittingSuite> device(recordRoot);
+    FakeImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, FittingSuite> device(recordRoot, PlayMode::FPS_30);
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);
     device.addMerger(merger);

@@ -4,7 +4,7 @@
 
 #include "io/pipe.h"
 #include "align/rigid.h"
-#include "face/cu_model.h"
+#include "face/model_cudahelper.h"
 #include "type.h"
 
 namespace telef::align {

@@ -13,7 +13,7 @@ int main() {
     for (int i=1; i<=4000; i++) {
         files.push_back("/home/ycjung/Projects/flame-fitting/output/" + std::to_string(i) + ".ply");
     }
-    telef::face::MorphableFaceModel<30> model(files);
+    telef::face::MorphableFaceModel<RANK> model(files);
 
     for(int i=1; i<10; i++) {
         auto sample = model.sample();

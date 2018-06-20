@@ -16,7 +16,7 @@ int main (int argc, char** argv) {
     for (int i=1; i<=10; i++) {
         files.push_back("/home/ycjung/Projects/kinect-face/data/"+ name + "/" + std::to_string(i) + ".ply");
     }
-    telef::face::MorphableFaceModel<5> model(files, true);
+    telef::face::MorphableFaceModel<RANK> model(files, true);
 
     model.save(fs::path("/home/ycjung/Projects/kinect-face/data/"+name));
 

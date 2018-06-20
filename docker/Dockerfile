@@ -29,3 +29,7 @@ COPY ./CLion-2018.1.5.tar.gz /home/user/clion.tar.gz
 RUN sudo chown user:user /home/user/clion.tar.gz && \
     cd /home/user/ && tar -xvf clion.tar.gz && \
     sudo ln -s /home/user/clion-2018.1.5/bin/clion.sh /usr/bin/clion
+
+COPY ./OpenNI2-FreenectDriver /home/user/OpenNI2-FreenectDriver
+RUN /bin/bash -c "sudo cp /home/user/OpenNI2-FreenectDriver/* /usr/lib/OpenNI2/Drivers/ && sudo rm -rf /home/user/OpenNI2-FreenectDriver"
+RUN /bin/bash -c "yaourt -S --noconfirm openni"

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-nvidia-docker build -t local/telef-build .
+nvidia-docker build --squash -t local/telef-build .

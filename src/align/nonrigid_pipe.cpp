@@ -7,7 +7,7 @@
 
 #include "align/nonrigid_pipe.h"
 #include "align/cost_func.h"
-#include "face/cu_model.h"
+#include "face/model_cudahelper.h"
 #include "type.h"
 
 #define EPS 0.005
