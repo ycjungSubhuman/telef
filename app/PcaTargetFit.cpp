@@ -73,10 +73,13 @@ int main(int ac, const char* const *av) {
     desc.add_options()
             ("help,H", "print help message")
             ("model,M", po::value<std::string>(), "specify PCA model path")
-            ("output,O", po::value<std::string>(), "specify output PLY file path");
+            ("output,O", po::value<std::string>(), "specify output PLY file path")
+            ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
     po::notify(vm);
+
+    bool useFakeKinect = vm.count("fake") > 0;
 
     if(vm.count("help") > 0) {
         std::cout << desc << std::endl;
@@ -88,14 +91,21 @@ int main(int ac, const char* const *av) {
         return 1;
     }
 
+
     std::string modelPath;
     std::string outputPath;
+    std::string fakePath("");
 
     modelPath = vm["model"].as<std::string>();
     outputPath = vm["output"].as<std::string>();
 
+    if (useFakeKinect) {
+        fakePath = vm["fake"].as<std::string>();
+    }
+
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
+    auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     auto imagePipe = IdentityPipe<ImageT>();
     auto cloudPipe = RemoveNaNPoints();
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
@@ -115,11 +125,18 @@ int main(int ac, const char* const *av) {
     merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
 
-    FakeImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh> device {fs::path("./test2")};
-    device.setCloudChannel(cloudChannel);
-    device.setImageChannel(imageChannel);
-    device.addMerger(merger);
-    device.run();
+    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>> device = NULL;
+
+    if (useFakeKinect) {
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(fs::path(fakePath));
+    } else {
+        device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(std::move(grabber), true);
+    }
+
+    device->setCloudChannel(cloudChannel);
+    device->setImageChannel(imageChannel);
+    device->addMerger(merger);
+    device->run();
 
     return 0;
 }
