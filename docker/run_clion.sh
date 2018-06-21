@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ ! -d "/home/$USER/.CLion2018.1" ]; then
-    mkdir /home/$USER/.CLion2018.1
+if [ ! -d "/home/$USER/.CLionDocker" ]; then
+    mkdir /home/$USER/.CLionDocker
 fi
 
 ./telef_run.sh clion
