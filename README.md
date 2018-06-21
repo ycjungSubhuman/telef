@@ -16,6 +16,10 @@ C++ Library for Facial Performance Capture with Kinect
     Their lastest binary release(1.8.1) has bugs with kinect v1. Don't use it.
 1. Install ceres-solver
 
+#### Or use docker image for this project
+
+You don't have to install all of them. I made an Docker image for developing and testing this project. Please checkout `docker/HOW_TO_USE_DOCKER.md`.
+
 ### Additional Setup for Temporary Implementation
 
 1. put your LIB.a into lib/libface.a
@@ -32,6 +36,8 @@ cd build
 cmake ../
 make
 ```
+
+This project is still not FOSS. Some of the project files are missing in this repository. We are working on making it free.
 
 ## Reference
 
