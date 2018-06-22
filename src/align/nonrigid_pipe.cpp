@@ -222,7 +222,7 @@ namespace {
             residuals[0] = lmkRes + nearRes + regRes;
             if(isJacobianRequired) {
                 for (int i = 0; i < CoeffRank; i++) {
-                    jacobians[0][i] = lmkJ[i] + nearJ[i] + regJ[i];
+                    jacobians[0][i] = -(lmkJ[i] + nearJ[i] + regJ[i]);
                 }
             }
 
@@ -242,18 +242,16 @@ namespace telef::align {
         ceres::Problem problem;
         auto cost = new FaceCostFunction<RANK>(in->pca_model->getLandmarks(), in->fittingSuite->landmark3d, in->rawCloud,
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
-                                          100.0, 80.0, 0.000002);
+                                          100.0, 0.0, 0.000002);
         double coeff[RANK] = {0,};
         // The ownership of 'cost' is moved to 'probelm'. So we don't delete cost outsideof 'problem'.
         problem.AddResidualBlock(cost, nullptr, coeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 100;
-        options.use_nonmonotonic_steps = true;
-        options.function_tolerance = 1e-10;
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
-        std::cout << summary.BriefReport() << std::endl;
+        std::cout << summary.FullReport() << std::endl;
         std::cout << coeff[0] << std::endl;
         std::cout << "wat??" << std::endl;
 

@@ -105,7 +105,6 @@ int main(int ac, const char* const *av) {
 
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
-    auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     auto imagePipe = IdentityPipe<ImageT>();
     auto cloudPipe = RemoveNaNPoints();
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
@@ -130,6 +129,7 @@ int main(int ac, const char* const *av) {
     if (useFakeKinect) {
         device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(fs::path(fakePath));
     } else {
+        auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(std::move(grabber), true);
     }
 
