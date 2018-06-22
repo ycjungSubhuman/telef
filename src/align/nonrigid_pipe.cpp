@@ -114,7 +114,7 @@ namespace {
                                     modelBasis[3 * meshLandmark3d[i] + 1],
                                     modelBasis[3 * meshLandmark3d[i] + 2];
 
-                            jacobian[j] += 2 * landmarkCoeff * (ptSubt.array() * basis.array()).sum();
+                            jacobian[j] += -2 * landmarkCoeff * (ptSubt.array() * basis.array()).sum();
 
                         }
                     }
@@ -222,7 +222,7 @@ namespace {
             residuals[0] = lmkRes + nearRes + regRes;
             if(isJacobianRequired) {
                 for (int i = 0; i < CoeffRank; i++) {
-                    jacobians[0][i] = -(lmkJ[i] + nearJ[i] + regJ[i]);
+                    jacobians[0][i] = lmkJ[i] + nearJ[i] + regJ[i];
                 }
             }
 
@@ -242,7 +242,7 @@ namespace telef::align {
         ceres::Problem problem;
         auto cost = new FaceCostFunction<RANK>(in->pca_model->getLandmarks(), in->fittingSuite->landmark3d, in->rawCloud,
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
-                                          100.0, 0.0, 0.000002);
+                                          100.0, 0.0, 0.01);
         double coeff[RANK] = {0,};
         // The ownership of 'cost' is moved to 'probelm'. So we don't delete cost outsideof 'problem'.
         problem.AddResidualBlock(cost, nullptr, coeff);
