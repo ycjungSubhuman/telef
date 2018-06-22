@@ -101,20 +101,22 @@ namespace {
                 if(isPointValid) {
                     Eigen::Vector3f ptSubt;
                     ptSubt <<
-                            meshLmk3d[3 * i] - scanLandmark3d->points[validPointCount].x,
-                            meshLmk3d[3 * i + 1] - scanLandmark3d->points[validPointCount].y,
-                            meshLmk3d[3 * i + 2] - scanLandmark3d->points[validPointCount].z;
+                            scanLandmark3d->points[validPointCount].x - meshLmk3d[3 * i],
+                            scanLandmark3d->points[validPointCount].y - meshLmk3d[3 * i + 1],
+                            scanLandmark3d->points[validPointCount].z - meshLmk3d[3 * i + 2];
 
-                    *residual += landmarkCoeff * ptSubt.squaredNorm();
+                    auto norm = ptSubt.norm();
+                    *residual += landmarkCoeff * norm;
+
                     if(isJacobianRequired) {
-                        for (unsigned long j = 0; j < CoeffRank; j++) {
+                        for (int j = 0; j < CoeffRank; j++) {
                             Eigen::Vector3f basis;
                             auto modelBasis = model->getBasis(j);
                             basis << modelBasis[3 * meshLandmark3d[i]],
                                     modelBasis[3 * meshLandmark3d[i] + 1],
                                     modelBasis[3 * meshLandmark3d[i] + 2];
 
-                            jacobian[j] += 2 * landmarkCoeff * (ptSubt.array() * basis.array()).sum();
+                            jacobian[j] += landmarkCoeff * (-1 / norm) * (ptSubt.array() * basis.array()).sum();
 
                         }
                     }
@@ -127,7 +129,7 @@ namespace {
             *residual /= validPointCount;
 
             if(isJacobianRequired) {
-                for (unsigned long j = 0; j < CoeffRank; j++) {
+                for (int j = 0; j < CoeffRank; j++) {
                     jacobian[j] /= validPointCount;
                 }
             }
@@ -145,7 +147,7 @@ namespace {
             auto nearestPts = getNearestPoints(meshPos, scanPc, numValidPoint);
             *residual = nearestCoeff * (meshPos - nearestPts).squaredNorm()/numValidPoint;
             if (isJacobianRequired) {
-                for (unsigned long j = 0; j < CoeffRank; j++) {
+                for (int j = 0; j < CoeffRank; j++) {
                     jacobian[j] =
                             2 * nearestCoeff * ((meshPos - nearestPts).array() * model->getBasis(j).array()).sum() / numValidPoint;
                 }
@@ -216,14 +218,23 @@ namespace {
             auto meshPos = m.position;
 
             getLandmarkRes(meshPos, parameters[0], &lmkRes, lmkJ, isJacobianRequired);
-            getNearestRes(meshPos, parameters[0], &nearRes, nearJ, isJacobianRequired);
-            getRegularizerRes(meshPos, parameters[0], &regRes, regJ, isJacobianRequired);
+
+            //getNearestRes(meshPos, parameters[0], &nearRes, nearJ, isJacobianRequired);
+            //getRegularizerRes(meshPos, parameters[0], &regRes, regJ, isJacobianRequired);
 
             residuals[0] = lmkRes + nearRes + regRes;
             if(isJacobianRequired) {
                 for (int i = 0; i < CoeffRank; i++) {
                     jacobians[0][i] = lmkJ[i] + nearJ[i] + regJ[i];
                 }
+            }
+            std::cout << "isJacobianRequired: " << isJacobianRequired
+                      << " res0: " << residuals[0]
+                      << " ja0: " << (isJacobianRequired ? jacobians[0][0] : 0.0)
+                      << std::endl;
+            if(isJacobianRequired) {
+                Eigen::Map<const Eigen::Matrix<double, 40, 1>> coeff(jacobians[0]);
+                std::cout << "ja: " << coeff << std::endl;
             }
 
             return true;
@@ -242,20 +253,19 @@ namespace telef::align {
         ceres::Problem problem;
         auto cost = new FaceCostFunction<RANK>(in->pca_model->getLandmarks(), in->fittingSuite->landmark3d, in->rawCloud,
                                           in->pca_model, in->fittingSuite->invalid3dLandmarks, in->transformation,
-                                          100.0, 80.0, 0.000002);
+                                          100.0, 0.0, 0.01);
         double coeff[RANK] = {0,};
         // The ownership of 'cost' is moved to 'probelm'. So we don't delete cost outsideof 'problem'.
         problem.AddResidualBlock(cost, nullptr, coeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
-        options.max_num_iterations = 100;
-        options.use_nonmonotonic_steps = true;
-        options.function_tolerance = 1e-10;
+        options.max_num_iterations = 1000;
+        options.function_tolerance = 1e-6;
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
-        std::cout << coeff[0] << std::endl;
-        std::cout << "wat??" << std::endl;
+        std::cout  << std::endl;
+        std::cout << "Coefficients:\n" << coeff[0] << std::endl;
 
         result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, RANK).cast<float>();
         std::cout << result->fitCoeff << std::endl;
