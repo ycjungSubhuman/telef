@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
+option (BUILD_TESTS "Build All Tests" ON)
+
 project (telef LANGUAGES CXX CUDA)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -11,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr" )
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true" )
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -323,5 +325,14 @@ target_link_libraries(FakeDeviceTest
         opencv_imgproc
         opencv_highgui
         opencv_flann
-	-lstdc++
         )
+
+if (BUILD_TESTS)
+	add_subdirectory(lib/googletest)
+	enable_testing()
+	include_directories(${gtest_INCLUDE_DIRS})
+	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu)
+	target_link_libraries(test_cu_quaternion gtest gtest_main)
+	target_link_libraries(test_cu_quaternion cutelef -lm)
+	add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
+endif()
