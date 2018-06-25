@@ -1,11 +1,8 @@
 #pragma once
+#include <cstdio>
+#include "util/cu_quaternion.h"
 
-#define CON 1.4
-#define CON2 (CON*CON)
-#define BIG 1e30
-#define NTAB 10
-#define SAFE 2.0
-
+//TODO : This only works for specific function and specific input
 __device__
 void calc_numerical_diff(float *result, void (*calc_func)(float*, const float*), int val_dim, int param_dim, const float *x0) {
     float *x1 = (float*)malloc(param_dim*sizeof(float));
@@ -13,24 +10,24 @@ void calc_numerical_diff(float *result, void (*calc_func)(float*, const float*),
     float *f1 = (float*)malloc(val_dim*sizeof(float));
     float *f2= (float*)malloc(val_dim*sizeof(float));
 
-    const float h = 1e-4;
+    const float h = 1e-5;
 
     for (int i=0; i<param_dim; i++) {
         for (int j=0; j<param_dim; j++) {
             if(i==j) {
-                x1[i] = x0[i]-h;
+                x1[j] = x0[j]-h;
             }
             else {
-                x1[i] = x0[i];
+                x1[j] = x0[j];
             }
         }
 
         for (int j=0; j<param_dim; j++) {
             if(i==j) {
-                x2[i] = x0[i]+h;
+                x2[j] = x0[j]+h;
             }
             else {
-                x2[i] = x0[i];
+                x2[j] = x0[j];
             }
         }
 

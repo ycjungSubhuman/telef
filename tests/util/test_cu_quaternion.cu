@@ -5,7 +5,7 @@
 #include "util/cudautil.h"
 #include "testutil/diff.h"
 
-#define WIDTH 32
+#define WIDTH 16
 #define BLOCKSIZE 8
 
 __global__
@@ -15,9 +15,9 @@ void calc_diff_analytic_numeric(float *diff_d) {
     int z = (blockIdx.z * blockDim.z + threadIdx.z);
     if (!(x < WIDTH && y < WIDTH && z < WIDTH)) return;
     float u[3] = {
-        -0.016f + 0.001f*x,
-        -0.016f + 0.001f*y,
-        -0.016f + 0.001f*z
+        -0.08f + 0.01f*x,
+        -0.08f + 0.01f*y,
+        -0.08f + 0.01f*z
     };
     float numeric[3*3*3];
     float analytic[3*3*3];
@@ -26,6 +26,17 @@ void calc_diff_analytic_numeric(float *diff_d) {
     calc_dr_du(analytic, u);
     for (int i=0; i<3*3*3; i++) {
         diff_d[WIDTH*WIDTH*WIDTH*x + WIDTH*WIDTH*y + WIDTH*z + i] = analytic[i] - numeric[i];
+    }
+    if (x ==4 && y ==4 && z==4) {
+        for (int i=0; i<3*3*3; i++) {
+            printf("%f/", analytic[i]);
+        }
+        printf("\n");
+
+        for (int i=0; i<3*3*3; i++) {
+            printf("%f/", numeric[i]);
+        }
+        printf("\n");
     }
 }
 
@@ -44,17 +55,16 @@ TEST(RotationDerivativeTest, AroundZero) {
     CHECK_ERROR_MSG("Kernel Error");
     CUDA_CHECK(cudaMemcpy((void*)diff, diff_d, 3*3*3*WIDTH*WIDTH*WIDTH*sizeof(float), cudaMemcpyDeviceToHost));
 
-    //show the first 27 values
-    for (int i=0; i<3*3*3; i++) {
+    for (int i=0; i<3*3*3*WIDTH*WIDTH*WIDTH; i++) {
+        EXPECT_LE( fabsf(diff[i]),  0.01f );
+    }
+
+    //show the 27 values at zero
+    for (int i=WIDTH*WIDTH*WIDTH; i<WIDTH*WIDTH*WIDTH+3*3*3; i++) {
         printf("%f ", fabsf(diff[i]));
     }
     printf("\n");
 
-/*
-    for (int i=0; i<3*3*3*WIDTH*WIDTH*WIDTH; i++) {
-        EXPECT_LE( fabsf(diff[i]),  1.0f );
-    }
-    */
     CUDA_CHECK(cudaFree(diff_d));
     free(diff);
 }

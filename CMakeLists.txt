@@ -100,10 +100,14 @@ add_library(telef
 
 add_library(cutelef STATIC
         include/util/cu_quaternion.h
+		include/face/cu_model_kernel.h
+		include/util/cudautil.h
+		include/align/cu_loss.h
+
 		src/util/cu_quaternion.cu
 		src/face/cu_model_kernel.cu
-		include/face/cu_model_kernel.h
-		include/util/cudautil.h)
+		src/align/cu_loss.cu
+		)
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)

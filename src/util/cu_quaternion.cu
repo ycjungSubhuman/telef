@@ -1,7 +1,7 @@
 #include <math.h>
 #include "util/cu_quaternion.h"
 
-#define EPS 1e-10
+#define EPS 1e-6
 #define SQ(X) (powf(X, 2.0f))
 #define CU(X) (powf(X, 3.0f))
 
