@@ -14,6 +14,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true" )
+set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -102,7 +103,7 @@ add_library(cutelef STATIC
 		src/util/cu_quaternion.cu
 		src/face/cu_model_kernel.cu
 		include/face/cu_model_kernel.h
-		)
+		include/util/cudautil.h)
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
@@ -331,7 +332,8 @@ if (BUILD_TESTS)
 	add_subdirectory(lib/googletest)
 	enable_testing()
 	include_directories(${gtest_INCLUDE_DIRS})
-	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu)
+	include_directories(tests)
+	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu tests/testutil/diff.h)
 	target_link_libraries(test_cu_quaternion gtest gtest_main)
 	target_link_libraries(test_cu_quaternion cutelef -lm)
 	add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
