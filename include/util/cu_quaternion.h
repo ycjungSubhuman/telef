@@ -3,6 +3,8 @@
 #include <cuda_runtime_api.h>
 
 /**
+ * Written by Yucheol Jung<ycjung@postech.ac.kr>
+ *
  * Quaternion calculation helper functions for CUDA code
  *
  * There are three different representations for origin-preserving rotation in this project
@@ -37,6 +39,24 @@
  * 'q' is good for composing different rotations
  * 'R' is needed to apply the rotation to any 3d point in R^3
  */
+
+/**
+ * Calculate R(q(u)) on GPU
+ *
+ * @param r_d   3x3 array in device
+ * @param u_d   3-element axis-angle representation in device
+ */
+__device__
+void calc_r_from_u(float *r_d, const float *u_d);
+
+/**
+ * Calculate R(q) on GPU
+ *
+ * @param r_d   3x3 array in device
+ * @param q_d   4-element axis-angle representation in device
+ */
+__device__
+void calc_r_from_q(float *r_d, const float *q_d);
 
 /**
  * Calculate dR(q(u)) / du_i on GPU
@@ -76,3 +96,4 @@ void calc_q(float *q_d, const float *u_d);
  */
 __device__
 void calc_dq_du(float *dq_du_d, const float *u_d);
+

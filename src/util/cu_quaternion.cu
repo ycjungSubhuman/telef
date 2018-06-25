@@ -30,6 +30,26 @@ static void scale_elements(float *out, const float scale, int dim, const float *
 }
 
 __device__
+void calc_r_from_u(float *r_d, const float *u_d) {
+    float q[4];
+    calc_q(q, u_d);
+    calc_r_from_q(r_d, q);
+}
+
+__device__
+void calc_r_from_q(float *r_d, const float *q_d) {
+    const float *q = q_d;
+    float r[9] = {
+        SQ(q[0])+SQ(q[1])-SQ(q[2])-SQ(q[3]), 2*(q[1]*q[2]+q[0]*q[3]), 2*(q[1]*q[3]-q[0]*q[2]),
+        2*(q[1]*q[2]-q[0]*q[3]), SQ(q[0])-SQ(q[1])+SQ(q[2])-SQ(q[3]), 2*(q[2]*q[3]+q[0]*q[1]),
+        2*(q[1]*q[3]+q[0]*q[2]), 2*(q[2]*q[3]-q[0]*q[1]), SQ(q[0])-SQ(q[1])-SQ(q[2])+SQ(q[3])
+    };
+    for(int i=0; i<9; i++) {
+        r_d[i] = r[i];
+    }
+}
+
+__device__
 void calc_dr_du(float *dr_du_d, const float *u_d) {
     //Convert u to q
     float q[4];
