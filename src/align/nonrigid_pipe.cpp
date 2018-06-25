@@ -114,7 +114,7 @@ namespace {
                                     modelBasis[3 * meshLandmark3d[i] + 1],
                                     modelBasis[3 * meshLandmark3d[i] + 2];
 
-                            jacobian[j] += -2 * landmarkCoeff * (ptSubt.array() * basis.array()).sum();
+                            jacobian[j] += -landmarkCoeff * (ptSubt.array() * basis.array()).sum();
 
                         }
                     }
@@ -216,7 +216,7 @@ namespace {
             auto meshPos = m.position;
 
             getLandmarkRes(meshPos, parameters[0], &lmkRes, lmkJ, isJacobianRequired);
-            getNearestRes(meshPos, parameters[0], &nearRes, nearJ, isJacobianRequired);
+            //getNearestRes(meshPos, parameters[0], &nearRes, nearJ, isJacobianRequired);
             getRegularizerRes(meshPos, parameters[0], &regRes, regJ, isJacobianRequired);
 
             residuals[0] = lmkRes + nearRes + regRes;

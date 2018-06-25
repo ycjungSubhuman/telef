@@ -127,7 +127,7 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(fs::path(fakePath));
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(fs::path(fakePath), PlayMode::FIRST_FRAME_ONLY);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(std::move(grabber), true);
