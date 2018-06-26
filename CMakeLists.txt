@@ -335,7 +335,7 @@ target_link_libraries(FakeDeviceTest
 if (BUILD_TESTS)
 	add_subdirectory(lib/googletest)
 	enable_testing()
-	include_directories(${gtest_INCLUDE_DIRS})
+	include_directories(lib/googletest/googletest/include)
 	include_directories(tests)
 	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu tests/testutil/diff.h)
 	target_link_libraries(test_cu_quaternion gtest gtest_main)
