@@ -7,7 +7,7 @@
 
 /* Includes, cuda */
 #include <cuda_runtime.h>
-#include <cublas_v2.h>
+//#include <cublas_v2.h>
 
 
 #include "face/raw_model.h"
@@ -23,7 +23,8 @@ void freeModelCUDA(C_PcaDeformModel deformModel);
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                           boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
                           const std::vector<int> scanLmkIdx,
-                          const std::vector<int> validLmks);
+                          const std::vector<int> validLmks,
+                          const Eigen::MatrixXf rigidTransform);
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud);
 
@@ -60,7 +61,7 @@ void calculateLandmarkLoss(float *residual, float *jacobian,
  * @param scanPointCloud
  */
 void applyRigidAlignment(float *align_pos_d, const float *position_d,
-                         const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud) {
+                         const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model
@@ -70,4 +71,5 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
  */
 void calculateLoss(float *residual, float *jacobian,
                    const float *position_d, const C_Params params,
-                   const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud);
+                   const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                   const bool isJacobianRequired);

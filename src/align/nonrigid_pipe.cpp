@@ -78,11 +78,11 @@ namespace telef::align {
         }
 
         // Filter out non-detected Deformable Model landmarks
-        std::vector<int> validLmks = pca_model->pca_model->getLandmarks();
+        std::vector<int> validLmks = in->pca_model->getLandmarks();
         std::vector<int>::reverse_iterator riter = in->fittingSuite->invalid3dLandmarks.rbegin();
-        while (riter != in->invalid3dLandmarks.rend())
+        while (riter != in->fittingSuite->invalid3dLandmarks.rend())
         {
-            std::vector<int>::iterator iter_data = pca_lmks.begin() + *riter;
+            std::vector<int>::iterator iter_data = validLmks.begin() + *riter;
             iter_data = validLmks.erase(iter_data);
             riter++;
         }

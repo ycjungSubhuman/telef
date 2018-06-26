@@ -207,9 +207,8 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
 
 }
 
-void calculateLoss(float *residual, float *jacobian,
-                   float *position_d, const C_Params params,
-                   const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+void calculateLoss(float *residual, float *jacobian, float *position_d,
+                   const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired) {
     float *residual_d, *jacobian_d;
     float *align_pos_d;
