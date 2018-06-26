@@ -13,6 +13,7 @@
 #include "face/raw_model.h"
 
 
+
 /** Loads MorphableFaceModel to GPU Device */
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
                            const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
@@ -70,6 +71,6 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
  *      + (L2 norm of parameters)
  */
 void calculateLoss(float *residual, float *jacobian,
-                   const float *position_d, const C_Params params,
+                   float *position_d, const C_Params params,
                    const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired);
