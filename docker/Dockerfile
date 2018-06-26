@@ -1,8 +1,7 @@
 FROM heichblatt/archlinux-yaourt
 
 RUN /bin/bash -c "yaourt -Syy"
-RUN /bin/bash -c "yaourt -S --noconfirm clang nvidia cuda"
-
+RUN /bin/bash -c "yaourt -S --noconfirm clang nvidia cuda" 
 COPY ./flann /home/user/flann
 RUN /bin/bash -c "sudo chown user:user /home/user/flann"
 RUN /bin/bash -c "cd /home/user/flann && makepkg -si --noconfirm"
@@ -33,3 +32,9 @@ RUN sudo chown user:user /home/user/clion.tar.gz && \
 COPY ./OpenNI2-FreenectDriver /home/user/OpenNI2-FreenectDriver
 RUN /bin/bash -c "sudo cp /home/user/OpenNI2-FreenectDriver/* /usr/lib/OpenNI2/Drivers/ && sudo rm -rf /home/user/OpenNI2-FreenectDriver"
 RUN /bin/bash -c "yaourt -S --noconfirm openni"
+
+COPY ./ncurses5-compat-libs /home/user/ncurses5-compat-libs
+RUN /bin/bash -c "sudo chown user:user /home/user/ncurses5-compat-libs"
+RUN /bin/bash -c "cd /home/user/ncurses5-compat-libs && makepkg -si --noconfirm"
+RUN /bin/bash -c "yaourt -S --noconfirm gdb"
+RUN /bin/bash -c "rm -rf /home/user/ncurses5-compat-libs"
