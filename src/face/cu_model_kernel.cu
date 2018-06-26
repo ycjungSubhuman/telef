@@ -1,8 +1,8 @@
 #include "face/cu_model_kernel.h"
 
 /* Includes, cuda */
-//#include <cuda_runtime.h>
-//#include <cublas_v2.h>
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
 
 #define BLOCKSIZE 128
 

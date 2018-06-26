@@ -4,7 +4,14 @@
 #include <Eigen/Core>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+
+/* Includes, cuda */
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+
+
 #include "face/raw_model.h"
+
 
 /** Loads MorphableFaceModel to GPU Device */
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
