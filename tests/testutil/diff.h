@@ -6,6 +6,21 @@
 typedef void(*func)(float*, const float*);
 
 //TODO : The selection of h only works for specific function and specific input. Make it adaptive.
+/**
+ * Calculate numerical derivative value on x0
+ *
+ * F'(x) = (F(x+h) - F(x-h)) /  (2h)
+ *
+ * for a small h
+ *
+ * @param result                        the result array of length val_dim
+ * @param calc_func                     function pointer for evaluating function value from parameter
+ * @param h                             small value h
+ *                                      the optimal h value are dependent on the shape of function.
+ * @param val_dim                       the dimension of function value
+ * @param param_dim                     the dimension of parameter
+ * @param x0                            the point we want to evaluate numerical diff on
+ */
 __device__
 void calc_numerical_diff(float *result, func *calc_func,
                          const float h, int val_dim, int param_dim, const float *x0) {
@@ -50,7 +65,31 @@ void calc_numerical_diff(float *result, func *calc_func,
 /**
  * Calculate difference between analytic differentiation and numeric differentiation
  *
- * @param diff_d            output matrix. width^param_dim * val_dim*param_dim
+ * Tests on various parameters starting from (initial_value, initial_value ...)
+ *
+ * example ) 2D parameter case
+ *
+ *  initial_value
+ *  |
+ *  V
+ *  *---delta---*---delta---*---delta---* ...
+ *  |           |           |
+ *  delta     delta       delta
+ *  |           |           |
+ *  *---delta---*---delta---*---delta---* ...
+ *  ...
+ *
+ *  (Total number of grid intersections '*') = width^param_dim
+ *
+ * @param diff_d                output matrix. width^param_dim * val_dim*param_dim
+ *                              stores element wise differnce btw analytic and numeric derivatives
+ * @param calc_analytic_diff    function pointer for calculating analytic differentiation
+ * @param calc_function_value   function pointer for calculating function value
+ * @param initial_value         initial parameter value
+ * @param delta                 parameter perturbation amount
+ * @param param_dim             parameter dimension
+ * @param val_dim               functino value dimension(number of elements calculated from calc_function_value)
+ * @param width                 parameter grid count for each dimension
  */
 __global__
 void calc_diff_analytic_numeric(float *diff_d,
