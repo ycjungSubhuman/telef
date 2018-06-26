@@ -97,7 +97,7 @@ namespace telef::io {
         OutPtrT merge(const ImagePtrT image, const DeviceCloudBoostPtrT deviceCloud) override {
             auto landmark3d = boost::make_shared<CloudT>();
             auto rawCloud = deviceCloud->cloud;
-            std::vector<int> rawCloudLmkIdx();
+            std::vector<int> rawCloudLmkIdx;
             auto mapping = deviceCloud->img2cloudMapping;
             feature::IntraFace featureDetector;
             auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
