@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <gtest/gtest.h>
 
@@ -54,22 +55,47 @@ void test_dr_dq(float initial, float delta) {
 }
 
 /**
- * Error btw numerical version and analytic version of dr_du calculation around (0, 0, 0) should be less than 1e-2
+ * Error btw numerical version and analytic version of dr_du calculation around
+ * (0, 0, 0)
+ * should be less than 1e-2
  */
 TEST(RotationDerivativeTest, AroundZero) {
     test_dr_dq(-0.08f, 0.01f);
 }
 
 /**
- * Error btw numerical version and analytic version of dr_du calculation around (1, 1, 1) should be less than 1e-2
+ * Error btw numerical version and analytic version of dr_du calculation around
+ * (1, 1, 1)
+ * should be less than 1e-2
  */
 TEST(RotationDerivativeTest, AroundOne) {
     test_dr_dq(0.92f, 0.01f);
 }
 
 /**
- * Error btw numerical version and analytic version of dr_du calculation around (-1, -1, -1) should be less than 1e-2
+ * Error btw numerical version and analytic version of dr_du calculation around
+ * (-1, -1, -1)
+ * should be less than 1e-2
  */
 TEST(RotationDerivativeTest, AroundMinusOne) {
     test_dr_dq(-1.08f, 0.01f);
 }
+
+/**
+ * Error btw numerical version and analytic version of dr_du calculation around
+ * (1, 1, 1)*(PI/sqrt(3))
+ * should be less than 1e-2
+ */
+TEST(RotationDerivativeTest, AroundPI) {
+    test_dr_dq(0.92f*(M_PI/sqrtf(3.0f)), 0.01f*(M_PI/sqrtf(3.0f)));
+}
+
+/**
+ * Error btw numerical version and analytic version of dr_du calculation around
+ * (-1, -1, -1)*(PI/sqrt(3.0f))
+ * should be less than 1e-2
+ */
+TEST(RotationDerivativeTest, AroundMinusPI) {
+    test_dr_dq(-1.08f*(M_PI/sqrtf(3.0f)), 0.01f*(M_PI/sqrtf(3.0f)));
+}
+
