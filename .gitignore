@@ -13,4 +13,3 @@ models/*.bin
 models/*.xml
 data/
 lib/libface.a
-lib/googletest
