@@ -89,7 +89,7 @@ void calc_numerical_diff(float *result, func *calc_func,
  * @param delta                 parameter perturbation amount
  * @param param_dim             parameter dimension
  * @param val_dim               functino value dimension(number of elements calculated from calc_function_value)
- * @param width                 parameter grid count for each dimension
+ * @param width                 parameter grid intersection count for each dimension
  */
 __global__
 void calc_diff_analytic_numeric(float *diff_d,
