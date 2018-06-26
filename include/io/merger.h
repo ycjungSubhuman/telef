@@ -97,6 +97,7 @@ namespace telef::io {
         OutPtrT merge(const ImagePtrT image, const DeviceCloudBoostPtrT deviceCloud) override {
             auto landmark3d = boost::make_shared<CloudT>();
             auto rawCloud = deviceCloud->cloud;
+            std::vector<int> rawCloudLmkIdx();
             auto mapping = deviceCloud->img2cloudMapping;
             feature::IntraFace featureDetector;
             auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
@@ -104,6 +105,7 @@ namespace telef::io {
                 try {
                     auto pointInd = mapping->getMappedPointId(feature->points(0, i), feature->points(1, i));
                     landmark3d->push_back(rawCloud->at(pointInd));
+                    rawCloudLmkIdx.push_back(pointInd);
                 } catch (std::out_of_range &e) {
                     std::cout << "WARNING: Landmark Points at Hole." << std::endl;
                 }
@@ -116,6 +118,7 @@ namespace telef::io {
             result->landmark2d = feature;
             result->landmark3d = landmark3d;
             result->rawCloud = rawCloud;
+            result->rawCloudLmkIdx = rawCloudLmkIdx;
             result->rawImage = image;
             result->fx = deviceCloud->fx;
             result->fy = deviceCloud->fy;

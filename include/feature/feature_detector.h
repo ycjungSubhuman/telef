@@ -41,6 +41,7 @@ namespace telef::feature {
         CloudConstPtrT landmark3d;
         std::vector<int> invalid3dLandmarks;
         ImagePtrT rawImage;
+        std::vector<int> rawCloudLmkIdx;
         CloudConstPtrT rawCloud;
         float fx;
         float fy;

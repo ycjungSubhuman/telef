@@ -74,10 +74,22 @@ namespace telef::align {
             auto ref = in->pca_model->getReferenceVector();
             auto landmarks = in->pca_model->getLandmarks();
             loadModelToCUDADevice(&this->c_deformModel, deformBasis, ref, landmarks);
+            isModelInitialized = true;
+        }
+
+        // Filter out non-detected Deformable Model landmarks
+        std::vector<int> validLmks = pca_model->pca_model->getLandmarks();
+        std::vector<int>::reverse_iterator riter = in->fittingSuite->invalid3dLandmarks.rbegin();
+        while (riter != in->invalid3dLandmarks.rend())
+        {
+            std::vector<int>::iterator iter_data = pca_lmks.begin() + *riter;
+            iter_data = validLmks.erase(iter_data);
+            riter++;
         }
 
         C_ScanPointCloud c_scanPointCloud;
-        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud);
+        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fittingSuite->rawCloudLmkIdx,
+                             validLmks, in->transformation);
 
         /* Setup Optimizer */
         auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud);

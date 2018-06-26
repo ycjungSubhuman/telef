@@ -12,12 +12,18 @@ typedef struct C_PcaDeformModel {
 
 typedef struct C_ScanPointCloud {
     float *scanPoints_d;
+    float *rigidTransform_d;
+    int *validModelLmks_d;
+    int *scanLmks_d;
     int numPoints;
+    // Transformation Matrix dims
+    int transformCols;
+    int transformRows;
+    // Size of valid lmks and scan lmk points should be same
+    int numLmks;
 } C_ScanPointCloud;
 
 typedef struct C_Params {
     float *params_d;
     int numParams;
 } C_Params;
-
-

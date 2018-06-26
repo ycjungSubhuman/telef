@@ -182,11 +182,16 @@ namespace telef::align{
             float fparams[CoeffRank];
             float fjacobians[CoeffRank];
 
+            // According to ceres-solver documentation, jacobians and jacobians[i] can be null depending on
+            // optimization methods. if either is null, we don't have to compute jacobian
+            bool isJacobianRequired = jacobians != nullptr && jacobians[0] != nullptr;
+
             // Copy to float array
             convertArray(parameters[0], fparams, CoeffRank);
             updateParamsInCUDADevice(c_params, fparams, CoeffRank);
 
-            calculateLoss(fresiduals, fjacobians, position_d, c_params, c_deformModel, c_scanPointCloud);
+            calculateLoss(fresiduals, fjacobians, position_d,
+                          c_params, c_deformModel, c_scanPointCloud, isJacobianRequired);
 
             // Copy back to double array
             convertArray(fresiduals, residuals, 1);

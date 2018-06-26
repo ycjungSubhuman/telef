@@ -31,9 +31,15 @@ void freeModelCUDA(C_PcaDeformModel deformModel) {
 }
 
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
-                          boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan) {
+                          boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
+                          const std::vector<int> scanLmkIdx,
+                          const std::vector<int> validLmks,
+                          const Eigen::MatrixXf rigidTransform) {
 
     cudaMalloc((void**)(&scanPointCloud->scanPoints_d), scan->points.size()*3*sizeof(float));
+    cudaMalloc((void**)(&scanPointCloud->validModelLmks_d), validLmks.size()*sizeof(int));
+    cudaMalloc((void**)(&scanPointCloud->scanLmks_d), scanLmkIdx.size()*sizeof(int));
+    cudaMalloc((void**)(&scanPointCloud->rigidTransform_d), rigidTransform.size()*sizeof(float));
 
     float *scanPoints = new float[scan->points.size()*3];
     for (int i=0; i<scan->points.size(); i+=3) {
@@ -44,6 +50,19 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
 
     cudaMemcpy((void*)scanPointCloud->scanPoints_d,
                scanPoints, scan->points.size()*3*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy((void*)scanPointCloud->validModelLmks_d,
+               validLmks.data(), validLmks.size()*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy((void*)scanPointCloud->scanLmks_d,
+               scanLmkIdx.data(), scanLmkIdx.size()*sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy((void*)scanPointCloud->rigidTransform_d,
+               rigidTransform.data(), rigidTransform.size()*sizeof(float), cudaMemcpyHostToDevice);
+
+    scanPointCloud->numPoints = scan->points.size();
+    scanPointCloud->transformCols = (int)rigidTransform.cols();
+    scanPointCloud->transformRows = (int)rigidTransform.rows();
+    scanPointCloud->numLmks = scan->points.size();
+
+    assert(scanLmkIdx.size() == validLmks.size());
 }
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
