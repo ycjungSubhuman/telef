@@ -121,7 +121,7 @@ namespace telef::face {
             return result;
         }
 
-        Eigen::VectorXf getBasisMatrix() {
+        Eigen::MatrixXf getBasisMatrix() {
             return deformModel.shapeBase;
         }
 

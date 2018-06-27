@@ -62,7 +62,9 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
     scanPointCloud->transformRows = (int)rigidTransform.rows();
     scanPointCloud->numLmks = scan->points.size();
 
+    std::cout << "loadScanToCUDADevice: scanLmkIdx: "<< scanLmkIdx.size() << " validLmks: "<< validLmks.size() << std::endl;
     assert(scanLmkIdx.size() == validLmks.size());
+    std::cout << "loadScanToCUDADevice: Done..." << std::endl;
 }
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud) {

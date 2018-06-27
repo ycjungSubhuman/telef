@@ -1,5 +1,7 @@
 #include "face/cu_model_kernel.h"
 
+#include <iostream>
+
 /* Includes, cuda */
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -194,13 +196,10 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
 
     cudaMemcpy(&status, d_status, sizeof(cublasStatus_t), cudaMemcpyDeviceToHost);
 
-//    if (status != CUBLAS_STATUS_SUCCESS)
-//    {
-//        fprintf(stderr,
-//                "!!!! CUBLAS Device API call failed with code %d\n",
-//                status);
-//        exit(EXIT_FAILURE);
-//    }
+    if (status != CUBLAS_STATUS_SUCCESS)
+    {
+        std::cout << "!!! CUBLAS Device API call failed with code %d\n" << std::endl;
+    }
 
     cudaFree(d_status);
 
@@ -210,6 +209,8 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
 void calculateLoss(float *residual, float *jacobian, float *position_d,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired) {
+
+    std::cout << "calculateLoss" << std::endl;
     float *residual_d, *jacobian_d;
     float *align_pos_d;
 
@@ -234,14 +235,18 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
      * Compute Loss
      */
     // Calculate position_d
+
+    std::cout << "calculateLoss: calculateVertexPosition" << std::endl;
     calculateVertexPosition(position_d, params, deformModel);
     //cudaDeviceSynchronize();
 
     // Rigid alignment
+    std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
     applyRigidAlignment(align_pos_d, position_d, deformModel, scanPointCloud);
     //cudaDeviceSynchronize();
 
     // Calculate residual_d, jacobian_d for Landmarks
+    std::cout << "calculateLoss: calculateLandmarkLoss" << std::endl;
     calculateLandmarkLoss(residual_d, jacobian_d,
                           align_pos_d, params, deformModel, scanPointCloud, isJacobianRequired);
     //cudaDeviceSynchronize();
@@ -249,9 +254,12 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
     /*
      * Copy computed residual and jacobian to Host
      */
+    std::cout << "Copy to host" << std::endl;
     cudaMemcpy(residual, residual_d, sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(jacobian, jacobian_d, params.numParams*sizeof(float), cudaMemcpyDeviceToHost);
 
     //TODO: return value to see rigid aligned mesh?
+
+    std::cout << "Free cuda" << std::endl;
     cudaFree(align_pos_d);
 }

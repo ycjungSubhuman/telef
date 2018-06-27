@@ -69,6 +69,8 @@ namespace telef::align {
     boost::shared_ptr<PCANonRigidFittingResult>
     PCAGPUNonRigidFittingPipe::_processData(boost::shared_ptr<PCARigidAlignmentSuite> in) {
         /* Load data to cuda device */
+
+        std::cout << "Fitting PCA model GPU" << std::endl;
         if(!isModelInitialized) {
             auto deformBasis = in->pca_model->getBasisMatrix();
             auto ref = in->pca_model->getReferenceVector();
@@ -77,6 +79,7 @@ namespace telef::align {
             isModelInitialized = true;
         }
 
+        std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
         // Filter out non-detected Deformable Model landmarks
         std::vector<int> validLmks = in->pca_model->getLandmarks();
         std::vector<int>::reverse_iterator riter = in->fittingSuite->invalid3dLandmarks.rbegin();
@@ -92,6 +95,8 @@ namespace telef::align {
                              validLmks, in->transformation);
 
         /* Setup Optimizer */
+
+        std::cout << "Fitting PCA model to scan..." << std::endl;
         auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud);
         ceres::Problem problem;
         double coeff[RANK] = {0,};

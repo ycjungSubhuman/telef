@@ -206,7 +206,15 @@ namespace telef::align{
 
             // Copy back to double array
             convertArray(fresiduals, residuals, 1);
+
+            std::cout << "Result: " << residuals[0] << std::endl;
             convertArray(fjacobians, jacobians[0], CoeffRank);
+
+            std::cout << "Jacobi: ";
+            for( int i = 1; i < CoeffRank; i++) {
+                std::cout << " " << jacobians[0][i];
+            }
+            std::cout << std::endl;
 
             return true;
         }
