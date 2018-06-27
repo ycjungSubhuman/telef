@@ -150,6 +150,12 @@ namespace telef::io {
         std::thread runThread;
         volatile bool isRunning;
     };
+    enum PlayMode {
+        FIRST_FRAME_ONLY,       // Use the first frame only and terminate
+        ONE_FRAME_PER_ENTER,    // Proceed to the next frame every time you press enter
+        FPS_30                  // Play at 30 FPS
+    };
+
 
     /** Fake device for easy experiments */
     template <class CloudOutT, class ImageOutT, class MergeOutT, class MergePipeOutT>
@@ -160,12 +166,6 @@ namespace telef::io {
         using MergerT = BinaryMerger<ImageOutT, CloudOutT, MergeOutT, MergePipeOutT>;
         using FrontEndT = FrontEnd<MergePipeOutT>;
     public:
-        enum PlayMode {
-            FIRST_FRAME_ONLY,       // Use the first frame only and terminate
-            ONE_FRAME_PER_ENTER,    // Proceed to the next frame every time you press enter
-            FPS_30                  // Play at 30 FPS
-        };
-
         /**
          * Create a Fake device from previous records
          *
