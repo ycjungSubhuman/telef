@@ -204,17 +204,29 @@ namespace telef::align{
             calculateLoss(fresiduals, fjacobians, position_d,
                           c_params, c_deformModel, c_scanPointCloud, isJacobianRequired);
 
+            //Test cuda calculated positions
+            float position[c_deformModel.dim];
+            cudaMemcpy(position, position_d, c_deformModel.dim*sizeof(float), cudaMemcpyDeviceToHost);
+            Eigen::Map<Eigen::VectorXf> cuda_m(position, c_deformModel.dim);
+
+
+
+            std::cout << "Cuda position: " << cuda_m[0] << std::endl;
+
+
             // Copy back to double array
             convertArray(fresiduals, residuals, 1);
 
-            std::cout << "Result: " << residuals[0] << std::endl;
+            std::cout << "Residuals: " << residuals[0] << std::endl;
             convertArray(fjacobians, jacobians[0], CoeffRank);
 
-            std::cout << "Jacobi: ";
-            for( int i = 1; i < CoeffRank; i++) {
-                std::cout << " " << jacobians[0][i];
+            if (isJacobianRequired) {
+                std::cout << "Jacobi: ";
+                for (int i = 1; i < CoeffRank; i++) {
+                    std::cout << " " << jacobians[0][i];
+                }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
 
             return true;
         }

@@ -1,6 +1,9 @@
 #include "face/cu_model_kernel.h"
 
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Includes, cuda */
 #include <cuda_runtime.h>
@@ -40,10 +43,12 @@ __global__
 void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    const int colDim = deformModel.dim;
+    printf("_calculateVertexPosition %d\n", i);
 
-    position_d[i] = 0;
-    for (int j=0; j<deformModel.rank; j++) {
+    const int colDim = *deformModel.dim_d;
+
+    position_d[i] = 0;;
+    for (int j=0; j<*deformModel.rank_d; j++) {
         position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
     }
 }
@@ -64,12 +69,12 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d,
 
     //TODO: Add param for weights
     float landmarkCoeff = 1.0;
-    const int colDim = deformModel.dim;
+    const int colDim = *deformModel.dim_d;
 
     // This Treads Placeholders for output
     float res = 0.0;
 
-    for (int idx = index; idx < scanPointCloud.numLmks; idx += blockDim.x * gridDim.x) {
+    for (int idx = index; idx < *scanPointCloud.numLmks_d; idx += blockDim.x * gridDim.x) {
         int posIdx = deformModel.lmks_d[idx];
         int scanIdx = scanPointCloud.scanLmks_d[idx];
 
@@ -87,7 +92,7 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d,
         res += landmarkCoeff * squaredNorm;
 
         if(isJacobianRequired) {
-            for (int j=0; j<deformModel.rank; j++) {
+            for (int j=0; j<*deformModel.rank_d; j++) {
                 float basis[3] = { deformModel.deformBasis_d[3*index + colDim * j],       // x @ col j
                                    deformModel.deformBasis_d[3*index + 1 + colDim * j ],  // y @ col j
                                    deformModel.deformBasis_d[3*index + 2 + colDim * j] }; // z @ col j
@@ -198,7 +203,14 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
 
     if (status != CUBLAS_STATUS_SUCCESS)
     {
-        std::cout << "!!! CUBLAS Device API call failed with code %d\n" << std::endl;
+        fprintf(stderr,
+                "!!!! CUBLAS Device API call failed with code %d\n",
+                status);
+        exit(EXIT_FAILURE);
+    } else {
+        fprintf(stdout,
+                "CUBLAS Success %d\n",
+                status);
     }
 
     cudaFree(d_status);
@@ -213,6 +225,7 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
     std::cout << "calculateLoss" << std::endl;
     float *residual_d, *jacobian_d;
     float *align_pos_d;
+    float align_pos[deformModel.dim];
 
     /*
      * Allocate and Copy residual amd jacobian to GPU
@@ -235,7 +248,6 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
      * Compute Loss
      */
     // Calculate position_d
-
     std::cout << "calculateLoss: calculateVertexPosition" << std::endl;
     calculateVertexPosition(position_d, params, deformModel);
     //cudaDeviceSynchronize();
@@ -257,9 +269,15 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
     std::cout << "Copy to host" << std::endl;
     cudaMemcpy(residual, residual_d, sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(jacobian, jacobian_d, params.numParams*sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(align_pos, align_pos_d, deformModel.dim*sizeof(float), cudaMemcpyDeviceToHost);
+
+
 
     //TODO: return value to see rigid aligned mesh?
 
-    std::cout << "Free cuda" << std::endl;
+    std::cout << "Free cuda: " << align_pos[0] << std::endl;
+    //delete align_pos;
+    //align_pos = NULL;
+
     cudaFree(align_pos_d);
 }

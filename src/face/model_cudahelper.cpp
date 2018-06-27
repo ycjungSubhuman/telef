@@ -1,25 +1,35 @@
 #include <cuda_runtime_api.h>
 
+#include "util/cudautil.h"
 #include "face/model_cudahelper.h"
 
 
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
                            const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
                            const std::vector<int> lmkInds) {
+    std::cout << "deformBasis.size() <<: " << deformBasis.size() << std::endl;
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->deformBasis_d), deformBasis.size()*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->ref_d), ref.size()*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->lmks_d), lmkInds.size()*sizeof(int)));
 
-    cudaMalloc((void**)(&deformModel->deformBasis_d), deformBasis.size()*sizeof(float));
-    cudaMalloc((void**)(&deformModel->ref_d), ref.size()*sizeof(float));
-    cudaMalloc((void**)(&deformModel->lmks_d), lmkInds.size()*sizeof(int));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->deformBasis_d,
+               deformBasis.data(), deformBasis.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->ref_d,
+               ref.data(), ref.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->lmks_d,
+               lmkInds.data(), lmkInds.size()*sizeof(int), cudaMemcpyHostToDevice));
 
-    cudaMemcpy((void*)deformModel->deformBasis_d,
-               deformBasis.data(), deformBasis.size()*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy((void*)deformModel->ref_d,
-               ref.data(), ref.size()*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy((void*)deformModel->lmks_d,
-               lmkInds.data(), lmkInds.size()*sizeof(int), cudaMemcpyHostToDevice);
     deformModel->rank = (int)deformBasis.cols();
     deformModel->dim = (int)deformBasis.rows();
     deformModel->lmkCount = (int)lmkInds.size();
+
+    CUDA_CHECK(cudaMalloc((void**)&deformModel->rank_d, sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)&deformModel->dim_d, sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)&deformModel->lmkCount_d, sizeof(int)));
+
+    CUDA_CHECK(cudaMemcpy(deformModel->rank_d, &deformModel->rank, sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(deformModel->dim_d, &deformModel->dim, sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(deformModel->lmkCount_d, &deformModel->lmkCount, sizeof(int), cudaMemcpyHostToDevice));
 
     assert(deformBasis.rows() == ref.size());
 }
@@ -62,9 +72,18 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
     scanPointCloud->transformRows = (int)rigidTransform.rows();
     scanPointCloud->numLmks = scan->points.size();
 
-    std::cout << "loadScanToCUDADevice: scanLmkIdx: "<< scanLmkIdx.size() << " validLmks: "<< validLmks.size() << std::endl;
+
+    cudaMalloc((void**)&scanPointCloud->numPoints_d, sizeof(int));
+    cudaMalloc((void**)&scanPointCloud->transformCols_d, sizeof(int));
+    cudaMalloc((void**)&scanPointCloud->transformRows_d, sizeof(int));
+    cudaMalloc((void**)&scanPointCloud->numLmks_d, sizeof(int));
+
+    cudaMemcpy(scanPointCloud->numPoints_d, &scanPointCloud->numPoints, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(scanPointCloud->transformCols_d, &scanPointCloud->transformCols, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(scanPointCloud->transformRows_d, &scanPointCloud->transformRows, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(scanPointCloud->numLmks_d, &scanPointCloud->numLmks, sizeof(int), cudaMemcpyHostToDevice);
+
     assert(scanLmkIdx.size() == validLmks.size());
-    std::cout << "loadScanToCUDADevice: Done..." << std::endl;
 }
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
@@ -82,6 +101,10 @@ void allocParamsToCUDADevice(C_Params *params, int numParams) {
 
 void updateParamsInCUDADevice(const C_Params params, const float * const paramsIn, int numParams) {
     cudaMemcpy((void*)params.params_d, paramsIn, numParams*sizeof(float), cudaMemcpyHostToDevice);
+
+
+    cudaMalloc((void**)&params.numParams_d, sizeof(int));
+    cudaMemcpy(params.numParams_d, &params.numParams, sizeof(int), cudaMemcpyHostToDevice);
 }
 
 void freeParamsCUDA(C_Params params) {
