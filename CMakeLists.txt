@@ -8,12 +8,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 # Required because of relocated static libray. We can delete it after we get rid of it.
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true -arch=compute_50" )
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true -gencode arch=compute_61,code=sm_61 -lcublas_device")
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
@@ -108,11 +109,13 @@ add_library(cutelef STATIC
 		src/face/cu_model_kernel.cu
 		src/align/cu_loss.cu
 		)
+
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         stdc++fs
+		-lcublas_device
     	cutelef
         ${Ceres_LIBRARIES}
         ${PCL_COMMON_LIBRARIES}
@@ -124,6 +127,7 @@ add_library(modelio src/io/modelio.cpp)
 
 add_executable(KinectTest app/KinectTest.cpp)
 target_link_libraries(KinectTest
+		-lcublas_device
         telef
         ${PCL_IO_LIBRARIES}
         opencv_core
@@ -134,6 +138,7 @@ target_link_libraries(KinectTest
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
 target_link_libraries(LandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(LandmarkProject
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -150,6 +155,7 @@ target_link_libraries(LandmarkProject
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect
+		-lcublas_device
         telef
         opencv_core
         opencv_objdetect
@@ -161,6 +167,7 @@ target_link_libraries(FaceFeatureDetect
 
 add_executable(PcaTest app/PcaTest.cpp)
 target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
+		-lcublas_device
         opencv_core
         opencv_ml
         opencv_objdetect
@@ -172,6 +179,7 @@ target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
 
 add_executable(PcaSample app/PcaSample.cpp)
 target_link_libraries(PcaSample stdc++fs telef
+		-lcublas_device
         ${Boost_LIBRARIES}
         opencv_core
         opencv_ml
@@ -184,6 +192,7 @@ target_link_libraries(PcaSample stdc++fs telef
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)
 target_link_libraries(RigidAlighnment
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -201,6 +210,7 @@ target_link_libraries(RigidAlighnment
 add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(RigidAlignmentTest
+		-lcublas_device
         stdc++fs
         telef
         ${Boost_LIBRAREIS}
@@ -217,6 +227,7 @@ target_link_libraries(RigidAlignmentTest
 add_executable(PcaTargetFit app/PcaTargetFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(PcaTargetFit
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -236,6 +247,7 @@ target_link_libraries(PcaTargetFit
 add_executable(PcaFit app/PcaFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(PcaFit
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -255,6 +267,7 @@ target_link_libraries(PcaFit
 add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp include/face/raw_model.h)
 target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(ConvertPlyUV
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -273,6 +286,7 @@ target_link_libraries(ConvertPlyUV
 add_executable(MakePcaModel app/MakePcaModel.cpp src/io/modelio.cpp)
 target_link_libraries(MakePcaModel ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(MakePcaModel
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -292,6 +306,7 @@ target_link_libraries(MakePcaModel
 add_executable(PngTest app/PngTest.cpp)
 target_link_libraries(PngTest)
 target_link_libraries(PngTest
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -302,6 +317,7 @@ target_link_libraries(PngTest
 add_executable(RecordFakeFrame app/RecordFakeFrame.cpp)
 target_link_libraries(RecordFakeFrame)
 target_link_libraries(RecordFakeFrame
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -319,6 +335,7 @@ target_link_libraries(RecordFakeFrame
 add_executable(FakeDeviceTest app/FakeDeviceTest.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceTest
+		-lcublas_device
         stdc++fs
         ${Boost_LIBRARIES}
         telef
@@ -338,7 +355,7 @@ if (BUILD_TESTS)
 	include_directories(lib/googletest/googletest/include)
 	include_directories(tests)
 	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu tests/testutil/diff.h)
-	target_link_libraries(test_cu_quaternion gtest gtest_main)
+	target_link_libraries(test_cu_quaternion gtest gtest_main -lcublas_device)
 	target_link_libraries(test_cu_quaternion cutelef -lm)
 	add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
 endif()

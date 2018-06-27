@@ -21,7 +21,7 @@ float warpReduceSum(float val) {
 __inline__ __device__
 float blockReduceSum(float val) {
 
-    static __shared__ int shared[32]; // Shared mem for 32 partial sums
+    static __shared__ int shared[32]; // SFFared mem for 32 partial sums
     int lane = threadIdx.x % warpSize;
     int wid = threadIdx.x / warpSize;
 

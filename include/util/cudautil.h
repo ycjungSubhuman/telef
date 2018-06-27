@@ -10,7 +10,7 @@ inline void __checkErrorFunc(cudaError_t errarg, const char* file,
                              const int line)
 {
     if(errarg) {
-        fprintf(stderr, "Error at %s(%i)\n", file, line);
+        fprintf(stderr, "Error \"%s\" at %s(%i)\n", cudaGetErrorName(errarg), file, line);
         exit(EXIT_FAILURE);
     }
 }
