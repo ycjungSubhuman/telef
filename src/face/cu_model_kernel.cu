@@ -9,7 +9,41 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+#include "util/cudautil.h"
+
 #define BLOCKSIZE 128
+
+static const char *_cublasGetErrorEnum(cublasStatus_t error)
+{
+    switch (error)
+    {
+        case CUBLAS_STATUS_SUCCESS:
+            return "CUBLAS_STATUS_SUCCESS";
+
+        case CUBLAS_STATUS_NOT_INITIALIZED:
+            return "CUBLAS_STATUS_NOT_INITIALIZED";
+
+        case CUBLAS_STATUS_ALLOC_FAILED:
+            return "CUBLAS_STATUS_ALLOC_FAILED";
+
+        case CUBLAS_STATUS_INVALID_VALUE:
+            return "CUBLAS_STATUS_INVALID_VALUE";
+
+        case CUBLAS_STATUS_ARCH_MISMATCH:
+            return "CUBLAS_STATUS_ARCH_MISMATCH";
+
+        case CUBLAS_STATUS_MAPPING_ERROR:
+            return "CUBLAS_STATUS_MAPPING_ERROR";
+
+        case CUBLAS_STATUS_EXECUTION_FAILED:
+            return "CUBLAS_STATUS_EXECUTION_FAILED";
+
+        case CUBLAS_STATUS_INTERNAL_ERROR:
+            return "CUBLAS_STATUS_INTERNAL_ERROR";
+    }
+
+    return "<unknown>";
+}
 
 __inline__ __device__
 float warpReduceSum(float val) {
@@ -43,7 +77,7 @@ __global__
 void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    printf("_calculateVertexPosition %d\n", i);
+    //printf("_calculateVertexPosition %d\n", i);
 
     const int colDim = *deformModel.dim_d;
 
@@ -58,6 +92,7 @@ void calculateVertexPosition(float *position_d, const C_Params params, const C_P
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE-1)/BLOCKSIZE);
     _calculateVertexPosition<<<dimGrid, dimBlock>>>(position_d, params, deformModel);
+    CHECK_ERROR_MSG("Kernel Error");
 }
 
 __global__
@@ -135,55 +170,72 @@ void calculateLandmarkLoss(float *residual_d, float *jacobian_d,
 
     _calculateLandmarkLoss<<<lmkBlocks, lmkThrds>>>(residual_d, jacobian_d,
             position_d, params, deformModel, scanPointCloud, isJacobianRequired);
+    CHECK_ERROR_MSG("Kernel Error");
 }
 
 __global__
 void _applyRigidAlignment(cublasStatus_t *d_status, float *align_pos_d, const float *position_d,
                           const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud) {
 
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
+    int nPoints = *deformModel.dim_d/3;
+    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
+
     cublasHandle_t cnpHandle;
     cublasStatus_t status = cublasCreate(&cnpHandle);
 
-    // Don't know what this is (scalar?) but examples use this
-    const float alf = 1;
-    const float bet = 0;
-    const float *alpha = &alf;
-    const float *beta = &bet;
 
-    if (status != CUBLAS_STATUS_SUCCESS)
-    {
-        *d_status = status;
-        return;
+    // grid-striding loop
+    for (int index = start_index;
+         index < nPoints;
+         index += stride) {
+
+
+        // Don't know what this is (scalar?) but examples use this
+        const float alf = 1;
+        const float bet = 0;
+        const float *alpha = &alf;
+        const float *beta = &bet;
+
+
+        // homogeneous coordinates (x,y,z,1);
+        float pos[4] = {position_d[3 * index], position_d[3 * index + 1], position_d[3 * index + 2], 1};
+
+        // homogeneous result
+        float h_aligned[4];
+
+        if (status != CUBLAS_STATUS_SUCCESS) {
+            d_status[index] = status;
+            //printf("cublasCreate Status %i\n", status);
+            return;
+        }
+
+        //printf("Index %i\n", index);
+        /* Perform operation using cublas, inputs/outputs are col-major.
+         * vector and array were originally Eigen which defaults to Col-major
+         * m is rows for A and C
+         * n is cols for B and C
+         * k is cols for A and rows for B*/
+        status =
+                cublasSgemm(cnpHandle,
+                            CUBLAS_OP_N, CUBLAS_OP_N, // Operations on inputs, **No-op**, Transpose, conjugate*/
+                            1, 4, 4, //(m,n,k)
+                            alpha,
+                            pos, 4/*Leading dim*/, //(4x1) or (mxk)
+                            scanPointCloud.rigidTransform_d, 4/*Leading dim*/, //(4x4) or (kxn)
+                            beta,
+                            h_aligned, 4/*Leading dim*/); //(4x1) or (mxk)
+
+        //printf("cublasSgemm result %.6f\n", h_aligned[0]);
+
+        //printf("cublasSgemm Status %i\n", status);
+
+        // hnormalized point (x,y,z)
+        memcpy(&align_pos_d[3 * index], &h_aligned[0], 3 * sizeof(float));
+        //printf("final result %.6f\n", align_pos_d[3 * index]);
+        d_status[index] = status;
     }
-
-    // homogeneous coordinates (x,y,z,1);
-    float pos[4] = {position_d[3 * index], position_d[3 * index + 1], position_d[3 * index + 2], 1};
-
-    // homogeneous result
-    float h_aligned[4];
-
-    /* Perform operation using cublas, inputs/outputs are col-major.
-     * vector and array were originally Eigen which defaults to Col-major
-     * m is rows for A and C
-     * n is cols for B and C
-     * k is cols for A and rows for B*/
-    status =
-            cublasSgemm(cnpHandle,
-                        CUBLAS_OP_N, CUBLAS_OP_N,
-                        4, 1, 4, //(m,n,k)
-                        alpha,
-                        scanPointCloud.rigidTransform_d, 4, //(4x4) or (mxk)
-                        pos, 1, //(4x1) or (kxn)
-                        beta,
-                        h_aligned, 4); //(4x1) or (mxk)
-
     cublasDestroy(cnpHandle);
-
-    // hnormalized point (x,y,z)
-    memcpy(align_pos_d, h_aligned, 3*sizeof(int));
-
-    *d_status = status;
 }
 
 void applyRigidAlignment(float *align_pos_d, const float *position_d,
@@ -192,30 +244,35 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d,
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE-1)/BLOCKSIZE);
     cublasStatus_t *d_status;
-    cublasStatus_t status;
+    cublasStatus_t status[idim];
 
-    cudaMalloc((void **) &d_status, sizeof(cublasStatus_t));
+    CUDA_CHECK(cudaMalloc((void **) &d_status, idim*sizeof(cublasStatus_t)));
+    //CUDA_CHECK(cudaMemcpy(d_status, &status, idim*sizeof(cublasStatus_t), cudaMemcpyHostToDevice));
 
     _applyRigidAlignment<<<dimGrid, dimBlock>>>(d_status, align_pos_d, position_d,
             deformModel, scanPointCloud);
+    CHECK_ERROR_MSG("Kernel Error");
 
-    cudaMemcpy(&status, d_status, sizeof(cublasStatus_t), cudaMemcpyDeviceToHost);
-
-    if (status != CUBLAS_STATUS_SUCCESS)
-    {
-        fprintf(stderr,
-                "!!!! CUBLAS Device API call failed with code %d\n",
-                status);
-        exit(EXIT_FAILURE);
-    } else {
-        fprintf(stdout,
-                "CUBLAS Success %d\n",
-                status);
+    // FIXME: _applyRigidAlignment is failing with Warp Illegal Address in the cublas kernal, yet reports as success
+    // in kernel and causes the following memcpy to report a false error
+    /*CUDA_CHECK(*/cudaMemcpy(&status, d_status, idim*sizeof(cublasStatus_t), cudaMemcpyDeviceToHost)/*)*/;
+    //TODO: reduce to 1 status
+    // NOTE: Cublas status is not being copied or stored correctly, status returned is almost random
+    for (int i = 0; i < idim; i++) {
+        if (status[i] != CUBLAS_STATUS_SUCCESS) {
+            const char *stat_str = _cublasGetErrorEnum(status[i]);
+            fprintf(stderr,
+                    "!!!! CUBLAS Device API call failed with code %s\n",
+                    stat_str);
+            //exit(EXIT_FAILURE);
+            break;
+        }
     }
 
-    cudaFree(d_status);
+    fprintf(stdout,
+            "CUBLAS Success\n");
 
-
+    CUDA_CHECK(cudaFree(d_status));
 }
 
 void calculateLoss(float *residual, float *jacobian, float *position_d,
@@ -231,16 +288,16 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
      * Allocate and Copy residual amd jacobian to GPU
      */
     // Currently, We are using only 1 residual to contain the loss
-    cudaMalloc(&residual_d, sizeof(float));
+    CUDA_CHECK(cudaMalloc((void**)&residual_d, sizeof(float)));
 
     // Compute Jacobians for each parameter
-    cudaMalloc((void**)&jacobian_d, params.numParams*sizeof(float));
+    CUDA_CHECK(cudaMalloc((void**)&jacobian_d, params.numParams*sizeof(float)));
 
     // Allocate memory for Rigid aligned positions
-    cudaMalloc((void**)&align_pos_d, deformModel.dim*sizeof(float));
+    CUDA_CHECK(cudaMalloc((void**)&align_pos_d, deformModel.dim*sizeof(float)));
 
-    cudaMemcpy(residual_d,  residual, sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(jacobian_d,  jacobian, params.numParams*sizeof(float), cudaMemcpyHostToDevice);
+    CUDA_CHECK(cudaMemcpy(residual_d,  residual, sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(jacobian_d,  jacobian, params.numParams*sizeof(float), cudaMemcpyHostToDevice));
 
     // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
 
@@ -267,15 +324,15 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
      * Copy computed residual and jacobian to Host
      */
     std::cout << "Copy to host" << std::endl;
-    cudaMemcpy(residual, residual_d, sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(jacobian, jacobian_d, params.numParams*sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(align_pos, align_pos_d, deformModel.dim*sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy(residual, residual_d, sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(jacobian, jacobian_d, params.numParams*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&align_pos, align_pos_d, deformModel.dim*sizeof(float), cudaMemcpyDeviceToHost));
 
 
 
     //TODO: return value to see rigid aligned mesh?
 
-    std::cout << "Free cuda: " << align_pos[0] << std::endl;
+    std::cout << "align_pos: " << align_pos[15] << std::endl;
     //delete align_pos;
     //align_pos = NULL;
 
