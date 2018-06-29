@@ -70,6 +70,7 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
     scanPointCloud->numPoints = scan->points.size();
     scanPointCloud->transformCols = (int)rigidTransform.cols();
     scanPointCloud->transformRows = (int)rigidTransform.rows();
+    //TODO: Need Fix
     scanPointCloud->numLmks = scan->points.size();
 
 

@@ -5,9 +5,13 @@
 #define SQ(X) (powf(X, 2.0f))
 #define CU(X) (powf(X, 3.0f))
 
-__device__
-static float safe_norm(int dim, const float *v) {
+__device__ __host__
+static float safe_3_elem_norm(int dim, const float *v) {
+#ifdef __CUDA_ARCH__
     float norm2 = normf(dim, v);
+#else
+    float norm2 = sqrtf(powf(v[0], 2.0f) + powf(v[1], 2.0f) + powf(v[2], 2.0f));
+#endif
     if (norm2 == 0) {
         // for avoiding zero-norm
         norm2 += EPS;
@@ -15,45 +19,44 @@ static float safe_norm(int dim, const float *v) {
     return norm2;
 }
 
-__device__
+__device__ __host__
 static void zero_elements(int dim, float *v) {
     for (int i=0; i<dim; i++) {
         v[i] = 0;
     }
 }
 
-__device__
+__device__ __host__
 static void scale_elements(float *out, const float scale, int dim, const float *v) {
     for (int i=0; i<dim; i++) {
         out[i] = v[i]*scale;
     }
 }
 
-__device__
-void calc_r_from_u(float *r_d, const float *u_d) {
+__device__ __host__
+void calc_r_from_u(float *r, const float *u) {
     float q[4];
-    calc_q(q, u_d);
-    calc_r_from_q(r_d, q);
+    calc_q(q, u);
+    calc_r_from_q(r, q);
 }
 
-__device__
-void calc_r_from_q(float *r_d, const float *q_d) {
-    const float *q = q_d;
-    float r[9] = {
+__device__ __host__
+void calc_r_from_q(float *r, const float *q) {
+    float _r[9] = {
         SQ(q[0])+SQ(q[1])-SQ(q[2])-SQ(q[3]), 2*(q[1]*q[2]+q[0]*q[3]), 2*(q[1]*q[3]-q[0]*q[2]),
         2*(q[1]*q[2]-q[0]*q[3]), SQ(q[0])-SQ(q[1])+SQ(q[2])-SQ(q[3]), 2*(q[2]*q[3]+q[0]*q[1]),
         2*(q[1]*q[3]+q[0]*q[2]), 2*(q[2]*q[3]-q[0]*q[1]), SQ(q[0])-SQ(q[1])-SQ(q[2])+SQ(q[3])
     };
     for(int i=0; i<9; i++) {
-        r_d[i] = r[i];
+        r[i] = _r[i];
     }
 }
 
-__device__
-void calc_dr_du(float *dr_du_d, const float *u_d) {
+__device__ __host__
+void calc_dr_du(float *dr_du, const float *u) {
     //Convert u to q
     float q[4];
-    calc_q(q, u_d);
+    calc_q(q, u);
 
     //Calculate dR(q(u))/dq(u)
     float dr_dq[4*9];
@@ -61,10 +64,10 @@ void calc_dr_du(float *dr_du_d, const float *u_d) {
 
     //Calculate dq(u)/du
     float dq_du[3*4];
-    calc_dq_du(dq_du, u_d);
+    calc_dq_du(dq_du, u);
 
     for (int i=0; i<3; i++) {
-        float *dr_dui = dr_du_d + i*9;
+        float *dr_dui = dr_du + i*9;
         zero_elements(9, dr_dui); // initialization
 
         for (int j=0; j<4; j++) {
@@ -77,9 +80,8 @@ void calc_dr_du(float *dr_du_d, const float *u_d) {
     }
 }
 
-__device__
-void calc_dr_dq(float *dr_dq_d, const float *q_d) {
-    const float *q = q_d;
+__device__ __host__
+void calc_dr_dq(float *dr_dq, const float *q) {
     const float dr_dq0[9] = {
         2*q[0], 2*q[3], -2*q[2],
         -2*q[3], 2*q[0], 2*q[1],
@@ -102,27 +104,26 @@ void calc_dr_dq(float *dr_dq_d, const float *q_d) {
     };
 
     for (int i=0; i<9; i++) {
-        dr_dq_d[0*9 + i] = dr_dq0[i];
-        dr_dq_d[1*9 + i] = dr_dq1[i];
-        dr_dq_d[2*9 + i] = dr_dq2[i];
-        dr_dq_d[3*9 + i] = dr_dq3[i];
+        dr_dq[0*9 + i] = dr_dq0[i];
+        dr_dq[1*9 + i] = dr_dq1[i];
+        dr_dq[2*9 + i] = dr_dq2[i];
+        dr_dq[3*9 + i] = dr_dq3[i];
     }
 }
 
-__device__
-void calc_q(float *q_d, const float *u_d) {
-    float v = safe_norm(3, u_d);
+__device__ __host__
+void calc_q(float *q, const float *u) {
+    float v = safe_3_elem_norm(3, u);
     float u_normalizer = sinf(v / 2.0f) / v;
-    q_d[0] = cosf(v / 2.0f);
-    q_d[1] = u_normalizer * u_d[0];
-    q_d[2] = u_normalizer * u_d[1];
-    q_d[3] = u_normalizer * u_d[2];
+    q[0] = cosf(v / 2.0f);
+    q[1] = u_normalizer * u[0];
+    q[2] = u_normalizer * u[1];
+    q[3] = u_normalizer * u[2];
 }
 
-__device__
-void calc_dq_du(float *dq_du_d, const float *u_d) {
-    const float *u = u_d;
-    const float v = safe_norm(3, u_d);
+__device__ __host__
+void calc_dq_du(float *dq_du, const float *u) {
+    const float v = safe_3_elem_norm(3, u);
     const float s = sinf(v / 2.0f);
     const float c = cosf(v / 2.0f);
     const float c_2v2 = c/(2*SQ(v));
@@ -150,8 +151,8 @@ void calc_dq_du(float *dq_du_d, const float *u_d) {
     };
 
     for (int i=0; i<4; i++) {
-        dq_du_d[0*4 + i] = dq_du0[i];
-        dq_du_d[1*4 + i] = dq_du1[i];
-        dq_du_d[2*4 + i] = dq_du2[i];
+        dq_du[0*4 + i] = dq_du0[i];
+        dq_du[1*4 + i] = dq_du1[i];
+        dq_du[2*4 + i] = dq_du2[i];
     }
 }

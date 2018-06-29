@@ -43,57 +43,57 @@
 /**
  * Calculate R(q(u)) on GPU
  *
- * @param r_d   3x3 array in device
- * @param u_d   3-element axis-angle representation in device
+ * @param r   3x3 array in device
+ * @param u   3-element axis-angle representation in device
  */
-__device__
-void calc_r_from_u(float *r_d, const float *u_d);
+__device__ __host__
+void calc_r_from_u(float *r, const float *u);
 
 /**
  * Calculate R(q) on GPU
  *
- * @param r_d   3x3 array in device
- * @param q_d   4-element axis-angle representation in device
+ * @param r   3x3 array in device
+ * @param q   4-element axis-angle representation in device
  */
-__device__
-void calc_r_from_q(float *r_d, const float *q_d);
+__device__ __host__
+void calc_r_from_q(float *r, const float *q);
 
 /**
  * Calculate dR(q(u)) / du_i on GPU
  *
- * @param dr_du_d 3x3x3 array in device
+ * @param dr_du 3x3x3 array in device
  *          (dr_du_d + i*3*3) represents 3x3 column major matrix for dR(q(u)) / du_i
- * @param u_d       3-element axis-angle representation in device
+ * @param u       3-element axis-angle representation in device
  */
-__device__
-void calc_dr_du(float *dr_du_d, const float *u_d);
+__device__ __host__
+void calc_dr_du(float *dr_du, const float *u);
 
 /**
  * Calculate dR(q) / dq_i on GPU
  *
- * @param dr_dq_d 4x3x3 array in device
+ * @param dr_dq 4x3x3 array in device
  *          (dr_dq_d + i*3*3) represents 3x3 column major matrix for dR(q) / dq_i
- * @param q_d     4-element quaternion in device
+ * @param q     4-element quaternion in device
  */
-__device__
-void calc_dr_dq(float *dr_dq_d, const float *q_d);
+__device__ __host__
+void calc_dr_dq(float *dr_dq, const float *q);
 
 /**
  * Calculate quaternion q from axis-angle vector u
  *
- * @param q_d     4-element quaternion in device
- * @param u_d     3-element axis-angle vector in device
+ * @param q     4-element quaternion in device
+ * @param u     3-element axis-angle vector in device
  */
-__device__
-void calc_q(float *q_d, const float *u_d);
+__device__ __host__
+void calc_q(float *q, const float *u);
 
 /**
  * Calculate dq(u) / du_i on GPU
  *
- * @param dq_du_d   3x4 array in device
+ * @param dq_du   3x4 array in device
  *          (dq_du_d + i*4) represents 4-element vector for dq(u) / du_i
- * @param u_d       3-element axis-angle vector in device
+ * @param u       3-element axis-angle vector in device
  */
-__device__
-void calc_dq_du(float *dq_du_d, const float *u_d);
+__device__ __host__
+void calc_dq_du(float *dq_du, const float *u);
 
