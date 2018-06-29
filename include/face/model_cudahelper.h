@@ -61,8 +61,7 @@ void calculateLandmarkLoss(float *residual, float *jacobian,
  * @param deformModel
  * @param scanPointCloud
  */
-void applyRigidAlignment(float *align_pos_d, const float *position_d,
-                         const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud);
+//void applyRigidAlignment(float *align_pos_d, const float *position_d, const float *tranMat, int N);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model

@@ -75,15 +75,19 @@ float blockReduceSum(float val) {
 
 __global__
 void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
 
-    //printf("_calculateVertexPosition %d\n", i);
+    const int colDim = deformModel.dim;
 
-    const int colDim = *deformModel.dim_d;
+    // grid-striding loop
+    for (int i = start_index; i < deformModel.dim; i += stride) {
 
-    position_d[i] = 0;;
-    for (int j=0; j<*deformModel.rank_d; j++) {
-        position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
+        //printf("_calculateVertexPosition %d\n", i);
+        position_d[i] = 0;;
+        for (int j = 0; j < deformModel.rank; j++) {
+            position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
+        }
     }
 }
 
@@ -99,20 +103,27 @@ __global__
 void _calculateLandmarkLoss(float *residual_d, float *jacobian_d,
                    const float *position_d, const C_Params params,
                    const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                   const bool isJacobianRequired) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
+                   int nPoints, const bool isJacobianRequired) {
+    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
+
 
     //TODO: Add param for weights
     float landmarkCoeff = 1.0;
-    const int colDim = *deformModel.dim_d;
+    const int colDim = deformModel.dim;
 
     // This Treads Placeholders for output
     float res = 0.0;
 
-    for (int idx = index; idx < *scanPointCloud.numLmks_d; idx += blockDim.x * gridDim.x) {
+    // grid-striding loop
+    //printf("NumLmks: %d\n", nPoints);
+    for (int idx = start_index; idx < scanPointCloud.numLmks; idx += stride) {
+
+        //printf("Index: %d\n", idx);
         int posIdx = deformModel.lmks_d[idx];
         int scanIdx = scanPointCloud.scanLmks_d[idx];
 
+        printf("Point[%d]: %.6f\n", posIdx, position_d[3 * posIdx]);
 
         float ptSubt[3] = { position_d[3 * posIdx] - scanPointCloud.scanPoints_d[3 * scanIdx],           // x
                             position_d[3 * posIdx + 1] - scanPointCloud.scanPoints_d[3 * scanIdx + 1],   // y
@@ -124,27 +135,34 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d,
             squaredNorm += ptSubt[i] * ptSubt[i];
         }
 
+
         res += landmarkCoeff * squaredNorm;
 
         if(isJacobianRequired) {
-            for (int j=0; j<*deformModel.rank_d; j++) {
-                float basis[3] = { deformModel.deformBasis_d[3*index + colDim * j],       // x @ col j
-                                   deformModel.deformBasis_d[3*index + 1 + colDim * j ],  // y @ col j
-                                   deformModel.deformBasis_d[3*index + 2 + colDim * j] }; // z @ col j
+            printf("res[%d]: %.6f\n", idx, res);
+            for (int j=0; j<deformModel.rank; j++) {
+                printf("jacobi[j:%d][i:%d] - 1\n", j, idx);
+                float basis[3] = { deformModel.deformBasis_d[colDim*j + 3*posIdx + 0],       // x @ col j
+                                   deformModel.deformBasis_d[colDim*j + 3*posIdx + 1],  // y @ col j
+                                   deformModel.deformBasis_d[colDim*j + 3*posIdx + 2] }; // z @ col j
 
+                printf("jacobi[j:%d][i:%d] - 2\n", j, idx);
                 // Element wise multiplication and sum
                 float sum = 0.0;
                 for (int k = 0; k < 3; k++) {
                     sum += ptSubt[k] * basis[k];
                 }
+                printf("jacobi[j:%d][i:%d] - 3\n", j, idx);
 
                 float jacobi = -2 * landmarkCoeff * sum;
 
                 // Reduce Jacobians across across block
                 jacobi = blockReduceSum(jacobi);
+                printf("jacobi[j:%d][i:%d] - 4\n", j, idx);
 
                 // Add partial sum into atomic output, only do it once per block
                 if (threadIdx.x == 0) {
+                    printf("jacobi[j:%d][i:%d]: %.6f\n", j, idx, jacobi);
                     atomicAdd(&jacobian_d[j], jacobi);
                 }
             }
@@ -165,114 +183,109 @@ void calculateLandmarkLoss(float *residual_d, float *jacobian_d,
                             const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                             const bool isJacobianRequired) {
     int idim = scanPointCloud.numLmks;
+    printf("Num Landmarks: %d\n", scanPointCloud.numLmks);
     dim3 lmkThrds(BLOCKSIZE);
-    dim3 lmkBlocks((idim/BLOCKSIZE) + 1);
+    dim3 lmkBlocks((idim + BLOCKSIZE-1)/BLOCKSIZE);
 
     _calculateLandmarkLoss<<<lmkBlocks, lmkThrds>>>(residual_d, jacobian_d,
-            position_d, params, deformModel, scanPointCloud, isJacobianRequired);
+            position_d, params, deformModel, scanPointCloud, scanPointCloud.numLmks, isJacobianRequired);
     CHECK_ERROR_MSG("Kernel Error");
 }
 
 __global__
-void _applyRigidAlignment(cublasStatus_t *d_status, float *align_pos_d, const float *position_d,
-                          const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud) {
+void _homogeneousPositions(float *h_position_d, const float *position_d, int nPoints) {
 
     int start_index = threadIdx.x + blockIdx.x * blockDim.x;
-    int nPoints = *deformModel.dim_d/3;
     int stride = blockDim.x * gridDim.x; // total number of threads in the grid
+
+    // grid-striding loop
+    for (int index = start_index; index < nPoints; index += stride) {
+        // homogeneous coordinates (x,y,z,1);
+        float pos[4] = {position_d[3 * index], position_d[3 * index + 1], position_d[3 * index + 2], 1};
+        memcpy(&h_position_d[4 * index], &pos[0], 4 * sizeof(float));
+    }
+}
+
+__global__
+void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPoints) {
+
+    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
+
+    // grid-striding loop
+    for (int index = start_index; index < nPoints; index += stride) {
+
+        // homogeneous coordinates (x,y,z,1);
+        float hnorm = h_position_d[4*index+3];
+        position_d[3*index] = h_position_d[4*index] / hnorm;
+        position_d[3*index+1] = h_position_d[4*index+1] / hnorm;
+        position_d[3*index+2] = h_position_d[4*index+2] / hnorm;
+    }
+}
+
+void applyRigidAlignment(float *align_pos_d, const float *position_d, const float *transMatA, int N) {
 
     cublasHandle_t cnpHandle;
     cublasStatus_t status = cublasCreate(&cnpHandle);
+    int size_homo = 4 * N;
+    int size = 3 * N;
+    dim3 grid = ((N+BLOCKSIZE-1)/BLOCKSIZE);
+    dim3 block = BLOCKSIZE;
+
+    float *matB, *matC;
+
+    cudaMalloc ((void**)&matB,size_homo*sizeof(float));
+    cudaMalloc ((void**)&matC,size_homo*sizeof(float));
+
+    // Don't know what this is (scalar?) but examples use this
+    const float alf = 1;
+    const float bet = 0;
+    const float *alpha = &alf;
+    const float *beta = &bet;
 
 
-    // grid-striding loop
-    for (int index = start_index;
-         index < nPoints;
-         index += stride) {
-
-
-        // Don't know what this is (scalar?) but examples use this
-        const float alf = 1;
-        const float bet = 0;
-        const float *alpha = &alf;
-        const float *beta = &bet;
-
-
-        // homogeneous coordinates (x,y,z,1);
-        float pos[4] = {position_d[3 * index], position_d[3 * index + 1], position_d[3 * index + 2], 1};
-
-        // homogeneous result
-        float h_aligned[4];
-
-        if (status != CUBLAS_STATUS_SUCCESS) {
-            d_status[index] = status;
-            //printf("cublasCreate Status %i\n", status);
-            return;
-        }
-
-        //printf("Index %i\n", index);
-        /* Perform operation using cublas, inputs/outputs are col-major.
-         * vector and array were originally Eigen which defaults to Col-major
-         * m is rows for A and C
-         * n is cols for B and C
-         * k is cols for A and rows for B*/
-        status =
-                cublasSgemm(cnpHandle,
-                            CUBLAS_OP_N, CUBLAS_OP_N, // Operations on inputs, **No-op**, Transpose, conjugate*/
-                            1, 4, 4, //(m,n,k)
-                            alpha,
-                            pos, 4/*Leading dim*/, //(4x1) or (mxk)
-                            scanPointCloud.rigidTransform_d, 4/*Leading dim*/, //(4x4) or (kxn)
-                            beta,
-                            h_aligned, 4/*Leading dim*/); //(4x1) or (mxk)
-
-        //printf("cublasSgemm result %.6f\n", h_aligned[0]);
-
-        //printf("cublasSgemm Status %i\n", status);
-
-        // hnormalized point (x,y,z)
-        memcpy(&align_pos_d[3 * index], &h_aligned[0], 3 * sizeof(float));
-        //printf("final result %.6f\n", align_pos_d[3 * index]);
-        d_status[index] = status;
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("CUBLAS initialization failed, %s\n",_cublasGetErrorEnum(status));
+        return;
     }
-    cublasDestroy(cnpHandle);
-}
 
-void applyRigidAlignment(float *align_pos_d, const float *position_d,
-                         const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud) {
-    int idim = deformModel.dim/3;
-    dim3 dimBlock(BLOCKSIZE);
-    dim3 dimGrid((idim + BLOCKSIZE-1)/BLOCKSIZE);
-    cublasStatus_t *d_status;
-    cublasStatus_t status[idim];
-
-    CUDA_CHECK(cudaMalloc((void **) &d_status, idim*sizeof(cublasStatus_t)));
-    //CUDA_CHECK(cudaMemcpy(d_status, &status, idim*sizeof(cublasStatus_t), cudaMemcpyHostToDevice));
-
-    _applyRigidAlignment<<<dimGrid, dimBlock>>>(d_status, align_pos_d, position_d,
-            deformModel, scanPointCloud);
+    // Create homogenous matrix (x,y,z,1)
+    _homogeneousPositions<<<grid,block>>>(matB, position_d, N);
     CHECK_ERROR_MSG("Kernel Error");
 
-    // FIXME: _applyRigidAlignment is failing with Warp Illegal Address in the cublas kernal, yet reports as success
-    // in kernel and causes the following memcpy to report a false error
-    /*CUDA_CHECK(*/cudaMemcpy(&status, d_status, idim*sizeof(cublasStatus_t), cudaMemcpyDeviceToHost)/*)*/;
-    //TODO: reduce to 1 status
-    // NOTE: Cublas status is not being copied or stored correctly, status returned is almost random
-    for (int i = 0; i < idim; i++) {
-        if (status[i] != CUBLAS_STATUS_SUCCESS) {
-            const char *stat_str = _cublasGetErrorEnum(status[i]);
-            fprintf(stderr,
-                    "!!!! CUBLAS Device API call failed with code %s\n",
-                    stat_str);
-            //exit(EXIT_FAILURE);
-            break;
-        }
+    /* Perform operation using cublas, inputs/outputs are col-major.
+     * vector and array were originally Eigen which defaults to Col-major
+     * m is rows for A and C
+     * n is cols for B and C
+     * k is cols for A and rows for B*/
+    // Matrix Mult C = α op ( A ) op ( B ) + β C
+    status =
+            cublasSgemm(cnpHandle,
+                        CUBLAS_OP_N, CUBLAS_OP_N, // Matrix op(A) and op(B): No-op, Transpose, Conjugate
+                        4, N, 4, //(m,n,k)
+                        alpha,
+                        transMatA, 4/*leading dim, ROWS?*/, //(4x4) or (mxk)
+                        matB, 4/*leading dim*/, //(4xN) or (kxn)
+                        beta,
+                        matC, 4/*leading dim*/); //(4xN) or (mxk)
+
+    if (status != CUBLAS_STATUS_SUCCESS) {
+        printf ("MatMul Failed, %s\n",_cublasGetErrorEnum(status));
+        cudaFree (matB);
+        cudaFree (matC);
+        cublasDestroy(cnpHandle);
+        return;
     }
 
-    fprintf(stdout,
-            "CUBLAS Success\n");
+    // hnormalized point (x,y,z)
+    _hnormalizedPositions<<<grid,block>>>(align_pos_d, matC, N);
+    CHECK_ERROR_MSG("Kernel Error");
 
-    CUDA_CHECK(cudaFree(d_status));
+    printf("cublasSgemm Status %i\n", status);
+
+    cudaFree (matB);
+    cudaFree (matC);
+    cublasDestroy(cnpHandle);
 }
 
 void calculateLoss(float *residual, float *jacobian, float *position_d,
@@ -311,11 +324,11 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
 
     // Rigid alignment
     std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
-    applyRigidAlignment(align_pos_d, position_d, deformModel, scanPointCloud);
+    applyRigidAlignment(align_pos_d, position_d, scanPointCloud.rigidTransform_d, deformModel.dim/3.0);
     //cudaDeviceSynchronize();
 
     // Calculate residual_d, jacobian_d for Landmarks
-    std::cout << "calculateLoss: calculateLandmarkLoss" << std::endl;
+    std::cout << "calculateLoss: calculateLandmarkLoss (Jacobi:"<<isJacobianRequired<<")" << std::endl;
     calculateLandmarkLoss(residual_d, jacobian_d,
                           align_pos_d, params, deformModel, scanPointCloud, isJacobianRequired);
     //cudaDeviceSynchronize();
