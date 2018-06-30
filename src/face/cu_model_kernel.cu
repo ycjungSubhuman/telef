@@ -123,7 +123,7 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d,
         int posIdx = deformModel.lmks_d[idx];
         int scanIdx = scanPointCloud.scanLmks_d[idx];
 
-        printf("Point[%d]: %.6f\n", posIdx, position_d[3 * posIdx]);
+        //printf("Point[%d]: %.6f\n", posIdx, position_d[3 * posIdx]);
 
         float ptSubt[3] = { position_d[3 * posIdx] - scanPointCloud.scanPoints_d[3 * scanIdx],           // x
                             position_d[3 * posIdx + 1] - scanPointCloud.scanPoints_d[3 * scanIdx + 1],   // y
@@ -138,36 +138,31 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d,
 
         res += landmarkCoeff * squaredNorm;
 
-        if(isJacobianRequired) {
-            printf("res[%d]: %.6f\n", idx, res);
+        if(isJacobianRequired) {;
             for (int j=0; j<deformModel.rank; j++) {
-                printf("jacobi[j:%d][i:%d] - 1\n", j, idx);
                 float basis[3] = { deformModel.deformBasis_d[colDim*j + 3*posIdx + 0],       // x @ col j
                                    deformModel.deformBasis_d[colDim*j + 3*posIdx + 1],  // y @ col j
                                    deformModel.deformBasis_d[colDim*j + 3*posIdx + 2] }; // z @ col j
 
-                printf("jacobi[j:%d][i:%d] - 2\n", j, idx);
                 // Element wise multiplication and sum
                 float sum = 0.0;
                 for (int k = 0; k < 3; k++) {
                     sum += ptSubt[k] * basis[k];
                 }
-                printf("jacobi[j:%d][i:%d] - 3\n", j, idx);
 
                 float jacobi = -2 * landmarkCoeff * sum;
 
                 // Reduce Jacobians across across block
                 jacobi = blockReduceSum(jacobi);
-                printf("jacobi[j:%d][i:%d] - 4\n", j, idx);
 
                 // Add partial sum into atomic output, only do it once per block
                 if (threadIdx.x == 0) {
-                    printf("jacobi[j:%d][i:%d]: %.6f\n", j, idx, jacobi);
                     atomicAdd(&jacobian_d[j], jacobi);
                 }
             }
         }
     }
+
 
     // Reduce Residuals across block
     res = blockReduceSum(res);
@@ -183,7 +178,7 @@ void calculateLandmarkLoss(float *residual_d, float *jacobian_d,
                             const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                             const bool isJacobianRequired) {
     int idim = scanPointCloud.numLmks;
-    printf("Num Landmarks: %d\n", scanPointCloud.numLmks);
+//    printf("Num Landmarks: %d\n", scanPointCloud.numLmks);
     dim3 lmkThrds(BLOCKSIZE);
     dim3 lmkBlocks((idim + BLOCKSIZE-1)/BLOCKSIZE);
 
@@ -281,7 +276,7 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d, const floa
     _hnormalizedPositions<<<grid,block>>>(align_pos_d, matC, N);
     CHECK_ERROR_MSG("Kernel Error");
 
-    printf("cublasSgemm Status %i\n", status);
+//    printf("cublasSgemm Status %i\n", status);
 
     cudaFree (matB);
     cudaFree (matC);
@@ -292,7 +287,7 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired) {
 
-    std::cout << "calculateLoss" << std::endl;
+//    std::cout << "calculateLoss" << std::endl;
     float *residual_d, *jacobian_d;
     float *align_pos_d;
     float align_pos[deformModel.dim];
@@ -318,17 +313,17 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
      * Compute Loss
      */
     // Calculate position_d
-    std::cout << "calculateLoss: calculateVertexPosition" << std::endl;
+//    std::cout << "calculateLoss: calculateVertexPosition" << std::endl;
     calculateVertexPosition(position_d, params, deformModel);
     //cudaDeviceSynchronize();
 
     // Rigid alignment
-    std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
+//    std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
     applyRigidAlignment(align_pos_d, position_d, scanPointCloud.rigidTransform_d, deformModel.dim/3.0);
     //cudaDeviceSynchronize();
 
     // Calculate residual_d, jacobian_d for Landmarks
-    std::cout << "calculateLoss: calculateLandmarkLoss (Jacobi:"<<isJacobianRequired<<")" << std::endl;
+//    std::cout << "calculateLoss: calculateLandmarkLoss (Jacobi:"<<isJacobianRequired<<")" << std::endl;
     calculateLandmarkLoss(residual_d, jacobian_d,
                           align_pos_d, params, deformModel, scanPointCloud, isJacobianRequired);
     //cudaDeviceSynchronize();
@@ -336,7 +331,7 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
     /*
      * Copy computed residual and jacobian to Host
      */
-    std::cout << "Copy to host" << std::endl;
+//    std::cout << "Copy to host" << std::endl;
     CUDA_CHECK(cudaMemcpy(residual, residual_d, sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(jacobian, jacobian_d, params.numParams*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&align_pos, align_pos_d, deformModel.dim*sizeof(float), cudaMemcpyDeviceToHost));
@@ -345,7 +340,7 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
 
     //TODO: return value to see rigid aligned mesh?
 
-    std::cout << "align_pos: " << align_pos[15] << std::endl;
+//    std::cout << "align_pos: " << align_pos[15] << std::endl;
     //delete align_pos;
     //align_pos = NULL;
 

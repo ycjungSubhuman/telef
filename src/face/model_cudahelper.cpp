@@ -7,7 +7,7 @@
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
                            const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
                            const std::vector<int> lmkInds) {
-    std::cout << "deformBasis.size() <<: " << deformBasis.size() << std::endl;
+    //std::cout << "deformBasis.size() <<: " << deformBasis.size() << std::endl;
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->deformBasis_d), deformBasis.size()*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->ref_d), ref.size()*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->lmks_d), lmkInds.size()*sizeof(int)));
