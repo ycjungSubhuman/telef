@@ -131,7 +131,8 @@ static void calc_de_da_lmk(float *de_da_d,
     float *dx_m_da; // concatenation of (dx_m_da1, dx_m_da2, ..., dx_m_daN)
     CUDA_CHECK(cudaMalloc((void**)(&dx_m_da), model.rank*3*scan.numLmks*sizeof(float)));
 
-    _calc_dx_da_lmk<<<1, model.rank*scan.numLmks*3>>>(dx_m_da, u_d, scan.numLmks, model, scan);
+    dim3 dimThread(static_cast<unsigned int>(scan.numLmks * 3), static_cast<unsigned int>(model.rank));
+    _calc_dx_da_lmk<<<1, dimThread>>>(dx_m_da, u_d, scan.numLmks, model, scan);
 
     deviceReduceKernelRepeatedLinearSum<<<model.rank, 3*scan.numLmks>>>
         (error_cache_d, de_da_d, 3*scan.numLmks, model.rank, dx_m_da);
@@ -140,13 +141,15 @@ static void calc_de_da_lmk(float *de_da_d,
 }
 
 void calc_derivatives_lmk(float *de_dt_d, float *de_du_d, float *de_da_d,
-                          const float *u_d, const float *position_d, C_ScanPointCloud scan) {
+                          const float *u_d, const float *position_d,
+                          C_PcaDeformModel model,C_ScanPointCloud scan) {
     float *error_cache_d;
     CUDA_CHECK(cudaMalloc((void**)(&error_cache_d), 3*scan.numLmks*sizeof(float)));
     _calc_error_exp_cache_lmk<<<1, 3*scan.numLmks>>>(error_cache_d, position_d, scan, 1.0f);
 
     calc_de_dt_lmk(de_dt_d, error_cache_d, scan.numLmks);
     calc_de_du_lmk(de_du_d, error_cache_d, u_d, position_d, scan);
+    calc_de_da_lmk(de_da_d, error_cache_d, u_d, position_d, model, scan);
 
     CUDA_CHECK(cudaFree(error_cache_d));
 }
