@@ -4,11 +4,8 @@
 typedef struct C_PcaDeformModel {
     float *deformBasis_d;
     float *ref_d;
+    float *mean_d;
     int *lmks_d;
-
-    int *lmkCount_d;
-    int *rank_d;
-    int *dim_d;
 
     int lmkCount;
     int rank;
@@ -20,12 +17,6 @@ typedef struct C_ScanPointCloud {
     float *rigidTransform_d;
     int *validModelLmks_d;
     int *scanLmks_d;
-    int *numPoints_d;
-    // Transformation Matrix dims
-    int *transformCols_d;
-    int *transformRows_d;
-    // Size of valid lmks and scan lmk points should be same
-    int *numLmks_d;
 
     int numPoints;
     // Transformation Matrix dims
@@ -37,7 +28,5 @@ typedef struct C_ScanPointCloud {
 
 typedef struct C_Params {
     float *params_d;
-    int *numParams_d;
-
     int numParams;
 } C_Params;

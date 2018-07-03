@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=n
 set(CUDA_GENCODES
 		"-gencode arch=compute_52,code=sm_52 -gencode arch=compute_61,code=sm_61 "
 		)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lcublas_device --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
 message("omomo" ${CMAKE_CUDA_FLAGS})
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 
@@ -31,7 +31,6 @@ find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
-
 
 add_library(telef
         include/align/nonrigid_pipe.h
@@ -109,7 +108,6 @@ target_include_directories(telef
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
 		stdc++fs
-		-lcublas_device
 		cutelef
 		${CERES_LIBRARIES}
         -lglog
@@ -131,7 +129,6 @@ add_library(cutelef STATIC
 		include/face/cu_model_kernel.h
 		include/util/cudautil.h
 		include/align/cu_loss.h
-
 		src/util/cu_quaternion.cu
 		src/face/cu_model_kernel.cu
 		src/align/cu_loss.cu
@@ -141,6 +138,7 @@ target_include_directories(cutelef
 		PUBLIC ${CUDA_INCLUDE_DIRS}
 		PUBLIC ${CMAKE_SOURCE_DIR}/include/
 		)
+target_link_libraries(cutelef -lcublas)
 
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
@@ -148,59 +146,58 @@ add_library(modelio src/io/modelio.cpp)
 
 add_executable(KinectTest app/KinectTest.cpp)
 target_link_libraries(KinectTest
-		-lcublas_device
         telef
         )
 
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
 target_link_libraries(LandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(LandmarkProject -lcublas_device ${Boost_LIBRARIES} telef)
+target_link_libraries(LandmarkProject ${Boost_LIBRARIES} telef)
 
 
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(FaceFeatureDetect -lcublas_device telef )
+target_link_libraries(FaceFeatureDetect telef )
 
 add_executable(PcaTest app/PcaTest.cpp)
-target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES} -lcublas_device )
+target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
 
 add_executable(PcaSample app/PcaSample.cpp)
-target_link_libraries(PcaSample stdc++fs telef -lcublas_device ${Boost_LIBRARIES} )
+target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)
-target_link_libraries(RigidAlighnment -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(RigidAlighnment ${Boost_LIBRARIES} telef)
 
 add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(RigidAlignmentTest -lcublas_device telef ${Boost_LIBRAREIS} )
+target_link_libraries(RigidAlignmentTest telef ${Boost_LIBRAREIS})
 
 add_executable(PcaTargetFit app/PcaTargetFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(PcaTargetFit -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(PcaTargetFit ${Boost_LIBRARIES} telef)
 
 add_executable(PcaFit app/PcaFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(PcaFit -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(PcaFit ${Boost_LIBRARIES} telef)
 
 add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
 target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(ConvertPlyUV -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(ConvertPlyUV ${Boost_LIBRARIES} telef)
 
 add_executable(MakePcaModel app/MakePcaModel.cpp src/io/modelio.cpp)
 target_link_libraries(MakePcaModel ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(MakePcaModel -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(MakePcaModel ${Boost_LIBRARIES} telef)
 
 add_executable(PngTest app/PngTest.cpp)
 target_link_libraries(PngTest)
-target_link_libraries(PngTest -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(PngTest ${Boost_LIBRARIES} telef)
 
 add_executable(RecordFakeFrame app/RecordFakeFrame.cpp)
 target_link_libraries(RecordFakeFrame)
-target_link_libraries(RecordFakeFrame -lcublas_device ${Boost_LIBRARIES} telef )
+target_link_libraries(RecordFakeFrame ${Boost_LIBRARIES} telef)
 
 add_executable(FakeDeviceTest app/FakeDeviceTest.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(FakeDeviceTest -lcublas_device stdc++fs ${Boost_LIBRARIES} telef )
+target_link_libraries(FakeDeviceTest stdc++fs ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
 	find_package(CBLAS REQUIRED)
@@ -208,15 +205,16 @@ if (BUILD_TESTS)
 	enable_testing()
 
 	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu tests/testutil/diff.h)
-	target_link_libraries(test_cu_quaternion gtest gtest_main -lcublas_device)
+	target_link_libraries(test_cu_quaternion gtest gtest_main)
 	target_link_libraries(test_cu_quaternion cutelef -lm)
 	target_include_directories(test_cu_quaternion
 			PRIVATE ${CMAKE_SOURCE_DIR}/include
 			PRIVATE lib/googletest/googletest/include
 			)
+    add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
 
 	add_executable(test_cu_loss tests/util/test_cu_loss.cu)
-	target_link_libraries(test_cu_loss gtest gtest_main gmock -lcublas_device ${CBLAS_LIBRARIES})
+	target_link_libraries(test_cu_loss gtest gtest_main gmock ${CBLAS_LIBRARIES})
 	target_link_libraries(test_cu_loss cutelef -lm)
 	target_include_directories(test_cu_loss
 			PRIVATE ${CMAKE_SOURCE_DIR}/include
@@ -224,7 +222,15 @@ if (BUILD_TESTS)
 			PRIVATE lib/googletest/googlemock/include
 			PRIVATE ${CBLAS_INCLUDE_DIRS}
 			)
+    add_test(NAME test_cu_loss COMMAND test_cu_loss)
 
-	add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
-	add_test(NAME test_cu_loss COMMAND test_cu_loss)
+	add_executable(test_nonrigid_pca tests/util/test_nonrigid_pca.cu tests/testutil/diff.h)
+	target_link_libraries(test_nonrigid_pca gtest gtest_main gmock)
+	target_link_libraries(test_nonrigid_pca cutelef -lm)
+    target_include_directories(test_nonrigid_pca
+            PRIVATE ${CMAKE_SOURCE_DIR}/include
+            PRIVATE lib/googletest/googletest/include
+            PRIVATE lib/googletest/googlemock/include
+            )
+	add_test(NAME test_nonrigid_pca COMMAND test_nonrigid_pca)
 endif()

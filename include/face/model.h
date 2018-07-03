@@ -125,8 +125,12 @@ namespace telef::face {
             return deformModel.shapeBase;
         }
 
-        Eigen::VectorXf getReferenceVector() {
+        Eigen::VectorXf getMeanDeformation() {
             return deformModel.mean;
+        }
+
+        Eigen::VectorXf getReferenceVector() {
+            return refMesh.position;
         }
 
         int getRank() {

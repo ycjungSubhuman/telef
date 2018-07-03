@@ -25,12 +25,18 @@ static C_PcaDeformModel get_mock_model(const float *fake_basis, int rank, int di
 
     //Setup Reference Mesh
     float *fakeRef = (float*)malloc(dim*sizeof(float));
+    float *fakeMean = (float*)malloc(dim*sizeof(float));
     for (int i=0; i<dim; i++) {
         fakeRef[i] = 0.0f;
+        fakeMean[i] = 0.0f;
     }
+
     CUDA_CHECK(cudaMalloc((void**)(&model.ref_d), dim*sizeof(float)));
     CUDA_CHECK(cudaMemcpy(model.ref_d, fakeRef, dim*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc((void**)(&model.mean_d), dim*sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(model.mean_d, fakeMean, dim*sizeof(float), cudaMemcpyHostToDevice));
     free(fakeRef);
+    free(fakeMean);
 
     return model;
 }
@@ -39,6 +45,7 @@ static void free_model(C_PcaDeformModel model) {
     CUDA_CHECK(cudaFree(model.deformBasis_d));
     CUDA_CHECK(cudaFree(model.lmks_d));
     CUDA_CHECK(cudaFree(model.ref_d));
+    CUDA_CHECK(cudaFree(model.mean_d));
 }
 
 static C_ScanPointCloud get_mock_scan(const float *fake_scan, int num_points, const int *fake_lmks, int num_lmk) {
@@ -113,6 +120,13 @@ static void calc_position(float *position, C_PcaDeformModel model,
     float rotation[9];
     calc_r_from_u(rotation, u);
 
+    printf ("u: %f %f %f\n", u[0], u[1], u[2]);
+
+    printf("rotation: \n");
+    for(int i=0; i<3; i++) {
+        printf("%f %f %f\n", rotation[3*i], rotation[3*i+1], rotation[3*i+2]);
+    }
+
     // apply rotation
     cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
                 3, model.dim/3, 3, 1.0f,
@@ -121,8 +135,10 @@ static void calc_position(float *position, C_PcaDeformModel model,
                 0.0f, position, 3);
     free(position_before_transform_h);
     // apply transpose
-    for(int i=0; i<model.dim/3; i++) {
+    printf("position: \n");
+    for(int i=0; i<model.dim; i++) {
         position[i] += t[i%3];
+        printf("%f\n", position[i]);
     }
 }
 
@@ -142,6 +158,8 @@ void _calc_loss(float *value, const float *param) {
     CUDA_CHECK(cudaMalloc((void**)(&value_d), sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&position_d), _glob_model.dim*sizeof(float)));
     CUDA_CHECK(cudaMemcpy(position_d, position, _glob_model.dim*sizeof(float), cudaMemcpyHostToDevice));
+    printf("position_d: %f %f %f\n", position[0], position[1], position[2]);
+    free(position);
     calc_mse_lmk(value_d, position_d, _glob_scan);
     // copy back the result to host
     CUDA_CHECK(cudaMemcpy(value, value_d, sizeof(float), cudaMemcpyDeviceToHost));
@@ -167,7 +185,8 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
 
     // get numerical differentiation
     func f = &_calc_loss;
-    calc_numerical_diff(numerical, &f, 1e-6, 1, (3+3+num_a), param);
+    printf("NUMERICALLLLLLL\n");
+    calc_numerical_diff(numerical, &f, 2e-2f, 1, (3+3+num_a), param);
 
     ////////////// Calculate analytic derivative
     float *de_dt_d;
@@ -185,6 +204,7 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     // calculate mesh vertex position again
     // (we are doing it in _calc_loss, but I didn't want to copy them back from it)
     float *position = (float*)malloc(model.dim*sizeof(float));
+    printf("ANALYTICALLLLLLL\n");
     calc_position(position, model, t, u, a);
 
     CUDA_CHECK(cudaMemcpy(u_d, u, 3*sizeof(float), cudaMemcpyHostToDevice));
@@ -197,17 +217,20 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     // clean up
     free(position);
     CUDA_CHECK(cudaFree(position_d));
+    for(int i=0; i<6+model.rank; i++) {
+        printf("%f %f\n", numerical[i], analytic[i]);
+    }
 
     /////////////// Compare btw two
-    printf("de_dts");
+    printf("de_dts\n");
     for(int i=0; i<3; i++) {
         ASSERT_FLOAT_EQ(numerical[i], analytic[i]);
     }
-    printf("de_dus");
+    printf("de_dus\n");
     for(int i=3; i<6; i++) {
         ASSERT_FLOAT_EQ(numerical[i], analytic[i]);
     }
-    printf("de_das");
+    printf("de_das\n");
     for(int i=6; i<6+model.rank; i++) {
         ASSERT_FLOAT_EQ(numerical[i], analytic[i]);
     }
@@ -265,9 +288,24 @@ TEST(LmkLossDerivative, ExactlySame) {
     float basis[] = {1.0f, 2.0f, 1.0f};
     float scan_points[] = {1.0f, 2.0f, 1.0f};
     int lmks[] = {0};
-    float t[] = {0.0f,};
-    float u[] = {0.0f,};
-    float a[] = {1.0f,};
+    float t[3] = {0.0f, 0.0f, 0.0f};
+    float u[3] = {0.0f, 0.0f, 0.0f};
+    float a[3] = {1.0f, 1.0f, 1.0f};
+
+    C_PcaDeformModel model = get_mock_model(basis, 1, 3, lmks, 1);
+    C_ScanPointCloud scan = get_mock_scan(scan_points, 1, lmks, 1);
+    test_lmk_derivatives(model, scan, t, u, a);
+    free_model(model);
+    free_scan(scan);
+}
+
+TEST(LmkLossDerivative, DifferentByOne) {
+    float basis[] = {1.0f, 2.0f, 1.0f};
+    float scan_points[] = {20.0f, 20.0f, 10.0f};
+    int lmks[] = {0};
+    float t[3] = {0.0f, 0.0f, 0.0f};
+    float u[3] = {0.0f, 1.0f, 1.0f};
+    float a[1] = {1.0f};
 
     C_PcaDeformModel model = get_mock_model(basis, 1, 3, lmks, 1);
     C_ScanPointCloud scan = get_mock_scan(scan_points, 1, lmks, 1);

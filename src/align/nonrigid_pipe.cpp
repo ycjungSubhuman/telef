@@ -74,8 +74,9 @@ namespace telef::align {
         if(!isModelInitialized) {
             auto deformBasis = in->pca_model->getBasisMatrix();
             auto ref = in->pca_model->getReferenceVector();
+            auto mean = in->pca_model->getMeanDeformation();
             auto landmarks = in->pca_model->getLandmarks();
-            loadModelToCUDADevice(&this->c_deformModel, deformBasis, ref, landmarks);
+            loadModelToCUDADevice(&this->c_deformModel, deformBasis, ref, mean, landmarks);
             isModelInitialized = true;
         }
 
@@ -111,16 +112,18 @@ namespace telef::align {
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
-        std::cout << coeff[0] << std::endl;
+        std::cout << "coeff[0]: " << coeff[0] << std::endl;
 
         /* Free Resources */
         freeScanCUDA(c_scanPointCloud);
 
         auto result = boost::make_shared<PCANonRigidFittingResult>();
 
-        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, RANK).cast<float>();
-        std::cout << result->fitCoeff << std::endl;
+        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, RANK).cast<float>() * 1;
+
+        std::cout << "Fitted: " << result->fitCoeff << std::endl;
         result->image = in->image;
+        result->pca_model = in->pca_model;
         result->fx = in->fx;
         result->fy = in->fy;
         result->transformation = in->transformation;

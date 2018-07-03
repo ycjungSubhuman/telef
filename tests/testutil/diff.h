@@ -30,6 +30,10 @@ void calc_numerical_diff(float *result, func *calc_func,
     float *x2 = (float*)malloc(param_dim*sizeof(float));
     float *f1 = (float*)malloc(val_dim*sizeof(float));
     float *f2= (float*)malloc(val_dim*sizeof(float));
+    printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!x0\n");
+    for(int i=0; i<param_dim; i++) {
+        printf("%f\n", x0[i]);
+    }
 
     for (int i=0; i<param_dim; i++) {
         for (int j=0; j<param_dim; j++) {
@@ -50,8 +54,11 @@ void calc_numerical_diff(float *result, func *calc_func,
             }
         }
 
+        printf("------------------------f2");
         (*calc_func)(f2, x2);
+        printf("------------------------f1");
         (*calc_func)(f1, x1);
+        printf("f1: %f / f2: %f\n", f1[0], f2[0]);
 
         for (int j=0; j<val_dim; j++) {
             result[val_dim*i + j] = (double)(f2[j] - f1[j]) / (2.0f * h);

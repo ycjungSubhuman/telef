@@ -211,21 +211,22 @@ namespace telef::align{
 
 
 
-            std::cout << "Cuda position: " << cuda_m[0] << std::endl;
+//            std::cout << "Cuda position: " << cuda_m[0] << std::endl;
 
 
             // Copy back to double array
             convertArray(fresiduals, residuals, 1);
 
-            std::cout << "Residuals: " << residuals[0] << std::endl;
-            convertArray(fjacobians, jacobians[0], CoeffRank);
+//            std::cout << "Residuals: " << residuals[0] << std::endl;
+//            convertArray(fjacobians, jacobians[0], CoeffRank);
 
             if (isJacobianRequired) {
-                std::cout << "Jacobi: ";
-                for (int i = 1; i < CoeffRank; i++) {
-                    std::cout << " " << jacobians[0][i];
-                }
-                std::cout << std::endl;
+                convertArray(fjacobians, jacobians[0], CoeffRank);
+//                std::cout << "Jacobi: ";
+//                for (int i = 1; i < CoeffRank; i++) {
+//                    std::cout << " " << jacobians[0][i];
+//                }
+//                std::cout << std::endl;
             }
 
             return true;

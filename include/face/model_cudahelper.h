@@ -17,6 +17,7 @@
 /** Loads MorphableFaceModel to GPU Device */
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
                            const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
+                           const Eigen::VectorXf meanDeformation,
                            const std::vector<int> lmkInds);
 void freeModelCUDA(C_PcaDeformModel deformModel);
 
@@ -41,36 +42,3 @@ void freeParamsCUDA(C_Params params);
 void allocPositionCUDA(float **position_d, int dim);
 void freePositionCUDA(float *position_d);
 
-/** Calculate vertex position given basis and coefficients */
-void calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel);
-
-/**
- * Calculate residual and jacobian of the loss function representing Landmark distance btw scan and model
- *
- * Loss = (L2 distance btw corresponding landmarks)
- *      + (L2 norm of parameters)
- */
-void calculateLandmarkLoss(float *residual, float *jacobian,
-                           const float *position_d, const C_Params params,
-                           const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud);
-
-/**
- * Applies Transformation matrix on CUDA device model
- * @param align_pos_d
- * @param position_d
- * @param deformModel
- * @param scanPointCloud
- */
-void applyRigidAlignment(float *align_pos_d, const float *position_d,
-                         const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud);
-
-/**
- * Calculate residual and jacobian of the loss function representing distance btw scan and model
- *
- * Loss = (L2 distance btw corresponding landmarks)
- *      + (L2 norm of parameters)
- */
-void calculateLoss(float *residual, float *jacobian,
-                   float *position_d, const C_Params params,
-                   const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                   const bool isJacobianRequired);
