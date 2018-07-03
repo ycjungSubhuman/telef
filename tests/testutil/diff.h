@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdio>
+#include <cstdlib>
 #include <cuda_runtime_api.h>
+#include <device_launch_parameters.h>
 #include "util/cu_quaternion.h"
 
 typedef void(*func)(float*, const float*);
@@ -21,7 +23,7 @@ typedef void(*func)(float*, const float*);
  * @param param_dim                     the dimension of parameter
  * @param x0                            the point we want to evaluate numerical diff on
  */
-__device__
+__device__ __host__
 void calc_numerical_diff(float *result, func *calc_func,
                          const float h, int val_dim, int param_dim, const float *x0) {
     float *x1 = (float*)malloc(param_dim*sizeof(float));

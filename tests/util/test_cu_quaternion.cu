@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "util/cudautil.h"
-#include "testutil/diff.h"
+#include "../testutil/diff.h"
 
 #define WIDTH 16
 #define BLOCKSIZE 512

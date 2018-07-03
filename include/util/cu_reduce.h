@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cuda_runtime_api.h>
+#include <cstdio>
 #include <math_functions.h>
+#include <device_launch_parameters.h>
 
 __inline__ __device__
 float warpReduceSum(float val) {
@@ -70,8 +72,9 @@ void _deviceReduceKernelRepeatedLinearSum(const float *in, float *out, size_t N,
         sum += coeffs[i]*in[i%num_repeat];
     }
     sum = blockReduceSum(sum);
-    if (threadIdx.x == 0)
+    if (threadIdx.x == 0) {
         out[blockIdx.x] = sum;
+    }
 }
 
 __global__

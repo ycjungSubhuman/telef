@@ -14,7 +14,11 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=native")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true -gencode arch=compute_61,code=sm_61 -lcublas_device")
+set(CUDA_GENCODES
+		"-gencode arch=compute_52,code=sm_52 -gencode arch=compute_61,code=sm_61 "
+		)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lcublas_device --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
+message("omomo" ${CMAKE_CUDA_FLAGS})
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
@@ -22,21 +26,12 @@ find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 find_package(Ceres REQUIRED)
-find_package(CUDA)
+find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 
 link_directories(${PCL_LIBRARY_DIRS})
-
 link_directories(${OpenCV_LIBRARY_DIRS})
-include_directories(${OpenCV_INCLUDE_DIRS})
 
-include_directories(${CUDA_INCLUDE_DIRS})
-include_directories(${PCL_INCLUDE_DIRS})
-include_directories(${Eigen_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${Ceres_INCLUDE_DIRS})
-include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/include/face)
 
 add_library(telef
         include/align/nonrigid_pipe.h
@@ -66,18 +61,19 @@ add_library(telef
         include/util/UvPointMapping.h
         include/camera.h
         include/type.h
-	include/align/cost_func.h
-        include/face/classified_model.h 
-        include/face/classify_pipe.h 
-        include/face/deformation_model.h
-        include/io/devicecloud.h 
-        include/io/png.h 
-        include/io/fakeframe.h 
-        include/util/fake_frame_record_device.h
-	include/io/matrix.h
-	include/io/landmark.h
-	include/util/convert_arr.h
+		include/align/cost_func.h
+		include/face/classified_model.h
+		include/face/classify_pipe.h
+		include/face/deformation_model.h
+		include/io/devicecloud.h
+		include/io/png.h
+		include/io/fakeframe.h
+		include/util/fake_frame_record_device.h
+		include/io/matrix.h
+		include/io/landmark.h
+		include/util/convert_arr.h
 		include/face/model_cudahelper.h
+		include/face/raw_model.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -95,12 +91,43 @@ add_library(telef
         src/io/fakeframe.cpp 
         src/util/UvPointMapping.cpp 
         src/util/fake_frame_record_device.cpp
-	src/io/landmark.cpp
+        src/io/landmark.cpp
 		src/face/model_cudahelper.cpp
 		)
 
+target_include_directories(telef
+		PUBLIC ${OpenCV_INCLUDE_DIRS}
+        PUBLIC ${CUDA_INCLUDE_DIRS}
+        PUBLIC ${PCL_INCLUDE_DIRS}
+        PUBLIC ${Eigen_INCLUDE_DIRS}
+        PUBLIC ${Boost_INCLUDE_DIRS}
+        PUBLIC ${CERES_INCLUDE_DIRS}
+        PUBLIC ${CMAKE_SOURCE_DIR}/include/
+		PUBLIC ${CMAKE_SOURCE_DIR}/include/face
+		)
+
+target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(telef
+		stdc++fs
+		-lcublas_device
+		cutelef
+		${CERES_LIBRARIES}
+        -lglog
+		${PCL_COMMON_LIBRARIES}
+		${PCL_FILTERS_LIBRARIES}
+		${PCL_IO_LIBRARIES}
+		${PCL_KDTREE_LIBRARIES}
+		${PCL_VISUALIZATION_LIBRARIES}
+		opencv_core
+		opencv_objdetect
+		opencv_imgproc
+		opencv_highgui
+		opencv_flann
+		opencv_ml
+		)
+
 add_library(cutelef STATIC
-        include/util/cu_quaternion.h
+		include/util/cu_quaternion.h
 		include/face/cu_model_kernel.h
 		include/util/cudautil.h
 		include/align/cu_loss.h
@@ -108,258 +135,96 @@ add_library(cutelef STATIC
 		src/util/cu_quaternion.cu
 		src/face/cu_model_kernel.cu
 		src/align/cu_loss.cu
-        include/util/cu_reduce.h include/util/cu_array.h)
+		include/util/cu_reduce.h include/util/cu_array.h)
+
+target_include_directories(cutelef
+		PUBLIC ${CUDA_INCLUDE_DIRS}
+		PUBLIC ${CMAKE_SOURCE_DIR}/include/
+		)
 
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(telef
-        stdc++fs
-		-lcublas_device
-    	cutelef
-        ${Ceres_LIBRARIES}
-        ${PCL_COMMON_LIBRARIES}
-        ${PCL_FILTERS_LIBRARIES}
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        )
 add_library(modelio src/io/modelio.cpp)
 
 add_executable(KinectTest app/KinectTest.cpp)
 target_link_libraries(KinectTest
 		-lcublas_device
         telef
-        ${PCL_IO_LIBRARIES}
-        opencv_core
-        opencv_imgproc
-        opencv_highgui
         )
 
 add_executable(LandmarkProject app/LandmarkProject.cpp src/io/modelio.cpp)
 target_link_libraries(LandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(LandmarkProject
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        opencv_core
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-        )
+target_link_libraries(LandmarkProject -lcublas_device ${Boost_LIBRARIES} telef)
 
 
 add_executable(FaceFeatureDetect app/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(FaceFeatureDetect
-		-lcublas_device
-        telef
-        opencv_core
-        opencv_objdetect
-        opencv_highgui
-        opencv_imgproc
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(FaceFeatureDetect -lcublas_device telef )
 
 add_executable(PcaTest app/PcaTest.cpp)
-target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES}
-		-lcublas_device
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_highgui
-        opencv_imgproc
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES} -lcublas_device )
 
 add_executable(PcaSample app/PcaSample.cpp)
-target_link_libraries(PcaSample stdc++fs telef
-		-lcublas_device
-        ${Boost_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_highgui
-        opencv_imgproc
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(PcaSample stdc++fs telef -lcublas_device ${Boost_LIBRARIES} )
 
 add_executable(RigidAlighnment app/RigidAlighnment.cpp)
-target_link_libraries(RigidAlighnment
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_highgui
-        opencv_imgproc
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(RigidAlighnment -lcublas_device ${Boost_LIBRARIES} telef )
 
 add_executable(RigidAlignmentTest app/RigidAlignmentTest.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlignmentTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(RigidAlignmentTest
-		-lcublas_device
-        stdc++fs
-        telef
-        ${Boost_LIBRAREIS}
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        opencv_core
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(RigidAlignmentTest -lcublas_device telef ${Boost_LIBRAREIS} )
 
 add_executable(PcaTargetFit app/PcaTargetFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(PcaTargetFit
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        ${PCL_KDTREE_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-        ceres
-	-lstdc++
-        )
+target_link_libraries(PcaTargetFit -lcublas_device ${Boost_LIBRARIES} telef )
 
 add_executable(PcaFit app/PcaFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(PcaFit
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        ${PCL_KDTREE_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-        ceres
-	-lstdc++
-        )
+target_link_libraries(PcaFit -lcublas_device ${Boost_LIBRARIES} telef )
 
-add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp include/face/raw_model.h)
+add_executable(ConvertPlyUV app/ConvertPlyUV.cpp src/io/modelio.cpp)
 target_link_libraries(ConvertPlyUV ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(ConvertPlyUV
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        ${PCL_KDTREE_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(ConvertPlyUV -lcublas_device ${Boost_LIBRARIES} telef )
 
 add_executable(MakePcaModel app/MakePcaModel.cpp src/io/modelio.cpp)
 target_link_libraries(MakePcaModel ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(MakePcaModel
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        ${PCL_KDTREE_LIBRARIES}
-        ${PCL_REGISTRATION_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(MakePcaModel -lcublas_device ${Boost_LIBRARIES} telef )
 
 add_executable(PngTest app/PngTest.cpp)
 target_link_libraries(PngTest)
-target_link_libraries(PngTest
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-	-lstdc++
-        )
+target_link_libraries(PngTest -lcublas_device ${Boost_LIBRARIES} telef )
 
 add_executable(RecordFakeFrame app/RecordFakeFrame.cpp)
 target_link_libraries(RecordFakeFrame)
-target_link_libraries(RecordFakeFrame
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-	-lstdc++
-        )
+target_link_libraries(RecordFakeFrame -lcublas_device ${Boost_LIBRARIES} telef )
 
 add_executable(FakeDeviceTest app/FakeDeviceTest.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(FakeDeviceTest
-		-lcublas_device
-        stdc++fs
-        ${Boost_LIBRARIES}
-        telef
-        ${PCL_IO_LIBRARIES}
-        ${PCL_VISUALIZATION_LIBRARIES}
-        opencv_core
-        opencv_ml
-        opencv_objdetect
-        opencv_imgproc
-        opencv_highgui
-        opencv_flann
-        )
+target_link_libraries(FakeDeviceTest -lcublas_device stdc++fs ${Boost_LIBRARIES} telef )
 
 if (BUILD_TESTS)
+	find_package(CBLAS REQUIRED)
 	add_subdirectory(lib/googletest)
 	enable_testing()
-	include_directories(lib/googletest/googletest/include)
-	include_directories(tests)
+
 	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu tests/testutil/diff.h)
-	add_executable(test_cu_loss tests/util/test_cu_loss.cu)
 	target_link_libraries(test_cu_quaternion gtest gtest_main -lcublas_device)
-	target_link_libraries(test_cu_loss gtest gtest_main -lcublas_device)
 	target_link_libraries(test_cu_quaternion cutelef -lm)
+	target_include_directories(test_cu_quaternion
+			PRIVATE ${CMAKE_SOURCE_DIR}/include
+			PRIVATE lib/googletest/googletest/include
+			)
+
+	add_executable(test_cu_loss tests/util/test_cu_loss.cu)
+	target_link_libraries(test_cu_loss gtest gtest_main gmock -lcublas_device ${CBLAS_LIBRARIES})
 	target_link_libraries(test_cu_loss cutelef -lm)
+	target_include_directories(test_cu_loss
+			PRIVATE ${CMAKE_SOURCE_DIR}/include
+			PRIVATE lib/googletest/googletest/include
+			PRIVATE lib/googletest/googlemock/include
+			PRIVATE ${CBLAS_INCLUDE_DIRS}
+			)
+
 	add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
 	add_test(NAME test_cu_loss COMMAND test_cu_loss)
 endif()

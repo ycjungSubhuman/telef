@@ -12,9 +12,9 @@
 /**
  * Calculate
  *
- *       N    3
- *      SUM  SUM  ( m_ik - x_m_ik )^2
- *       k    i
+ *   1    N    3
+ *   -   SUM  SUM  ( m_ik - x_m_ik )^2
+ *   N    k    i
  *
  * Where
  *   m is the number of landmark points
@@ -26,28 +26,28 @@
  * @param position_d            calculated mesh vertex positions
  * @param scan
  */
-void calc_mse_lmk(float *mse_d, const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan);
+void calc_mse_lmk(float *mse_d, const float *position_d, C_ScanPointCloud scan);
 
 /**
  * Calculate derivatives of landmark term
  *
  * Translation parameters:
  *
- *               N
- * de_dt_d[j] = SUM  -2 * ( m_jk - x_m_jk )
- *               k
+ *              1  N
+ * de_dt_d[j] = - SUM  -2 * ( m_jk - x_m_jk )
+ *              N  k
  *
  * Rotation parameters
  *
- *               N   3
- * de_du_d[j] = SUM SUM -2 * ( m_ik - x_m_ik ) * (dr_duj_i `dot` x_m_k)
- *               k   i
+ *              1  N   3
+ * de_du_d[j] = - SUM SUM -2 * ( m_ik - x_m_ik ) * (dr_duj_i `dot` x_m_k)
+ *              N  k   i
  *
  * PCA coefficients
  *
- *               N   3
- * de_da_d[j] = SUM SUM -2 * ( m_ik - x_m_ik ) * (r_i `dot` v_j_k)
- *               k   i
+ *              1  N   3
+ * de_da_d[j] = - SUM SUM -2 * ( m_ik - x_m_ik ) * (r_i `dot` v_j_k)
+ *              N  k   i
  *
  * Where
  *   N is the number of landmark points
@@ -64,14 +64,9 @@ void calc_mse_lmk(float *mse_d, const float *position_d, C_PcaDeformModel model,
  * @param de_da_d               de_da_d[j] = de_daj. (rank of pca model)-element array
  * @param u_d                   rotation parameter. 3-element array. Axis-angle notation (see cu_quaternion.h)
  * @param position_d            calculated mesh vertex positions
+ * @param model
  * @param scan
  */
 void calc_derivatives_lmk(float *de_dt_d, float *de_du_d, float *de_da_d,
-                          const float *u_d, const float *position_d, C_ScanPointCloud scan);
-
-__device__
-void calc_dll_du(float *dll_du_d, const float *u_d);
-
-__device__
-void calc_dll_dt(float *dll_du_d, const float *t_d);
-
+                          const float *u_d, const float *position_d,
+                          C_PcaDeformModel model, C_ScanPointCloud scan);

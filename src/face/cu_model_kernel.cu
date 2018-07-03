@@ -41,15 +41,16 @@ float blockReduceSum(float val) {
 
 __global__
 void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int start = blockIdx.x * blockDim.x + threadIdx.x;
+    int size = deformModel.dim;
+    int step = blockDim.x * gridDim.x;
+    for (int i=start; i<size; i+=step) {
+        const int colDim = deformModel.dim;
 
-    printf("_calculateVertexPosition %d\n", i);
-
-    const int colDim = *deformModel.dim_d;
-
-    position_d[i] = 0;;
-    for (int j=0; j<*deformModel.rank_d; j++) {
-        position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
+        position_d[i] = 0;;
+        for (int j = 0; j < deformModel.rank; j++) {
+            position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
+        }
     }
 }
 
