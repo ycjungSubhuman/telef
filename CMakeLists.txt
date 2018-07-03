@@ -344,4 +344,10 @@ if (BUILD_TESTS)
 	target_link_libraries(test_cu_quaternion gtest gtest_main)
 	target_link_libraries(test_cu_quaternion cutelef -lm)
 	add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
+
+	# CUDA PCA Non-rigid test
+	add_executable(test_nonrigid_pca tests/util/test_nonrigid_pca.cu tests/testutil/diff.h)
+	target_link_libraries(test_nonrigid_pca gtest gtest_main gmock)
+	target_link_libraries(test_nonrigid_pca cutelef -lm)
+	add_test(NAME test_nonrigid_pca COMMAND test_nonrigid_pca)
 endif()
