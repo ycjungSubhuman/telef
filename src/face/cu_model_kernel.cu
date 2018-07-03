@@ -84,7 +84,9 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
         //printf("_calculateVertexPosition %d\n", i);
         position_d[i] = 0;;
         for (int j = 0; j < deformModel.rank; j++) {
+//            position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j] + deformModel.mean_d[i] + deformModel.ref_d[i];
             position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
+            printf("position_d[%d]: %.6f\n", i, position_d[i]);
         }
     }
 }
@@ -126,6 +128,10 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *p
                            position_d[3 * posIdx + 2] - scanPoints_d[3 * scanIdx + 2]};  // z
 
         float squaredNorm = 0.0;
+
+//        printf("pos[%d]: %.6f, %.6f %.6f\n", posIdx, position_d[3 * posIdx], position_d[3 * posIdx+1], position_d[3 * posIdx+2]);
+//        printf("scan[%d]: %.6f, %.6f %.6f\n", scanIdx, scanPoints_d[3 * scanIdx], scanPoints_d[3 * scanIdx+1], scanPoints_d[3 * scanIdx+2]);
+
 
         for (int i = 0; i < 3; i++) {
             squaredNorm += ptSubt[i] * ptSubt[i];
@@ -183,11 +189,11 @@ void calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *po
                            const bool isJacobianRequired) {
 
     int idim = scanPointCloud.numLmks;
-    dim3 lmkThrds(BLOCKSIZE);
-    dim3 lmkBlocks((idim + BLOCKSIZE - 1) / BLOCKSIZE);
+    dim3 lmkThrds(64);
+    dim3 lmkBlocks((idim + 64 - 1) / 64);
 
     _calculateLandmarkLoss << < lmkBlocks, lmkThrds >> > (residual_d, jacobian_d, position_d,
-                           deformModel.deformBasis_d, deformModel.rank, deformModel.dim, deformModel.lmks_d,
+                           deformModel.deformBasis_d, deformModel.rank, deformModel.dim, scanPointCloud.validModelLmks_d,
                            scanPointCloud.scanPoints_d, scanPointCloud.scanLmks_d, scanPointCloud.numLmks,
                            isJacobianRequired);
     CHECK_ERROR_MSG("Kernel Error");
