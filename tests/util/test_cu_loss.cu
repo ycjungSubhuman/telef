@@ -186,7 +186,7 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     // get numerical differentiation
     func f = &_calc_loss;
     printf("NUMERICALLLLLLL\n");
-    calc_numerical_diff(numerical, &f, 2e-2f, 1, (3+3+num_a), param);
+    calc_numerical_diff(numerical, &f, 0.5f, 1, (3+3+num_a), param);
 
     ////////////// Calculate analytic derivative
     float *de_dt_d;
@@ -301,7 +301,7 @@ TEST(LmkLossDerivative, ExactlySame) {
 
 TEST(LmkLossDerivative, DifferentByOne) {
     float basis[] = {1.0f, 2.0f, 1.0f};
-    float scan_points[] = {20.0f, 20.0f, 10.0f};
+    float scan_points[] = {1.0f, 3.0f, 2.0f};
     int lmks[] = {0};
     float t[3] = {0.0f, 0.0f, 0.0f};
     float u[3] = {0.0f, 1.0f, 1.0f};
