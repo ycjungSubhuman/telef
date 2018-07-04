@@ -11,6 +11,7 @@ void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
     //std::cout << "deformBasis.size() <<: " << deformBasis.size() << std::endl;
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->deformBasis_d), deformBasis.size()*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->ref_d), ref.size()*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->mean_d), meanDeformation.size()*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->lmks_d), lmkInds.size()*sizeof(int)));
 
     CUDA_CHECK(cudaMemcpy((void*)deformModel->deformBasis_d,
