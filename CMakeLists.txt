@@ -200,37 +200,24 @@ target_link_libraries(FakeDeviceTest ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceTest stdc++fs ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
+	function(myaddtest testname testpath)
+		add_executable(${testname} ${testpath})
+		target_link_libraries(${testname} gtest gtest_main gmock ${CBLAS_LIBRARIES})
+		target_link_libraries(${testname} cutelef -lm)
+		target_include_directories(${testname}
+				PRIVATE ${CMAKE_SOURCE_DIR}/include
+				PRIVATE lib/googletest/googletest/include
+				PRIVATE lib/googletest/googlemock/include
+				PRIVATE ${CBLAS_INCLUDE_DIRS}
+				)
+		add_test(NAME ${testname} COMMAND ${testname})
+	endfunction(myaddtest)
+
 	find_package(CBLAS REQUIRED)
 	add_subdirectory(lib/googletest)
 	enable_testing()
 
-	add_executable(test_cu_quaternion tests/util/test_cu_quaternion.cu tests/testutil/diff.h)
-	target_link_libraries(test_cu_quaternion gtest gtest_main)
-	target_link_libraries(test_cu_quaternion cutelef -lm)
-	target_include_directories(test_cu_quaternion
-			PRIVATE ${CMAKE_SOURCE_DIR}/include
-			PRIVATE lib/googletest/googletest/include
-			)
-    add_test(NAME test_cu_quaternion COMMAND test_cu_quaternion)
-
-	add_executable(test_cu_loss tests/util/test_cu_loss.cu)
-	target_link_libraries(test_cu_loss gtest gtest_main gmock ${CBLAS_LIBRARIES})
-	target_link_libraries(test_cu_loss cutelef -lm)
-	target_include_directories(test_cu_loss
-			PRIVATE ${CMAKE_SOURCE_DIR}/include
-			PRIVATE lib/googletest/googletest/include
-			PRIVATE lib/googletest/googlemock/include
-			PRIVATE ${CBLAS_INCLUDE_DIRS}
-			)
-    add_test(NAME test_cu_loss COMMAND test_cu_loss)
-
-	add_executable(test_nonrigid_pca tests/util/test_nonrigid_pca.cu tests/testutil/diff.h)
-	target_link_libraries(test_nonrigid_pca gtest gtest_main gmock)
-	target_link_libraries(test_nonrigid_pca cutelef -lm)
-    target_include_directories(test_nonrigid_pca
-            PRIVATE ${CMAKE_SOURCE_DIR}/include
-            PRIVATE lib/googletest/googletest/include
-            PRIVATE lib/googletest/googlemock/include
-            )
-	add_test(NAME test_nonrigid_pca COMMAND test_nonrigid_pca)
+	myaddtest(test_cu_quaternion tests/util/test_cu_quaternion.cu)
+	myaddtest(test_cu_loss tests/align/test_cu_loss.cu)
+	myaddtest(test_nonrigid_pca tests/util/test_nonrigid_pca.cu)
 endif()

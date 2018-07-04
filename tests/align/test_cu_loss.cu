@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cstdlib>
 #include <cblas.h>
+#include <math.h>
 #include "align/cu_loss.h"
 #include "util/cudautil.h"
 #include "../testutil/diff.h"
@@ -97,7 +98,8 @@ static void test_lmk_loss(float oracle,
 // We use these global variables for test_lmk_derivatives
 // At the each call of test_lmk_derivatives, they are initialized
 // At the end of each call of test_lmk_derivatives, they are destroyed
-// The reason we are using global variables is to keep the signature of '_calc_loss' to void(float*, const float*)
+// The reason we are using global variables is to keep the signature of '_calc_loss' to void(float*, const float*),
+// while providing these data to '_calc_loss'
 C_ScanPointCloud _glob_scan;
 C_PcaDeformModel _glob_model;
 
@@ -186,7 +188,7 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     // get numerical differentiation
     func f = &_calc_loss;
     printf("NUMERICALLLLLLL\n");
-    calc_numerical_diff(numerical, &f, 0.5f, 1, (3+3+num_a), param);
+    calc_numerical_diff(numerical, &f, 0.1f, 1, (3+3+num_a), param);
 
     ////////////// Calculate analytic derivative
     float *de_dt_d;
@@ -224,15 +226,15 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     /////////////// Compare btw two
     printf("de_dts\n");
     for(int i=0; i<3; i++) {
-        ASSERT_FLOAT_EQ(numerical[i], analytic[i]);
+        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.001f);
     }
     printf("de_dus\n");
     for(int i=3; i<6; i++) {
-        ASSERT_FLOAT_EQ(numerical[i], analytic[i]);
+        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.001f);
     }
     printf("de_das\n");
     for(int i=6; i<6+model.rank; i++) {
-        ASSERT_FLOAT_EQ(numerical[i], analytic[i]);
+        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.001f);
     }
 }
 
@@ -271,14 +273,14 @@ TEST(LmkLoss, ExatlySameTwoPoints) {
                 lmks, 2);
 }
 
-TEST(LmkLoss, DifferentByTwoTwoPoints) {
+TEST(LmkLoss, DifferentTwoPoints) {
     float position[] = {1.0f, 2.0f, 3.0f,
                         4.0f, 5.0f, 6.0f};
-    float scan_positions[] = {1.0f, 2.0f, 1.0f,
-                              4.0f, 5.0f, 4.0f};
+    float scan_positions[] = {1.0f, 2.0f, 1.5f,
+                              4.0f, 5.0f, 4.5f};
     int lmks[] = {0, 1};
 
-    test_lmk_loss(4.0f,
+    test_lmk_loss(2.25f,
                   position, 2,
                   scan_positions, 2,
                   lmks, 2);
@@ -304,7 +306,7 @@ TEST(LmkLossDerivative, DifferentByOne) {
     float scan_points[] = {1.0f, 3.0f, 2.0f};
     int lmks[] = {0};
     float t[3] = {0.0f, 0.0f, 0.0f};
-    float u[3] = {0.0f, 1.0f, 1.0f};
+    float u[3] = {0.0f, 0.5f, 0.5f};
     float a[1] = {1.0f};
 
     C_PcaDeformModel model = get_mock_model(basis, 1, 3, lmks, 1);

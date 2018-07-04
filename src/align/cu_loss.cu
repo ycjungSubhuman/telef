@@ -92,13 +92,11 @@ static void calc_de_du_lmk(float *de_du_d,
                            const float *position_d, C_ScanPointCloud scan) {
     float *dx_m_du; // concatenation of (dx_m_du1, dx_m_du2, dx_m_du3)
     CUDA_CHECK(cudaMalloc((void**)(&dx_m_du), 3*3*scan.numLmks*sizeof(float)));
-
     dim3 dimThread = dim3(static_cast<unsigned int>(3 * scan.numLmks), 3);
     _calc_dx_m_du_lmk<<<1, dimThread>>>(dx_m_du, u_d, position_d, scan.numLmks, scan);
 
     const int numReductionThread = ((scan.numLmks*3 + 31) / 32) * 32;
-    deviceReduceKernelRepeatedLinearSum<<< 3, numReductionThread >>>
-        (error_cache_d, de_du_d, 3 * scan.numLmks, 3, dx_m_du);
+    repeatedLinearSum(error_cache_d, dx_m_du, de_du_d, 3*scan.numLmks, 3);
 
     CUDA_CHECK(cudaFree(dx_m_du));
 }
@@ -139,8 +137,8 @@ static void calc_de_da_lmk(float *de_da_d,
     _calc_dx_da_lmk<<<1, dimThread>>>(dx_m_da, u_d, scan.numLmks, model, scan);
 
     const int numReductionThread = ((scan.numLmks*3 + 31) / 32) * 32;
-    deviceReduceKernelRepeatedLinearSum<<<model.rank, numReductionThread>>>
-        (error_cache_d, de_da_d, 3*scan.numLmks, model.rank, dx_m_da);
+    repeatedLinearSum(error_cache_d, dx_m_da, de_da_d, 3*scan.numLmks, model.rank);
+    scale_array<<<1, model.rank>>>(de_da_d, model.rank, -2.0f);
 
     CUDA_CHECK(cudaFree(dx_m_da));
 }
