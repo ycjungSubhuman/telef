@@ -63,7 +63,7 @@ void calc_mse_lmk(float *mse_d, const float *position_d, C_ScanPointCloud scan);
  * @param de_du_d               de_du_d[j] = de_duj. 3-element array
  * @param de_da_d               de_da_d[j] = de_daj. (rank of pca model)-element array
  * @param u_d                   rotation parameter. 3-element array. Axis-angle notation (see cu_quaternion.h)
- * @param position_d            calculated mesh vertex positions before rigid transformation specified by t, u
+ * @param position_before_transform_d    calculated mesh vertex positions before rigid transformation specified by t, u
  * @param position_d            calculated mesh vertex positions
  * @param model
  * @param scan
