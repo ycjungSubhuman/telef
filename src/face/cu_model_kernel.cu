@@ -10,6 +10,9 @@
 #include <cublas_v2.h>
 
 #include "util/cudautil.h"
+#include "util/cu_quaternion.h"
+#include "align/cu_loss.h"
+#include "util/transform.h"
 
 #define BLOCKSIZE 128
 
@@ -83,7 +86,7 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
 
         position_d[i] = 0;
         for (int j = 0; j < deformModel.rank; j++) {
-            position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
+            position_d[i] += params.faParams_d[j] * deformModel.deformBasis_d[i + colDim * j];
         }
 
         position_d[i] += deformModel.mean_d[i] + deformModel.ref_d[i];
@@ -218,7 +221,7 @@ void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPo
 }
 
 void cudaMatMul(float *matC,
-                const float *matA_host, int aRows, int aCols,
+                const float *matA, int aRows, int aCols,
                 const float *matB, int bRows, int bCols) {
 
     cublasHandle_t cnpHandle;
@@ -230,21 +233,8 @@ void cudaMatMul(float *matC,
     const float *alpha = &alf;
     const float *beta = &bet;
 
-    float *matA;
-
-    cudaMalloc((void **) &matA, aCols * aRows * sizeof(float));
-
     if (status != CUBLAS_STATUS_SUCCESS) {
         printf("CUBLAS initialization failed, %s\n", _cublasGetErrorEnum(status).c_str());
-        return;
-    }
-
-    // Copy to GPU
-    status = cublasSetMatrix(aRows, aCols, sizeof(float), matA_host, /*ldim*/ aCols, matA, /*ldim*/ aCols);
-    if (status != CUBLAS_STATUS_SUCCESS) {
-        printf("data download failed: %s", _cublasGetErrorEnum(status).c_str());
-        cudaFree(matA);
-        cublasDestroy(cnpHandle);
         return;
     }
 
@@ -273,7 +263,7 @@ void cudaMatMul(float *matC,
     cublasDestroy(cnpHandle);
 }
 
-void applyRigidAlignment(float *align_pos_d, const float *position_d, const float *transMatA, int N) {
+void applyRigidAlignment(float *align_pos_d, const float *position_d, const float *transMat, int N) {
     int size_homo = 4 * N;
     int size = 3 * N;
     dim3 grid = ((N + BLOCKSIZE - 1) / BLOCKSIZE);
@@ -295,7 +285,7 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d, const floa
      * n is cols for B and C
      * k is cols for A and rows for B*/
     // Matrix Mult C = α op ( A ) op ( B ) + β C
-    cudaMatMul(matC, transMatA, 4, 4, matB, 4, N);
+    cudaMatMul(matC, transMat, 4, 4, matB, 4, N);
 
 // hnormalized point (x,y,z)
     _hnormalizedPositions << < grid, block >> > (align_pos_d, matC, N);
@@ -307,13 +297,13 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d, const floa
     cudaFree(matC);
 }
 
-void calculateLoss(float *residual, float *jacobian, float *position_d,
+void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float *fuJacobian, float *position_d,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired) {
 
 //    std::cout << "calculateLoss" << std::endl;
-    float *residual_d, *jacobian_d;
-    float *align_pos_d;
+    float *residual_d, *faJacobian_d, *ftJacobian_d, *fuJacobian_d;
+    float *align_pos_d, *result_pos_d;
     float align_pos[deformModel.dim];
 
     /*
@@ -323,14 +313,13 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
     CUDA_CHECK(cudaMalloc((void **) &residual_d, sizeof(float)));
 
     // Compute Jacobians for each parameter
-    CUDA_CHECK(cudaMalloc((void **) &jacobian_d, params.numParams * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &faJacobian_d, params.numa * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &ftJacobian_d, params.numt * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &fuJacobian_d, params.numu * sizeof(float)));
 
     // Allocate memory for Rigid aligned positions
     CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
-
-    CUDA_CHECK(cudaMemcpy(residual_d, residual, sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(jacobian_d, jacobian, params.numParams * sizeof(float), cudaMemcpyHostToDevice));
-
+    CUDA_CHECK(cudaMalloc((void **) &result_pos_d, deformModel.dim * sizeof(float)));
     // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
 
     /*
@@ -344,11 +333,26 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
     // Rigid alignment
 //    std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
     applyRigidAlignment(align_pos_d, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3.0);
+    float r[9];
+    float trans[16];
+    float *trans_d;
+    CUDA_CHECK(cudaMalloc((void **) &trans_d, 16*sizeof(float)));
+
+    calc_r_from_u(r, params.fuParams_h);
+    create_trans_from_tu(trans, params.ftParams_h, r);
+    CUDA_CHECK(cudaMemcpy(trans_d, trans, 16* sizeof(float), cudaMemcpyHostToDevice));
+
+    applyRigidAlignment(result_pos_d, align_pos_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3.0);
     //cudaDeviceSynchronize();
 
     // Calculate residual_d, jacobian_d for Landmarks
+    calc_mse_lmk(residual_d, result_pos_d, scanPointCloud);
+
+    calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, faJacobian_d,
+                         params.fuParams_h, align_pos_d, position_d, deformModel, scanPointCloud);
+
 //    std::cout << "calculateLoss: calculateLandmarkLoss (Jacobi:"<<isJacobianRequired<<")" << std::endl;
-    calculateLandmarkLoss(residual_d, jacobian_d, align_pos_d, deformModel, scanPointCloud, isJacobianRequired);
+    //calculateLandmarkLoss(residual_d, faJacobian_d, align_pos_d, deformModel, scanPointCloud, isJacobianRequired);
     //cudaDeviceSynchronize();
 
     /*
@@ -356,16 +360,18 @@ void calculateLoss(float *residual, float *jacobian, float *position_d,
      */
 //    std::cout << "Copy to host" << std::endl;
     CUDA_CHECK(cudaMemcpy(residual, residual_d, sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(jacobian, jacobian_d, params.numParams * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(faJacobian, faJacobian_d, params.numa * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(ftJacobian, ftJacobian_d, params.numt * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(fuJacobian, fuJacobian_d, params.numu * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(align_pos, align_pos_d, deformModel.dim * sizeof(float), cudaMemcpyDeviceToHost));
-
-
-
-    //TODO: return value to see rigid aligned mesh?
 
 //    std::cout << "align_pos: " << align_pos[15] << std::endl;
     //delete align_pos;
     //align_pos = NULL;
-
+    cudaFree(residual_d);
+    cudaFree(faJacobian_d);
+    cudaFree(ftJacobian_d);
+    cudaFree(fuJacobian_d);
     cudaFree(align_pos_d);
+    cudaFree(result_pos_d);
 }

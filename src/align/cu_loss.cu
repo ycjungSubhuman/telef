@@ -97,6 +97,7 @@ static void calc_de_du_lmk(float *de_du_d,
 
     repeatedLinearSum(error_cache_d, dx_m_du, de_du_d, 3*scan.numLmks, 3);
     scale_array<<<1,3>>>(de_du_d, 3, -2.0f);
+    CHECK_ERROR_MSG("Kernel Error");
 
     CUDA_CHECK(cudaFree(dx_m_du));
 }

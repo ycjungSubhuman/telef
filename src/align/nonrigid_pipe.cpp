@@ -9,6 +9,9 @@
 #include "align/cost_func.h"
 #include "face/model_cudahelper.h"
 #include "type.h"
+#include "util/transform.h"
+#include "util/cu_quaternion.h"
+#include "util/convert_arr.h"
 
 #define EPS 0.005
 
@@ -101,7 +104,9 @@ namespace telef::align {
         auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud);
         ceres::Problem problem;
         double coeff[RANK] = {0,};
-        problem.AddResidualBlock(cost, NULL, coeff);
+        double t[3] = {0,};
+        double u[3] = {0,};
+        problem.AddResidualBlock(cost, NULL, coeff, t, u);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
@@ -113,6 +118,16 @@ namespace telef::align {
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
         std::cout << "coeff[0]: " << coeff[0] << std::endl;
+
+        float fu[3];
+        float ft[3];
+        float r[9];
+        float trans[16];
+        convertArray(t, ft, 3);
+        convertArray(u, fu, 3);
+        calc_r_from_u(r, fu);
+        create_trans_from_tu(trans, ft, r);
+        Eigen::Map<Eigen::Matrix4f> eigenTrans(trans);
 
         /* Free Resources */
         freeScanCUDA(c_scanPointCloud);
@@ -126,7 +141,7 @@ namespace telef::align {
         result->pca_model = in->pca_model;
         result->fx = in->fx;
         result->fy = in->fy;
-        result->transformation = in->transformation;
+        result->transformation = eigenTrans * in->transformation;
 
         return result;
     }

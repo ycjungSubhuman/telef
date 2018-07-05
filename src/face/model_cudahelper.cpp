@@ -76,21 +76,42 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
     cudaFree(scanPointCloud.scanPoints_d);
 }
 
-void allocParamsToCUDADevice(C_Params *params, int numParams) {
-    CUDA_CHECK(cudaMalloc((void **)(&params->params_d), numParams*sizeof(float)));
-    float *zero = new float[numParams]{0,};
-    params->numParams = numParams;
+void allocParamsToCUDADevice(C_Params *params, int numa, int numt, int numu) {
+    CUDA_CHECK(cudaMalloc((void **)(&params->faParams_d), numa*sizeof(float)));
+    float *zeroA = new float[numa]{0,};
+    params->numa = numa;
 
-    updateParamsInCUDADevice(*params, zero, numParams);
-    delete[] zero;
+    CUDA_CHECK(cudaMalloc((void **)(&params->ftParams_d), numt*sizeof(float)));
+    params->ftParams_h = new float[numt]{0,};
+    params->numt = numt;
+
+    CUDA_CHECK(cudaMalloc((void **)(&params->fuParams_d), numu*sizeof(float)));
+    params->fuParams_h = new float[numu]{0,};
+    params->numu = numu;
+
+    updateParams(*params, zeroA, numa, params->ftParams_h, numt, params->fuParams_h, numu);
+    delete[] zeroA;
 }
 
-void updateParamsInCUDADevice(const C_Params params, const float * const paramsIn, int numParams) {
-    CUDA_CHECK(cudaMemcpy((void*)params.params_d, paramsIn, numParams*sizeof(float), cudaMemcpyHostToDevice));
+void updateParams(const C_Params params,
+                  const float *const aIn, int numa,
+                  const float *const tIn, int numt,
+                  const float *const uIn, int numu) {
+    CUDA_CHECK(cudaMemcpy((void*)params.faParams_d, aIn, numa*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)params.ftParams_d, tIn, numt*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)params.fuParams_d, uIn, numu*sizeof(float), cudaMemcpyHostToDevice));
+
+    memcpy((void*)params.ftParams_h, tIn, numt*sizeof(float));
+    memcpy((void*)params.fuParams_h, uIn, numu*sizeof(float));
 }
 
 void freeParamsCUDA(C_Params params) {
-    cudaFree(params.params_d);
+    CUDA_CHECK(cudaFree(params.faParams_d));
+    CUDA_CHECK(cudaFree(params.ftParams_d));
+    CUDA_CHECK(cudaFree(params.fuParams_d));
+
+    delete[] params.ftParams_h;
+    delete[] params.fuParams_h;
 }
 
 void allocPositionCUDA(float **position_d, int dim) {
@@ -98,6 +119,6 @@ void allocPositionCUDA(float **position_d, int dim) {
 }
 
 void freePositionCUDA(float *position_d) {
-    cudaFree(position_d);
+    CUDA_CHECK(cudaFree(position_d));
 }
 

@@ -35,8 +35,11 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud);
  *
  * If update is true, doesn't malloc. uses previously allocated address
  */
-void allocParamsToCUDADevice(C_Params *params, int numParams);
-void updateParamsInCUDADevice(const C_Params params, const float * const paramsIn, int numParams);
+void allocParamsToCUDADevice(C_Params *params, int numa, int numt, int numu);
+void updateParams(const C_Params params,
+                  const float *const aIn, int numa,
+                  const float *const tIn, int numt,
+                  const float *const uIn, int numu);
 void freeParamsCUDA(C_Params params);
 
 void allocPositionCUDA(float **position_d, int dim);

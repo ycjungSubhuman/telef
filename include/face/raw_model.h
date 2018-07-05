@@ -27,6 +27,14 @@ typedef struct C_ScanPointCloud {
 } C_ScanPointCloud;
 
 typedef struct C_Params {
-    float *params_d;
-    int numParams;
+    float *faParams_d;
+    float *ftParams_d;
+    float *fuParams_d;
+
+    float *ftParams_h;
+    float *fuParams_h;
+
+    int numa;
+    int numt;
+    int numu;
 } C_Params;

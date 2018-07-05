@@ -106,9 +106,9 @@ C_PcaDeformModel _glob_model;
 static void calc_position(float *position, C_PcaDeformModel model,
                           const float *t, const float *u, const float *a, bool apply_rigid_transform=true) {
     C_Params a_params;
-    a_params.numParams = model.rank;
-    CUDA_CHECK(cudaMalloc((void**)(&a_params.params_d), model.rank*sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(a_params.params_d, a, model.rank*sizeof(float), cudaMemcpyHostToDevice));
+    a_params.numa = model.rank;
+    CUDA_CHECK(cudaMalloc((void**)(&a_params.faParams_d), model.rank*sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(a_params.faParams_d, a, model.rank*sizeof(float), cudaMemcpyHostToDevice));
     float *position_before_transform_d;
     float *position_before_transform_h = (float*)malloc(model.dim*sizeof(float));
     CUDA_CHECK(cudaMalloc((void**)(&position_before_transform_d), model.dim*sizeof(float)));
@@ -120,7 +120,7 @@ static void calc_position(float *position, C_PcaDeformModel model,
     }
     CUDA_CHECK(cudaMemcpy(position_before_transform_h, position_before_transform_d,
                           model.dim*sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaFree(a_params.params_d));
+    CUDA_CHECK(cudaFree(a_params.faParams_d));
     CUDA_CHECK(cudaFree(position_before_transform_d));
 
     // calculate rotation

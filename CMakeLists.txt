@@ -73,6 +73,7 @@ add_library(telef
 		include/util/convert_arr.h
 		include/face/model_cudahelper.h
 		include/face/raw_model.h
+		include/util/transform.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -92,7 +93,7 @@ add_library(telef
         src/util/fake_frame_record_device.cpp
         src/io/landmark.cpp
 		src/face/model_cudahelper.cpp
-		)
+		src/util/transform.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -129,10 +130,12 @@ add_library(cutelef STATIC
 		include/face/cu_model_kernel.h
 		include/util/cudautil.h
 		include/align/cu_loss.h
+		include/util/transform.h
 		src/util/cu_quaternion.cu
 		src/face/cu_model_kernel.cu
 		src/align/cu_loss.cu
-		include/util/cu_reduce.h include/util/cu_array.h)
+		include/util/cu_reduce.h include/util/cu_array.h
+		src/util/transform.cpp)
 
 target_include_directories(cutelef
 		PUBLIC ${CUDA_INCLUDE_DIRS}

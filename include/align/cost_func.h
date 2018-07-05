@@ -10,6 +10,9 @@
 #include "type.h"
 #include "util/convert_arr.h"
 
+#define TRANSLATE_COEFF 3
+#define ROTATE_COEFF 3
+
 namespace {
     using namespace telef::face;
     using namespace telef::types;
@@ -171,13 +174,13 @@ namespace telef::align{
     };
 
     template<unsigned long CoeffRank>
-    class PCAGPULandmarkDistanceFunctor : public ceres::SizedCostFunction<1, CoeffRank> {
+    class PCAGPULandmarkDistanceFunctor : public ceres::SizedCostFunction<1, CoeffRank, TRANSLATE_COEFF, ROTATE_COEFF> {
     public:
         PCAGPULandmarkDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud) :
                 c_deformModel(c_deformModel),
                 c_scanPointCloud(c_scanPointCloud)
         {
-            allocParamsToCUDADevice(&c_params, CoeffRank);
+            allocParamsToCUDADevice(&c_params, CoeffRank, TRANSLATE_COEFF, ROTATE_COEFF);
             allocPositionCUDA(&position_d, c_deformModel.dim);
         }
 
@@ -190,18 +193,26 @@ namespace telef::align{
                               double* residuals,
                               double** jacobians) const {
             float fresiduals[1];
-            float fparams[CoeffRank];
-            float fjacobians[CoeffRank];
+            float faParams[CoeffRank];
+            float ftParams[TRANSLATE_COEFF];
+            float fuParams[ROTATE_COEFF];
+            float faJacobians[CoeffRank];
+            float ftJacobians[TRANSLATE_COEFF];
+            float fuJacobians[ROTATE_COEFF];
 
             // According to ceres-solver documentation, jacobians and jacobians[i] can be null depending on
             // optimization methods. if either is null, we don't have to compute jacobian
-            bool isJacobianRequired = jacobians != nullptr && jacobians[0] != nullptr;
+            // FIXME: Change to indicate which one to calcualte
+            bool isJacobianRequired = jacobians != nullptr && (jacobians[0] != nullptr || jacobians[1] != nullptr || jacobians[2] != nullptr);
 
             // Copy to float array
-            convertArray(parameters[0], fparams, CoeffRank);
-            updateParamsInCUDADevice(c_params, fparams, CoeffRank);
+            convertArray(parameters[0], faParams, CoeffRank);
+            convertArray(parameters[1], ftParams, TRANSLATE_COEFF);
+            convertArray(parameters[2], fuParams, ROTATE_COEFF);
 
-            calculateLoss(fresiduals, fjacobians, position_d,
+            updateParams(c_params, faParams, CoeffRank, ftParams, TRANSLATE_COEFF, fuParams, ROTATE_COEFF);
+
+            calculateLoss(fresiduals, faJacobians, ftJacobians, fuJacobians, position_d,
                           c_params, c_deformModel, c_scanPointCloud, isJacobianRequired);
 
             //Test cuda calculated positions
@@ -221,7 +232,9 @@ namespace telef::align{
 //            convertArray(fjacobians, jacobians[0], CoeffRank);
 
             if (isJacobianRequired) {
-                convertArray(fjacobians, jacobians[0], CoeffRank);
+                convertArray(faJacobians, jacobians[0], CoeffRank);
+                convertArray(faJacobians, jacobians[1], TRANSLATE_COEFF);
+                convertArray(faJacobians, jacobians[2], ROTATE_COEFF);
 //                std::cout << "Jacobi: ";
 //                for (int i = 1; i < CoeffRank; i++) {
 //                    std::cout << " " << jacobians[0][i];
