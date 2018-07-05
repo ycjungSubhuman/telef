@@ -53,7 +53,7 @@ float warpReduceSum(float val) {
 __inline__ __device__
 float blockReduceSum(float val) {
 
-    static __shared__ int shared[32]; // SFFared mem for 32 partial sums
+    static __shared__ float shared[32]; // SFFared mem for 32 partial sums
     int lane = threadIdx.x % warpSize;
     int wid = threadIdx.x / warpSize;
 
@@ -81,14 +81,12 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
     // grid-striding loop
     for (int i = start_index; i < deformModel.dim; i += stride) {
 
-        //printf("_calculateVertexPosition %d\n", i);
-        position_d[i] = 0;;
+        position_d[i] = 0;
         for (int j = 0; j < deformModel.rank; j++) {
-            position_d[i] +=
-                    params.params_d[j] * deformModel.deformBasis_d[i + colDim * j]
-                    + deformModel.mean_d[i]
-                    + deformModel.ref_d[i];
+            position_d[i] += params.params_d[j] * deformModel.deformBasis_d[i + colDim * j];
         }
+
+        position_d[i] += deformModel.mean_d[i] + deformModel.ref_d[i];
     }
 }
 
@@ -130,9 +128,6 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *p
 
         float squaredNorm = 0.0;
 
-//        printf("pos[%d]: %.6f, %.6f %.6f\n", posIdx, position_d[3 * posIdx], position_d[3 * posIdx+1], position_d[3 * posIdx+2]);
-//        printf("scan[%d]: %.6f, %.6f %.6f\n", scanIdx, scanPoints_d[3 * scanIdx], scanPoints_d[3 * scanIdx+1], scanPoints_d[3 * scanIdx+2]);
-
 
         for (int i = 0; i < 3; i++) {
             squaredNorm += ptSubt[i] * ptSubt[i];
@@ -140,9 +135,7 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *p
 
         res += landmarkCoeff * squaredNorm;
 
-//        printf("res[%d]: %.6f\n", posIdx, res);
-
-        if (isJacobianRequired) { ;
+        if (isJacobianRequired) {
             for (int j = 0; j < deformB_row; j++) {
                 float basis[3] = {deformBasis_d[colDim * j + 3 * posIdx + 0],  // x @ col j
                                   deformBasis_d[colDim * j + 3 * posIdx + 1],  // y @ col j
@@ -153,22 +146,14 @@ void _calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *p
                 for (int k = 0; k < 3; k++) {
                     sum += ptSubt[k] * basis[k];
                 }
-//                printf("basis[%d]: %.6f\n", colDim * j + 3 * posIdx + 0, deformBasis_d[colDim * j + 3 * posIdx + 0]);
-//                printf("basis[%d]: %.6f\n", colDim * j + 3 * posIdx + 1, deformBasis_d[colDim * j + 3 * posIdx + 1]);
-//                printf("basis[%d]: %.6f\n", colDim * j + 3 * posIdx + 2, deformBasis_d[colDim * j + 3 * posIdx + 2]);
-//
-//                printf("sum[%d]: %.6f\n", j, sum);
 
                 float jacobi = -2 * landmarkCoeff * sum;
-
-//                printf("jacobi[%d]: %.6f\n", j, jacobi);
 
                 // Reduce Jacobians across across block
                 jacobi = blockReduceSum(jacobi);
 
                 // Add partial sum into atomic output, only do it once per block
                 if (threadIdx.x == 0) {
-//                    printf("Reduced jacobi[%d]: %.6f\n", j, jacobi);
                     atomicAdd(&jacobian_d[j], jacobi/numLmks);
                 }
             }
