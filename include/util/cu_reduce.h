@@ -153,12 +153,17 @@ void repeatedLinearSum(const float *in, const float *coeffs, float *out, size_t 
         threads_needed = 1024;
     }
 
+    float *temp;
+    if (blocks_needed != 1) {
+        const int dimGrid = ((blocks_needed + 31) / 32) * 32;
+        CUDA_CHECK(cudaMalloc((void **) (&temp), dimGrid * sizeof(float)));
+    }
+
     for(int i=0; i<num_repeat; i++) {
         const int dimBlock = ((threads_needed + 31) / 32) * 32;
 
         if (blocks_needed != 1) {
             const int dimGrid = ((blocks_needed + 31) / 32) * 32;
-            float *temp = (float*)malloc(dimGrid*sizeof(float));
             deviceReduceKernelLinearSum <<< dimGrid, dimBlock >>> (in, coeffs + (N * i), temp, N);
             deviceReduceKernelLinearSum <<< 1, dimGrid >>> (in, coeffs + (N * i), out + i, N);
             CHECK_ERROR_MSG("Kernel Error");
@@ -167,6 +172,10 @@ void repeatedLinearSum(const float *in, const float *coeffs, float *out, size_t 
             deviceReduceKernelLinearSum <<< dimGrid, dimBlock >>> (in, coeffs + (N * i), out + i, N);
             CHECK_ERROR_MSG("Kernel Error");
         }
+    }
+
+    if (blocks_needed != 1) {
+        CUDA_CHECK(cudaFree(temp));
     }
 }
 
