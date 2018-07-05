@@ -30,10 +30,6 @@ void calc_numerical_diff(float *result, func *calc_func,
     float *x2 = (float*)malloc(param_dim*sizeof(float));
     float *f1 = (float*)malloc(val_dim*sizeof(float));
     float *f2= (float*)malloc(val_dim*sizeof(float));
-    printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!x0\n");
-    for(int i=0; i<param_dim; i++) {
-        printf("%f\n", x0[i]);
-    }
 
     for (int i=0; i<param_dim; i++) {
         for (int j=0; j<param_dim; j++) {
@@ -54,11 +50,8 @@ void calc_numerical_diff(float *result, func *calc_func,
             }
         }
 
-        printf("------------------------f2");
         (*calc_func)(f2, x2);
-        printf("------------------------f1");
         (*calc_func)(f1, x1);
-        printf("f1: %f / f2: %f\n", f1[0], f2[0]);
 
         for (int j=0; j<val_dim; j++) {
             result[val_dim*i + j] = (double)(f2[j] - f1[j]) / (2.0f * h);
@@ -70,86 +63,3 @@ void calc_numerical_diff(float *result, func *calc_func,
     free(f1);
     free(f2);
 }
-
-/**
- * Calculate difference between analytic differentiation and numeric differentiation
- *
- * Tests on various parameters starting from (initial_value, initial_value ...)
- *
- * example ) 2D parameter case
- *
- *  initial_value
- *  |
- *  V
- *  *---delta---*---delta---*---delta---* ...
- *  |           |           |
- *  delta     delta       delta
- *  |           |           |
- *  *---delta---*---delta---*---delta---* ...
- *  ...
- *
- *  (Total number of grid intersections '*') = width^param_dim
- *
- * @param diff_d                output matrix. width^param_dim * val_dim*param_dim
- *                              stores element wise differnce btw analytic and numeric derivatives
- * @param calc_analytic_diff    function pointer for calculating analytic differentiation
- * @param calc_function_value   function pointer for calculating function value
- * @param initial_value         initial parameter value
- * @param delta                 parameter perturbation amount
- * @param param_dim             parameter dimension
- * @param val_dim               functino value dimension(number of elements calculated from calc_function_value)
- * @param width                 parameter grid intersection count for each dimension
- */
-__global__
-void calc_diff_analytic_numeric(float *diff_d,
-                                func *calc_analytic_diff,
-                                func *calc_function_value,
-                                float initial_value, float delta,
-                                int param_dim, int val_dim,
-                                const int width) {
-    int d = (blockIdx.x * blockDim.x + threadIdx.x);
-    int *inds = (int*)malloc(param_dim*sizeof(int));
-    float *x = (float*)malloc(param_dim*sizeof(float));
-
-    // Setup index and function parameter
-    for(int i=param_dim-1; i>=0; i--) {
-        inds[i] = d % width;
-        d /= width;
-        x[i] = initial_value + inds[i]*delta;
-    }
-
-    float *numeric = (float*)malloc(param_dim*val_dim*sizeof(float));
-    float *analytic = (float*)malloc(param_dim*val_dim*sizeof(float));
-
-    calc_numerical_diff(numeric, calc_function_value, 1e-4, val_dim, param_dim, x);
-    (*calc_analytic_diff)(analytic, x);
-
-    int diff_index=0;
-    for (int i=0; i<param_dim; i++) {
-        diff_index = (diff_index + inds[i])*width;
-    }
-
-    for (int i=0; i<3*3*3; i++) {
-        diff_d[diff_index + i] = analytic[i] - numeric[i];
-    }
-
-    if (diff_index==0) {
-        printf("Analytic(27 samples): ");
-        for (int i=0; i<3*3*3; i++) {
-            printf("%f/", analytic[i]);
-        }
-        printf("\n");
-
-        printf("Numeric(27 samples): ");
-        for (int i=0; i<3*3*3; i++) {
-            printf("%f/", numeric[i]);
-        }
-        printf("\n");
-    }
-
-    free(inds);
-    free(x);
-    free(numeric);
-    free(analytic);
-}
-

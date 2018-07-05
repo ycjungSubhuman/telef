@@ -68,5 +68,5 @@ void calc_mse_lmk(float *mse_d, const float *position_d, C_ScanPointCloud scan);
  * @param scan
  */
 void calc_derivatives_lmk(float *de_dt_d, float *de_du_d, float *de_da_d,
-                          const float *u_d, const float *position_d,
+                          const float *u_d, const float *position_before_tarnsform_d, const float *position_d,
                           C_PcaDeformModel model, C_ScanPointCloud scan);

@@ -95,8 +95,8 @@ static void calc_de_du_lmk(float *de_du_d,
     dim3 dimThread = dim3(static_cast<unsigned int>(3 * scan.numLmks), 3);
     _calc_dx_m_du_lmk<<<1, dimThread>>>(dx_m_du, u_d, position_d, scan.numLmks, scan);
 
-    const int numReductionThread = ((scan.numLmks*3 + 31) / 32) * 32;
     repeatedLinearSum(error_cache_d, dx_m_du, de_du_d, 3*scan.numLmks, 3);
+    scale_array<<<1,3>>>(de_du_d, 3, -2.0f);
 
     CUDA_CHECK(cudaFree(dx_m_du));
 }
@@ -129,14 +129,13 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, C_
 
 static void calc_de_da_lmk(float *de_da_d,
                            const float *error_cache_d, const float *u_d,
-                           const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan) {
+                           C_PcaDeformModel model, C_ScanPointCloud scan) {
     float *dx_m_da; // concatenation of (dx_m_da1, dx_m_da2, ..., dx_m_daN)
     CUDA_CHECK(cudaMalloc((void**)(&dx_m_da), model.rank*3*scan.numLmks*sizeof(float)));
 
     dim3 dimThread(static_cast<unsigned int>(scan.numLmks * 3), static_cast<unsigned int>(model.rank));
     _calc_dx_da_lmk<<<1, dimThread>>>(dx_m_da, u_d, scan.numLmks, model, scan);
 
-    const int numReductionThread = ((scan.numLmks*3 + 31) / 32) * 32;
     repeatedLinearSum(error_cache_d, dx_m_da, de_da_d, 3*scan.numLmks, model.rank);
     scale_array<<<1, model.rank>>>(de_da_d, model.rank, -2.0f);
 
@@ -150,7 +149,7 @@ void calc_mse_lmk(float *mse_d, const float *position_d, C_ScanPointCloud scan) 
 
 
 void calc_derivatives_lmk(float *de_dt_d, float *de_du_d, float *de_da_d,
-                          const float *u_d, const float *position_d,
+                          const float *u_d, const float *position_before_tarnsform_d, const float *position_d,
                           C_PcaDeformModel model, C_ScanPointCloud scan) {
     float *error_cache_d;
     CUDA_CHECK(cudaMalloc((void**)(&error_cache_d), 3*scan.numLmks*sizeof(float)));
@@ -158,9 +157,9 @@ void calc_derivatives_lmk(float *de_dt_d, float *de_du_d, float *de_da_d,
 
     calc_de_dt_lmk(de_dt_d, error_cache_d, scan.numLmks);
     scale_array<<<1,3>>>(de_dt_d, 3, 1.0f/scan.numLmks);
-    calc_de_du_lmk(de_du_d, error_cache_d, u_d, position_d, scan);
+    calc_de_du_lmk(de_du_d, error_cache_d, u_d, position_before_tarnsform_d, scan);
     scale_array<<<1,3>>>(de_du_d, 3, 1.0f/scan.numLmks);
-    calc_de_da_lmk(de_da_d, error_cache_d, u_d, position_d, model, scan);
+    calc_de_da_lmk(de_da_d, error_cache_d, u_d, model, scan);
     scale_array<<<1,model.rank>>>(de_da_d, model.rank, 1.0f/scan.numLmks);
 
     CUDA_CHECK(cudaFree(error_cache_d));

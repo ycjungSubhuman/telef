@@ -104,7 +104,7 @@ C_ScanPointCloud _glob_scan;
 C_PcaDeformModel _glob_model;
 
 static void calc_position(float *position, C_PcaDeformModel model,
-                          const float *t, const float *u, const float *a) {
+                          const float *t, const float *u, const float *a, bool apply_rigid_transform=true) {
     C_Params a_params;
     a_params.numParams = model.rank;
     CUDA_CHECK(cudaMalloc((void**)(&a_params.params_d), model.rank*sizeof(float)));
@@ -113,6 +113,11 @@ static void calc_position(float *position, C_PcaDeformModel model,
     float *position_before_transform_h = (float*)malloc(model.dim*sizeof(float));
     CUDA_CHECK(cudaMalloc((void**)(&position_before_transform_d), model.dim*sizeof(float)));
     calculateVertexPosition(position_before_transform_d, a_params, model);
+    if(!apply_rigid_transform) {
+        CUDA_CHECK(cudaMemcpy(position, position_before_transform_d,
+                              model.dim*sizeof(float), cudaMemcpyDeviceToHost));
+        return;
+    }
     CUDA_CHECK(cudaMemcpy(position_before_transform_h, position_before_transform_d,
                           model.dim*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaFree(a_params.params_d));
@@ -188,7 +193,7 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     // get numerical differentiation
     func f = &_calc_loss;
     printf("NUMERICALLLLLLL\n");
-    calc_numerical_diff(numerical, &f, 0.1f, 1, (3+3+num_a), param);
+    calc_numerical_diff(numerical, &f, 0.01f, 1, (3+3+num_a), param);
 
     ////////////// Calculate analytic derivative
     float *de_dt_d;
@@ -196,29 +201,39 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     float *de_da_d;
     float *u_d;
     float *position_d;
+    float *position_before_transform_d;
 
     CUDA_CHECK(cudaMalloc((void**)(&de_dt_d), 3*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&de_du_d), 3*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&de_da_d), num_a*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&u_d), 3*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&position_d), model.dim*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&position_before_transform_d), model.dim*sizeof(float)));
 
     // calculate mesh vertex position again
     // (we are doing it in _calc_loss, but I didn't want to copy them back from it)
+    float *position_before_transform = (float*)malloc(model.dim*sizeof(float));
     float *position = (float*)malloc(model.dim*sizeof(float));
     printf("ANALYTICALLLLLLL\n");
-    calc_position(position, model, t, u, a);
+    calc_position(position_before_transform, model, t, u, a, false);
+    calc_position(position, model, t, u, a, true);
 
     CUDA_CHECK(cudaMemcpy(u_d, u, 3*sizeof(float), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(position_d, position, model.dim*sizeof(float), cudaMemcpyHostToDevice));
-    calc_derivatives_lmk(de_dt_d, de_du_d, de_da_d, u_d, position_d, model, scan);
+    CUDA_CHECK(cudaMemcpy(position_before_transform_d, position_before_transform, model.dim*sizeof(float), cudaMemcpyHostToDevice));
+    calc_derivatives_lmk(de_dt_d, de_du_d, de_da_d, u_d, position_before_transform_d, position_d, model, scan);
     CUDA_CHECK(cudaMemcpy(analytic, de_dt_d, 3*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(analytic+3, de_du_d, 3*sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(analytic+6, de_da_d, num_a*sizeof(float), cudaMemcpyDeviceToHost));
 
     // clean up
     free(position);
+    CUDA_CHECK(cudaFree(de_dt_d));
+    CUDA_CHECK(cudaFree(de_du_d));
+    CUDA_CHECK(cudaFree(de_da_d));
+    CUDA_CHECK(cudaFree(u_d));
     CUDA_CHECK(cudaFree(position_d));
+    CUDA_CHECK(cudaFree(position_before_transform_d));
     for(int i=0; i<6+model.rank; i++) {
         printf("%f %f\n", numerical[i], analytic[i]);
     }

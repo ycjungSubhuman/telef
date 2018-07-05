@@ -132,7 +132,7 @@ void deviceReduceKernelLinearSum(const float *in1, const float *in2, float *out,
  *  out[1] = (in[0]*coeff[N+0] + in[1]*coeff[N+1] + ... + in[N-1]*coeff[N+N-1])
  *  out[2] = (in[0]*coeff[2*N+0] + in[1]*coeff[2*N+1] + ... + in[N-1]*coeff[2*N+N-1])
  *  ...
- *  out[num_repeat-1] = (in[0]*coeff[(num_repeat-1)*N+0] + ... + in[N-1]*coeff[(num_repeat)*N+N-1])
+ *  out[num_repeat-1] = (in[0]*coeff[(num_repeat-1)*N+0] + ... + in[N-1]*coeff[(num_repeat-1)*N+N-1])
  *
  * @param in                input data array in device
  * @param out               output data array in device
