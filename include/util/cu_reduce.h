@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <math_functions.h>
 #include <device_launch_parameters.h>
+#include "cudautil.h"
 
 __inline__ __device__
 float warpReduceSum(float val) {
@@ -160,9 +161,11 @@ void repeatedLinearSum(const float *in, const float *coeffs, float *out, size_t 
             float *temp = (float*)malloc(dimGrid*sizeof(float));
             deviceReduceKernelLinearSum <<< dimGrid, dimBlock >>> (in, coeffs + (N * i), temp, N);
             deviceReduceKernelLinearSum <<< 1, dimGrid >>> (in, coeffs + (N * i), out + i, N);
+            CHECK_ERROR_MSG("Kernel Error");
         } else {
             const int dimGrid = blocks_needed;
             deviceReduceKernelLinearSum <<< dimGrid, dimBlock >>> (in, coeffs + (N * i), out + i, N);
+            CHECK_ERROR_MSG("Kernel Error");
         }
     }
 }

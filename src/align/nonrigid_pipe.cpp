@@ -116,7 +116,7 @@ namespace telef::align {
         /* Run Optimization */
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
-        std::cout << summary.BriefReport() << std::endl;
+        std::cout << summary.FullReport() << std::endl;
         std::cout << "coeff[0]: " << coeff[0] << std::endl;
 
         float fu[3];

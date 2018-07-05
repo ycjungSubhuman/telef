@@ -42,17 +42,19 @@ static void calc_error_exp_cache_lmk(float *mse_d, const float *position_d, C_Sc
     // Reduce sum to get MSE
     const int numReductionThread = ((scan.numLmks*3 + 31) / 32) * 32;
     deviceReduceKernel<<<1, numReductionThread>>>(error_exp_cache_d, mse_d, scan.numLmks*3);
+    CHECK_ERROR_MSG("Kernel Error");
     CUDA_CHECK(cudaFree(error_exp_cache_d));
 }
 
 static void calc_de_dt_lmk(float *de_dt_d, const float *error_cache_d, int num_point) {
-    const int numReductionThread = ((num_point*3 + 31) / 32) * 32;
+    const int numReductionThread = ((num_point + 31) / 32) * 32;
     // error_cache_d is an array of x y z x y z x y z ...
     // We calculate sums for x components, y component, z component
     // and save it to de_dt_d[0], de_dt_d[1], de_dt_d[2] respectively
-    deviceReduceKernelStrideScaled<<<1, numReductionThread>>>(error_cache_d, de_dt_d, 3*num_point, 3, -2.0f);
-    deviceReduceKernelStrideScaled<<<1, numReductionThread>>>(error_cache_d+1, de_dt_d+1, 3*num_point, 3, -2.0f);
-    deviceReduceKernelStrideScaled<<<1, numReductionThread>>>(error_cache_d+2, de_dt_d+2, 3*num_point, 3, -2.0f);
+    deviceReduceKernelStrideScaled<<<1, numReductionThread>>>(error_cache_d, de_dt_d, num_point, 3, -2.0f);
+    deviceReduceKernelStrideScaled<<<1, numReductionThread>>>(error_cache_d+1, de_dt_d+1, num_point, 3, -2.0f);
+    deviceReduceKernelStrideScaled<<<1, numReductionThread>>>(error_cache_d+2, de_dt_d+2, num_point, 3, -2.0f);
+    CHECK_ERROR_MSG("Kernel Error");
 }
 
 __global__
@@ -134,11 +136,17 @@ static void calc_de_da_lmk(float *de_da_d,
     float *dx_m_da; // concatenation of (dx_m_da1, dx_m_da2, ..., dx_m_daN)
     CUDA_CHECK(cudaMalloc((void**)(&dx_m_da), model.rank*3*scan.numLmks*sizeof(float)));
 
-    dim3 dimThread(static_cast<unsigned int>(scan.numLmks * 3), static_cast<unsigned int>(model.rank));
-    _calc_dx_da_lmk<<<1, dimThread>>>(dx_m_da, u_d, scan.numLmks, model, scan);
+    const int numThread = 32;
+    const int xRequired = scan.numLmks * 3;
+    const int yRequired = model.rank;
+    dim3 dimBlock((xRequired + numThread - 1) / numThread, (yRequired + numThread - 1) / numThread);
+    dim3 dimThread(numThread, numThread);
+    _calc_dx_da_lmk<<<dimBlock, dimThread>>>(dx_m_da, u_d, scan.numLmks, model, scan);
+    CHECK_ERROR_MSG("Kernel Error");
 
     repeatedLinearSum(error_cache_d, dx_m_da, de_da_d, 3*scan.numLmks, model.rank);
     scale_array<<<1, model.rank>>>(de_da_d, model.rank, -2.0f);
+    CHECK_ERROR_MSG("Kernel Error");
 
     CUDA_CHECK(cudaFree(dx_m_da));
 }
@@ -146,6 +154,7 @@ static void calc_de_da_lmk(float *de_da_d,
 void calc_mse_lmk(float *mse_d, const float *position_d, C_ScanPointCloud scan) {
     calc_error_exp_cache_lmk(mse_d, position_d, scan, 2.0f);
     scale_array<<<1,1>>>(mse_d, 1, 1.0f/scan.numLmks);
+    CHECK_ERROR_MSG("Kernel Error");
 }
 
 
@@ -155,13 +164,17 @@ void calc_derivatives_lmk(float *de_dt_d, float *de_du_d, float *de_da_d,
     float *error_cache_d;
     CUDA_CHECK(cudaMalloc((void**)(&error_cache_d), 3*scan.numLmks*sizeof(float)));
     _calc_error_exp_cache_lmk<<<1, 3*scan.numLmks>>>(error_cache_d, position_d, scan, 1.0f);
+    CHECK_ERROR_MSG("Kernel Error");
 
     calc_de_dt_lmk(de_dt_d, error_cache_d, scan.numLmks);
     scale_array<<<1,3>>>(de_dt_d, 3, 1.0f/scan.numLmks);
+    CHECK_ERROR_MSG("Kernel Error");
     calc_de_du_lmk(de_du_d, error_cache_d, u_d, position_before_tarnsform_d, scan);
     scale_array<<<1,3>>>(de_du_d, 3, 1.0f/scan.numLmks);
+    CHECK_ERROR_MSG("Kernel Error");
     calc_de_da_lmk(de_da_d, error_cache_d, u_d, model, scan);
     scale_array<<<1,model.rank>>>(de_da_d, model.rank, 1.0f/scan.numLmks);
+    CHECK_ERROR_MSG("Kernel Error");
 
     CUDA_CHECK(cudaFree(error_cache_d));
 }

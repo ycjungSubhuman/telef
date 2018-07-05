@@ -97,6 +97,7 @@ void calculateVertexPosition(float *position_d, const C_Params params, const C_P
     int idim = deformModel.dim;
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
+
     _calculateVertexPosition << < dimGrid, dimBlock >> > (position_d, params, deformModel);
     CHECK_ERROR_MSG("Kernel Error");
 }
@@ -347,9 +348,13 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
 
     // Calculate residual_d, jacobian_d for Landmarks
     calc_mse_lmk(residual_d, result_pos_d, scanPointCloud);
+    CHECK_ERROR_MSG("Kernel Error");
 
-    calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, faJacobian_d,
-                         params.fuParams_h, align_pos_d, position_d, deformModel, scanPointCloud);
+    if (isJacobianRequired) {
+        calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, faJacobian_d,
+                             params.fuParams_d, align_pos_d, result_pos_d, deformModel, scanPointCloud);
+        CHECK_ERROR_MSG("Kernel Error");
+    }
 
 //    std::cout << "calculateLoss: calculateLandmarkLoss (Jacobi:"<<isJacobianRequired<<")" << std::endl;
     //calculateLandmarkLoss(residual_d, faJacobian_d, align_pos_d, deformModel, scanPointCloud, isJacobianRequired);

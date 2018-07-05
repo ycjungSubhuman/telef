@@ -204,7 +204,7 @@ namespace telef::align{
             // optimization methods. if either is null, we don't have to compute jacobian
             // FIXME: Change to indicate which one to calcualte
             bool isJacobianRequired = jacobians != nullptr && (jacobians[0] != nullptr || jacobians[1] != nullptr || jacobians[2] != nullptr);
-
+            std::cout << "isJacobianRequired? " << isJacobianRequired << std::endl;
             // Copy to float array
             convertArray(parameters[0], faParams, CoeffRank);
             convertArray(parameters[1], ftParams, TRANSLATE_COEFF);
@@ -233,8 +233,8 @@ namespace telef::align{
 
             if (isJacobianRequired) {
                 convertArray(faJacobians, jacobians[0], CoeffRank);
-                convertArray(faJacobians, jacobians[1], TRANSLATE_COEFF);
-                convertArray(faJacobians, jacobians[2], ROTATE_COEFF);
+                convertArray(ftJacobians, jacobians[1], TRANSLATE_COEFF);
+                convertArray(fuJacobians, jacobians[2], ROTATE_COEFF);
 //                std::cout << "Jacobi: ";
 //                for (int i = 1; i < CoeffRank; i++) {
 //                    std::cout << " " << jacobians[0][i];

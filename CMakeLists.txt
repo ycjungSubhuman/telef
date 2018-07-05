@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O2 ${OpenMP_CXX_FLAGS} -march=n
 set(CUDA_GENCODES
 		"-gencode arch=compute_52,code=sm_52 -gencode arch=compute_61,code=sm_61 "
 		)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES} -g -G")
 message("omomo" ${CMAKE_CUDA_FLAGS})
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 
