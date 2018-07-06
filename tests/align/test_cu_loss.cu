@@ -330,3 +330,19 @@ TEST(LmkLossDerivative, DifferentByOne) {
     free_model(model);
     free_scan(scan);
 }
+
+TEST(LmkLossDerivative, Rank2) {
+    float basis[] = {1.0f, 2.0f, 1.0f,
+                     1.0f, 2.0f, 3.0f};
+    float scan_points[] = {1.0f, 3.0f, 2.0f};
+    int lmks[] = {0};
+    float t[3] = {0.0f, 0.0f, 0.0f};
+    float u[3] = {0.0f, 0.5f, 0.5f};
+    float a[2] = {1.0f, 2.0f};
+
+    C_PcaDeformModel model = get_mock_model(basis, 2, 3, lmks, 1);
+    C_ScanPointCloud scan = get_mock_scan(scan_points, 1, lmks, 1);
+    test_lmk_derivatives(model, scan, t, u, a);
+    free_model(model);
+    free_scan(scan);
+}

@@ -121,9 +121,9 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, C_
             const int k = ind / 3;
             float sum = 0.0f;
 
-            sum += r[0*3 + i] * model.deformBasis_d[3*scan.validModelLmks_d[k] + 0];
-            sum += r[1*3 + i] * model.deformBasis_d[3*scan.validModelLmks_d[k] + 1];
-            sum += r[2*3 + i] * model.deformBasis_d[3*scan.validModelLmks_d[k] + 2];
+            sum += r[0*3 + i] * model.deformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 0];
+            sum += r[1*3 + i] * model.deformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 1];
+            sum += r[2*3 + i] * model.deformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 2];
 
             dx_m_da[j*(num_points*3) + k*3 + i] = sum;
         }
