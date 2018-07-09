@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cuda_runtime_api.h>
+#include <cublas_v2.h>
 #include "face/raw_model.h"
 
 __global__
@@ -60,6 +61,8 @@ void cudaMatMul(float *matC,
  *      + (L2 norm of parameters)
  */
 void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float *fuJacobian,
-                   float *position_d, const C_Params params,
+                   float *position_d,
+                   cublasHandle_t cnpHandle,
+                   const C_Params params,
                    const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired);

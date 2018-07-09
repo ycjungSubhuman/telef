@@ -176,9 +176,11 @@ namespace telef::align{
     template<unsigned long CoeffRank>
     class PCAGPULandmarkDistanceFunctor : public ceres::SizedCostFunction<1, CoeffRank, TRANSLATE_COEFF, ROTATE_COEFF> {
     public:
-        PCAGPULandmarkDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud) :
+        PCAGPULandmarkDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
+                                      cublasHandle_t cublasHandle) :
                 c_deformModel(c_deformModel),
-                c_scanPointCloud(c_scanPointCloud)
+                c_scanPointCloud(c_scanPointCloud),
+                cublasHandle(cublasHandle)
         {
             allocParamsToCUDADevice(&c_params, CoeffRank, TRANSLATE_COEFF, ROTATE_COEFF);
             allocPositionCUDA(&position_d, c_deformModel.dim);
@@ -212,7 +214,7 @@ namespace telef::align{
 
             updateParams(c_params, faParams, CoeffRank, ftParams, TRANSLATE_COEFF, fuParams, ROTATE_COEFF);
 
-            calculateLoss(fresiduals, faJacobians, ftJacobians, fuJacobians, position_d,
+            calculateLoss(fresiduals, faJacobians, ftJacobians, fuJacobians, position_d, cublasHandle,
                           c_params, c_deformModel, c_scanPointCloud, isJacobianRequired);
 
             //Test cuda calculated positions
@@ -238,6 +240,7 @@ namespace telef::align{
         }
     private:
 
+        cublasHandle_t cublasHandle;
         C_PcaDeformModel c_deformModel;
         C_ScanPointCloud c_scanPointCloud;
         C_Params c_params;

@@ -61,12 +61,60 @@ namespace telef::align {
     }
 
     PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe()
-            :isModelInitialized(false) {}
+            :isModelInitialized(false) {
+        if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
+            throw std::runtime_error("Cublas could not be initialized");
+        }
+    }
+
+    PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that) {
+        this->isModelInitialized = false;
+        if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
+            throw std::runtime_error("Cublas could not be initialized");
+        }
+    }
+
+    PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(PCAGPUNonRigidFittingPipe &&that) noexcept {
+        this->isModelInitialized = that.isModelInitialized;
+        this->c_deformModel = that.c_deformModel;
+        this->cublasHandle = that.cublasHandle;
+    }
+
+    PCAGPUNonRigidFittingPipe& PCAGPUNonRigidFittingPipe::operator=(const PCAGPUNonRigidFittingPipe &that) {
+        if(&that != this) {
+            if(isModelInitialized) {
+                freeModelCUDA(c_deformModel);
+                this->isModelInitialized = false;
+            }
+            cublasDestroy(cublasHandle);
+            if (cublasCreate(&this->cublasHandle) != CUBLAS_STATUS_SUCCESS) {
+                throw std::runtime_error("Cublas could not be initialized");
+            }
+        }
+
+        return *this;
+    }
+
+    PCAGPUNonRigidFittingPipe& PCAGPUNonRigidFittingPipe::operator=(PCAGPUNonRigidFittingPipe &&that) {
+        if(&that != this) {
+            if(isModelInitialized) {
+                freeModelCUDA(c_deformModel);
+                this->isModelInitialized = false;
+            }
+            cublasDestroy(cublasHandle);
+            this->isModelInitialized = that.isModelInitialized;
+            this->c_deformModel = that.c_deformModel;
+            this->cublasHandle = that.cublasHandle;
+        }
+
+        return *this;
+    }
 
     PCAGPUNonRigidFittingPipe::~PCAGPUNonRigidFittingPipe() {
         if(isModelInitialized) {
             freeModelCUDA(c_deformModel);
         }
+        cublasDestroy(cublasHandle);
     }
 
     boost::shared_ptr<PCANonRigidFittingResult>
@@ -102,7 +150,7 @@ namespace telef::align {
         /* Setup Optimizer */
 
         std::cout << "Fitting PCA model to scan..." << std::endl;
-        auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud);
+        auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
         double coeff[RANK] = {0,};
         double t[3] = {0,};
@@ -145,4 +193,5 @@ namespace telef::align {
 
         return result;
     }
+
 }

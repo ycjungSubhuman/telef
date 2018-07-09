@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <cublas_v2.h>
 
 #include "io/pipe.h"
 #include "align/rigid.h"
@@ -29,9 +30,14 @@ namespace telef::align {
     class PCAGPUNonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {
     public:
         PCAGPUNonRigidFittingPipe();
+        PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that);
+        PCAGPUNonRigidFittingPipe(PCAGPUNonRigidFittingPipe &&that) noexcept;
+        PCAGPUNonRigidFittingPipe& operator=(const PCAGPUNonRigidFittingPipe &that);
+        PCAGPUNonRigidFittingPipe& operator=(PCAGPUNonRigidFittingPipe &&that);
         virtual ~PCAGPUNonRigidFittingPipe();
     private:
         C_PcaDeformModel c_deformModel;
+        cublasHandle_t cublasHandle;
         bool isModelInitialized;
         boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in) override;
     };

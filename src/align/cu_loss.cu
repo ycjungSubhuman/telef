@@ -6,8 +6,6 @@
 #include "util/cu_array.h"
 #include "util/cudautil.h"
 
-#define KERNEL_SIZE 512
-
 /**
  * Calculate error^exponent of each element of each point, resulting in 3XN mse_cache_d
  *

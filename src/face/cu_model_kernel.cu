@@ -221,23 +221,16 @@ void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPo
     }
 }
 
-void cudaMatMul(float *matC,
+void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                 const float *matA, int aRows, int aCols,
                 const float *matB, int bRows, int bCols) {
 
-    cublasHandle_t cnpHandle;
-    cublasStatus_t status = cublasCreate(&cnpHandle);
-
     // Don't know what this is (scalar?) but examples use this
+    cublasStatus_t status;
     const float alf = 1;
     const float bet = 0;
     const float *alpha = &alf;
     const float *beta = &bet;
-
-    if (status != CUBLAS_STATUS_SUCCESS) {
-        printf("CUBLAS initialization failed, %s\n", _cublasGetErrorEnum(status).c_str());
-        return;
-    }
 
     /* Perform operation using cublas, inputs/outputs are col-major.
      * vector and array were originally Eigen which defaults to Col-major
@@ -257,14 +250,12 @@ void cudaMatMul(float *matC,
 
     if (status != CUBLAS_STATUS_SUCCESS) {
         printf("MatMul Failed, %s\n", _cublasGetErrorEnum(status).c_str());
-        cublasDestroy(cnpHandle);
         return;
     }
-
-    cublasDestroy(cnpHandle);
 }
 
-void applyRigidAlignment(float *align_pos_d, const float *position_d, const float *transMat, int N) {
+void applyRigidAlignment(float *align_pos_d, cublasHandle_t cnpHandle,
+                         const float *position_d, const float *transMat, int N) {
     int size_homo = 4 * N;
     int size = 3 * N;
     dim3 grid = ((N + BLOCKSIZE - 1) / BLOCKSIZE);
@@ -286,7 +277,7 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d, const floa
      * n is cols for B and C
      * k is cols for A and rows for B*/
     // Matrix Mult C = α op ( A ) op ( B ) + β C
-    cudaMatMul(matC, transMat, 4, 4, matB, 4, N);
+    cudaMatMul(matC, cnpHandle, transMat, 4, 4, matB, 4, N);
 
 // hnormalized point (x,y,z)
     _hnormalizedPositions << < grid, block >> > (align_pos_d, matC, N);
@@ -299,6 +290,7 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d, const floa
 }
 
 void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float *fuJacobian, float *position_d,
+                   cublasHandle_t cnpHandle,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired) {
 
@@ -333,7 +325,7 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
 
     // Rigid alignment
 //    std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
-    applyRigidAlignment(align_pos_d, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);
+    applyRigidAlignment(align_pos_d, cnpHandle, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);
     float r[9];
     float trans[16];
     float *trans_d;
@@ -343,7 +335,7 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
     create_trans_from_tu(trans, params.ftParams_h, r);
     CUDA_CHECK(cudaMemcpy(trans_d, trans, 16* sizeof(float), cudaMemcpyHostToDevice));
 
-    applyRigidAlignment(result_pos_d, align_pos_d, trans_d, deformModel.dim / 3);
+    applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
     //cudaDeviceSynchronize();
 
     // Calculate residual_d, jacobian_d for Landmarks
