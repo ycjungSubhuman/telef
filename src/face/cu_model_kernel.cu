@@ -333,7 +333,7 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
 
     // Rigid alignment
 //    std::cout << "calculateLoss: applyRigidAlignment" << std::endl;
-    applyRigidAlignment(align_pos_d, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3.0);
+    applyRigidAlignment(align_pos_d, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);
     float r[9];
     float trans[16];
     float *trans_d;
@@ -343,7 +343,7 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
     create_trans_from_tu(trans, params.ftParams_h, r);
     CUDA_CHECK(cudaMemcpy(trans_d, trans, 16* sizeof(float), cudaMemcpyHostToDevice));
 
-    applyRigidAlignment(result_pos_d, align_pos_d, trans_d, deformModel.dim / 3.0);
+    applyRigidAlignment(result_pos_d, align_pos_d, trans_d, deformModel.dim / 3);
     //cudaDeviceSynchronize();
 
     // Calculate residual_d, jacobian_d for Landmarks
