@@ -86,11 +86,12 @@ namespace telef::align {
         std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
         // Filter out non-detected Deformable Model landmarks
         std::vector<int> validLmks = in->pca_model->getLandmarks();
-        std::vector<int>::reverse_iterator riter = in->fittingSuite->invalid3dLandmarks.rbegin();
+        auto riter = in->fittingSuite->invalid3dLandmarks.rbegin();
+        pcl::io::savePLYFile("captured.ply", *in->rawCloud);
         while (riter != in->fittingSuite->invalid3dLandmarks.rend())
         {
-            std::vector<int>::iterator iter_data = validLmks.begin() + *riter;
-            iter_data = validLmks.erase(iter_data);
+            auto iter_data = validLmks.begin() + *riter;
+            validLmks.erase(iter_data);
             riter++;
         }
 
@@ -110,7 +111,6 @@ namespace telef::align {
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
-        options.trust_region_strategy_type = ceres::TrustRegionStrategyType::DOGLEG;
         options.function_tolerance = 1e-4;
 
         /* Run Optimization */
@@ -136,7 +136,7 @@ namespace telef::align {
 
         result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, RANK).cast<float>() * 1;
 
-        std::cout << "Fitted: " << result->fitCoeff << std::endl;
+        std::cout << "Fitted: " << std::endl << result->fitCoeff << std::endl;
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->fx = in->fx;

@@ -49,10 +49,10 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
     CUDA_CHECK(cudaMalloc((void**)(&scanPointCloud->rigidTransform_d), rigidTransform.size()*sizeof(float)));
 
     float *scanPoints = new float[scan->points.size()*3];
-    for (int i=0; i<scan->points.size(); i+=3) {
-        scanPoints[i] = scan->points[i].x;
-        scanPoints[i+1] = scan->points[i].y;
-        scanPoints[i+2] = scan->points[i].z;
+    for (int i=0; i<scan->points.size(); i++) {
+        scanPoints[3*i] = scan->points[i].x;
+        scanPoints[3*i+1] = scan->points[i].y;
+        scanPoints[3*i+2] = scan->points[i].z;
     }
 
     CUDA_CHECK(cudaMemcpy((void*)scanPointCloud->scanPoints_d,

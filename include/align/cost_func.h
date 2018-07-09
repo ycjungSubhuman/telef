@@ -220,26 +220,18 @@ namespace telef::align{
             cudaMemcpy(position, position_d, c_deformModel.dim*sizeof(float), cudaMemcpyDeviceToHost);
             Eigen::Map<Eigen::VectorXf> cuda_m(position, c_deformModel.dim);
 
-
-
-//            std::cout << "Cuda position: " << cuda_m[0] << std::endl;
-
-
             // Copy back to double array
             convertArray(fresiduals, residuals, 1);
-
-//            std::cout << "Residuals: " << residuals[0] << std::endl;
-//            convertArray(fjacobians, jacobians[0], CoeffRank);
 
             if (isJacobianRequired) {
                 convertArray(faJacobians, jacobians[0], CoeffRank);
                 convertArray(ftJacobians, jacobians[1], TRANSLATE_COEFF);
                 convertArray(fuJacobians, jacobians[2], ROTATE_COEFF);
-//                std::cout << "Jacobi: ";
-//                for (int i = 1; i < CoeffRank; i++) {
-//                    std::cout << " " << jacobians[0][i];
-//                }
-//                std::cout << std::endl;
+
+                /*
+                for(int j=0; j<CoeffRank; j++) {
+                    jacobians[0][j] += 2*parameters[0][j];
+                }*/
             }
 
             return true;

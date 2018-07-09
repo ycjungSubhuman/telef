@@ -57,8 +57,7 @@ static C_ScanPointCloud get_mock_scan(const float *fake_scan, int num_points, co
     scan.numPoints = num_points;
 
     //Setup Landmark
-    // Always use the first point as landmark 0
-    scan.numLmks = 1;
+    scan.numLmks = num_lmk;
     CUDA_CHECK(cudaMalloc((void**)(&scan.scanLmks_d), num_lmk*sizeof(int)));
     CUDA_CHECK(cudaMemcpy(scan.scanLmks_d, fake_lmks, num_lmk*sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMalloc((void**)(&scan.validModelLmks_d), num_lmk*sizeof(int)));
@@ -127,13 +126,6 @@ static void calc_position(float *position, C_PcaDeformModel model,
     float rotation[9];
     calc_r_from_u(rotation, u);
 
-    printf ("u: %f %f %f\n", u[0], u[1], u[2]);
-
-    printf("rotation: \n");
-    for(int i=0; i<3; i++) {
-        printf("%f %f %f\n", rotation[3*i], rotation[3*i+1], rotation[3*i+2]);
-    }
-
     // apply rotation
     cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
                 3, model.dim/3, 3, 1.0f,
@@ -142,10 +134,8 @@ static void calc_position(float *position, C_PcaDeformModel model,
                 0.0f, position, 3);
     free(position_before_transform_h);
     // apply transpose
-    printf("position: \n");
     for(int i=0; i<model.dim; i++) {
         position[i] += t[i%3];
-        printf("%f\n", position[i]);
     }
 }
 
@@ -165,7 +155,6 @@ void _calc_loss(float *value, const float *param) {
     CUDA_CHECK(cudaMalloc((void**)(&value_d), sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&position_d), _glob_model.dim*sizeof(float)));
     CUDA_CHECK(cudaMemcpy(position_d, position, _glob_model.dim*sizeof(float), cudaMemcpyHostToDevice));
-    printf("position_d: %f %f %f\n", position[0], position[1], position[2]);
     free(position);
     calc_mse_lmk(value_d, position_d, _glob_scan);
     // copy back the result to host
@@ -175,8 +164,8 @@ void _calc_loss(float *value, const float *param) {
     CUDA_CHECK(cudaFree(position_d));
 }
 
-static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
-                                 const float *t, const float *u, const float *a) {
+static void _test_lmk_derivatives(float *de_dt, float *de_du, float *de_da, C_PcaDeformModel model, C_ScanPointCloud scan,
+                                 const float *t, const float *u, const float *a, bool copyback) {
     const int num_a = model.rank;
     ////////////// Calculate numerical derivative
     float *param = (float*)malloc((3+3+num_a)*sizeof(float));
@@ -192,7 +181,6 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
 
     // get numerical differentiation
     func f = &_calc_loss;
-    printf("NUMERICALLLLLLL\n");
     calc_numerical_diff(numerical, &f, 0.01f, 1, (3+3+num_a), param);
 
     ////////////// Calculate analytic derivative
@@ -214,7 +202,6 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     // (we are doing it in _calc_loss, but I didn't want to copy them back from it)
     float *position_before_transform = (float*)malloc(model.dim*sizeof(float));
     float *position = (float*)malloc(model.dim*sizeof(float));
-    printf("ANALYTICALLLLLLL\n");
     calc_position(position_before_transform, model, t, u, a, false);
     calc_position(position, model, t, u, a, true);
 
@@ -235,22 +222,36 @@ static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
     CUDA_CHECK(cudaFree(position_d));
     CUDA_CHECK(cudaFree(position_before_transform_d));
     for(int i=0; i<6+model.rank; i++) {
-        printf("%f %f\n", numerical[i], analytic[i]);
+        printf("Numeric[%d]: %f Analytic[%d], %f\n", i, numerical[i], i, analytic[i]);
     }
 
     /////////////// Compare btw two
     printf("de_dts\n");
     for(int i=0; i<3; i++) {
-        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.001f);
+        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.01f);
     }
     printf("de_dus\n");
     for(int i=3; i<6; i++) {
-        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.001f);
+        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.01f);
     }
     printf("de_das\n");
     for(int i=6; i<6+model.rank; i++) {
-        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.001f);
+        ASSERT_LE(fabs(numerical[i]-analytic[i]), 0.01f);
     }
+
+    if(copyback) {
+        memcpy(de_dt, analytic, 3 * sizeof(float));
+        memcpy(de_du, analytic + 3, 3 * sizeof(float));
+        memcpy(de_da, analytic + 6, num_a * sizeof(float));
+    }
+}
+static void test_lmk_derivatives(C_PcaDeformModel model, C_ScanPointCloud scan,
+                                 const float *t, const float *u, const float *a) {
+    _test_lmk_derivatives(nullptr, nullptr, nullptr, model, scan, t, u, a, false);
+}
+static void test_lmk_derivatives_copyback(float *de_dt, float *de_du, float *de_da, C_PcaDeformModel model, C_ScanPointCloud scan,
+                                 const float *t, const float *u, const float *a) {
+    _test_lmk_derivatives(de_dt, de_du, de_da, model, scan, t, u, a, true);
 }
 
 TEST(LmkLoss, ExactlySame) {
@@ -346,3 +347,103 @@ TEST(LmkLossDerivative, Rank2) {
     free_model(model);
     free_scan(scan);
 }
+
+TEST(LmkLossDerivative, Rank2TwoPoints) {
+    float basis[] = {1.0f, 2.0f, 1.0f, 3.0f, 2.0f, 1.0f,
+                     1.0f, 2.0f, 3.0f, 1.0f, 4.0f, 2.0f};
+    float scan_points[] = {1.0f, 3.0f, 2.0f,
+                           1.0f, 2.0f, 3.0f};
+    int lmks[] = {0, 1};
+    float t[3] = {0.0f, 0.0f, 0.0f};
+    float u[3] = {0.0f, 0.5f, 0.5f};
+    float a[2] = {1.0f, 2.0f};
+
+    C_PcaDeformModel model = get_mock_model(basis, 2, 6, lmks, 2);
+    C_ScanPointCloud scan = get_mock_scan(scan_points, 2, lmks, 2);
+    test_lmk_derivatives(model, scan, t, u, a);
+    free_model(model);
+    free_scan(scan);
+}
+
+TEST(LmkLossDerivative, DifferentPointCoordDifferentDerivative) {
+    float basis[] = {1.0f, 2.0f, 1.0f};
+    float scan_points1[] = {1.0f, 3.0f, 2.0f};
+    float scan_points2[] = {10.0f, 30.0f, 20.0f};
+    int lmks[] = {0};
+    float t[3] = {0.0f, 0.0f, 0.0f};
+    float u[3] = {0.0f, 0.5f, 0.5f};
+    float a[2] = {1.0f, 2.0f};
+
+    float de_dt1[3];
+    float de_du1[3];
+    float de_da1[1];
+    float de_dt2[3];
+    float de_du2[3];
+    float de_da2[1];
+
+    C_PcaDeformModel model = get_mock_model(basis, 2, 3, lmks, 1);
+    C_ScanPointCloud scan1 = get_mock_scan(scan_points1, 1, lmks, 1);
+    C_ScanPointCloud scan2 = get_mock_scan(scan_points2, 1, lmks, 1);
+
+    test_lmk_derivatives_copyback(de_dt1, de_du1, de_da1, model, scan1, t, u, a);
+    test_lmk_derivatives_copyback(de_dt2, de_du2, de_da2, model, scan2, t, u, a);
+
+    for(int i=0; i<3; i++) {
+        ASSERT_GE(fabs(de_dt1[i]-de_dt2[i]), 0.001f);
+    }
+
+    for(int i=0; i<3; i++) {
+        ASSERT_GE(fabs(de_du1[i]-de_du2[i]), 0.001f);
+    }
+
+    for(int i=0; i<1; i++) {
+        ASSERT_GE(fabs(de_da1[i]-de_da2[i]), 0.001f);
+    }
+
+    free_model(model);
+    free_scan(scan1);
+    free_scan(scan2);
+}
+
+TEST(LmkLossDerivative, DifferentPointNumberDifferentDerivative) {
+    float basis[] = {1.0f, 2.0f, 1.0f, 3.0f, 2.0f, 1.0f};
+    float scan_points1[] = {1.0f, 3.0f, 2.0f,
+                            1.0f, 1.0f, 1.0f};
+    float scan_points2[] = {1.0f, 3.0f, 2.0f,
+                            10.0f, 10.0f, 10.0f};
+    int lmks[] = {0,1};
+    float t[3] = {0.0f, 0.0f, 0.0f};
+    float u[3] = {0.0f, 0.5f, 0.5f};
+    float a[1] = {1.0f};
+
+    float de_dt1[3];
+    float de_du1[3];
+    float de_da1[1];
+    float de_dt2[3];
+    float de_du2[3];
+    float de_da2[1];
+
+    C_PcaDeformModel model = get_mock_model(basis, 1, 6, lmks, 2);
+    C_ScanPointCloud scan1 = get_mock_scan(scan_points1, 2, lmks, 2);
+    C_ScanPointCloud scan2 = get_mock_scan(scan_points2, 2, lmks, 2);
+
+    test_lmk_derivatives_copyback(de_dt1, de_du1, de_da1, model, scan1, t, u, a);
+    test_lmk_derivatives_copyback(de_dt2, de_du2, de_da2, model, scan2, t, u, a);
+
+    for(int i=0; i<3; i++) {
+        ASSERT_GE(fabs(de_dt1[i]-de_dt2[i]), 0.001f);
+    }
+
+    for(int i=0; i<3; i++) {
+        ASSERT_GE(fabs(de_du1[i]-de_du2[i]), 0.001f);
+    }
+
+    for(int i=0; i<1; i++) {
+        ASSERT_GE(fabs(de_da1[i]-de_da2[i]), 0.001f);
+    }
+
+    free_model(model);
+    free_scan(scan1);
+    free_scan(scan2);
+}
+
