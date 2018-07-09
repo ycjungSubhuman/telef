@@ -38,7 +38,8 @@ void calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *po
  * @param deformModel
  * @param scanPointCloud
  */
-void applyRigidAlignment(float *align_pos_d, const float *position_d, const float *transMat, int N);
+void applyRigidAlignment(float *align_pos_d, cublasHandle_t cnpHandle,
+                         const float *position_d, const float *transMat, int N);
 
 /**
  * GPU MatrixMultiply using Cublas
@@ -50,9 +51,9 @@ void applyRigidAlignment(float *align_pos_d, const float *position_d, const floa
  * @param bCols
  * @param bRows
  */
-void cudaMatMul(float *matC,
-                const float *matA_host, int aCols, int aRows,
-                const float *matB, int bCols, int bRows);
+void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
+                const float *matA, int aRows, int aCols,
+                const float *matB, int bRows, int bCols);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model

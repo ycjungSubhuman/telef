@@ -99,14 +99,17 @@ TEST(NonRigidPCATest, CublasMatrixMultipy) {
     const float expect[] = {5.0, 5.0};
 
     float output[2];
-    float *input_d, *output_d;
+    float *input_d, *output_d, *mat_d;
     cudaMalloc((void**)&input_d, 2 * sizeof(float));
     cudaMalloc((void**)&output_d, 2 * sizeof(float));
+    cudaMalloc((void**)&mat_d, 4 * sizeof(float));
 
     cudaMemcpy(input_d, input, 2 * sizeof(float), cudaMemcpyHostToDevice);
-
-    cudaMatMul(output_d, translationMat, 2, 2, input_d, 2, 1);
-
+    cudaMemcpy(mat_d, translationMat, 4 * sizeof(float), cudaMemcpyHostToDevice);
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    cudaMatMul(output_d, handle, mat_d, 2, 2, input_d, 2, 1);
+    cublasDestroy(handle);
     cudaMemcpy(output, output_d, 2 * sizeof(float), cudaMemcpyDeviceToHost);
 
     EXPECT_THAT(output,ElementsAreArray(expect));
@@ -131,13 +134,18 @@ TEST(NonRigidPCATest, CublasMatrixMultipy2) {
     const float expect[] = {-1, -2, 0, 1, -2, -4, 0, 2};
 
     float output[4*2];
-    float *input_d, *output_d;
+    float *input_d, *output_d, *mat_d;
     cudaMalloc((void**)&input_d, 4*2 * sizeof(float));
     cudaMalloc((void**)&output_d, 4*2 * sizeof(float));
+    cudaMalloc((void**)&mat_d, 4*4 * sizeof(float));
 
     cudaMemcpy(input_d, input, 4*2 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(mat_d, translationMat, 4*4 * sizeof(float), cudaMemcpyHostToDevice);
 
-    cudaMatMul(output_d, translationMat, 4, 4, input_d, 4, 2);
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    cudaMatMul(output_d, handle, mat_d, 4, 4, input_d, 4, 2);
+    cublasDestroy(handle);
 
     cudaMemcpy(output, output_d, 4*2 * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -161,13 +169,18 @@ TEST(NonRigidPCATest, RigidAlign) {
     const float expect[] = {-1, -2, 0};
 
     float output[3];
-    float *input_d, *output_d;
+    float *input_d, *output_d, *mat_d;
     cudaMalloc((void**)&input_d, 3 * sizeof(float));
     cudaMalloc((void**)&output_d, 3 * sizeof(float));
+    cudaMalloc((void**)&mat_d, 4*4 * sizeof(float));
 
     cudaMemcpy(input_d, input, 3 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(mat_d, translationMat, 4*4 * sizeof(float), cudaMemcpyHostToDevice);
 
-    applyRigidAlignment(output_d, input_d, translationMat, 1);
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    applyRigidAlignment(output_d, handle, input_d, mat_d, 1);
+    cublasDestroy(handle);
 
     cudaMemcpy(output, output_d, 3 * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -191,13 +204,18 @@ TEST(NonRigidPCATest, RigidAlign2) {
     const float expect[] = {0.324345, -0.378901, 0.884254};
 
     float output[3];
-    float *input_d, *output_d;
+    float *input_d, *output_d, *mat_d;
     cudaMalloc((void**)&input_d, 3 * sizeof(float));
     cudaMalloc((void**)&output_d, 3 * sizeof(float));
+    cudaMalloc((void**)&mat_d, 4*4 * sizeof(float));
 
     cudaMemcpy(input_d, input, 3 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(mat_d, translationMat, 4*4 * sizeof(float), cudaMemcpyHostToDevice);
 
-    applyRigidAlignment(output_d, input_d, translationMat, 1);
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    applyRigidAlignment(output_d, handle, input_d, mat_d, 1);
+    cublasDestroy(handle);
 
     cudaMemcpy(output, output_d, 3 * sizeof(float), cudaMemcpyDeviceToHost);
 

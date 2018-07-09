@@ -164,15 +164,6 @@ namespace telef::align{
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     };
 
-    template<int CoeffRank>
-    class PCAAnalyticFunctor : public ceres::SizedCostFunction<1, CoeffRank> {
-
-        virtual bool Evaluate(double const* const* parameters,
-                              double* residuals,
-                              double** jacobians) const {
-        }
-    };
-
     template<unsigned long CoeffRank>
     class PCAGPULandmarkDistanceFunctor : public ceres::SizedCostFunction<1, CoeffRank, TRANSLATE_COEFF, ROTATE_COEFF> {
     public:
