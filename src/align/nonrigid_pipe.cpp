@@ -102,7 +102,7 @@ namespace telef::align {
             riter++;
         }
 
-        //in->transformation = Eigen::Matrix4f::Identity();
+        in->transformation = Eigen::Matrix4f::Identity();
 
         C_ScanPointCloud c_scanPointCloud;
         loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fittingSuite->rawCloudLmkIdx,
@@ -114,13 +114,12 @@ namespace telef::align {
         auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
         double coeff[RANK] = {0,};
-        double t[3] = {0,};
-        double u[3] = {0,};
-        problem.AddResidualBlock(cost, NULL, coeff, t, u);
+        double t[3] = {0.0,0.0, 0.1};
+        double u[3] = {0.0,};
+        problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), coeff, t, u);
+        problem.AddResidualBlock(new RegularizerFunctor(RANK, 0.0001), NULL, coeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
-        options.function_tolerance = 0.0;
-        options.trust_region_strategy_type = ceres::DOGLEG;
         options.max_num_iterations = 1000;
 
         /* Run Optimization */

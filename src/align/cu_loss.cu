@@ -63,7 +63,7 @@ static void calc_de_dt_lmk(float *de_dt_d, int num_points) {
     dim3 dimThread = dim3(static_cast<unsigned int>(3 * num_points), 3);
     _calc_dx_m_dt_lmk<<<1, dimThread>>>(de_dt_d, num_points);
     CHECK_ERROR_MSG("Kernel Error");
-    //scale_array<<<1,num_points*3*3>>>(de_dt_d, num_points*3*3, -1.0f/sqrtf(num_points));
+    scale_array<<<1,num_points*3*3>>>(de_dt_d, num_points*3*3, 1.0f/sqrtf(num_points));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -98,7 +98,7 @@ static void calc_de_du_lmk(float *de_du_d,
     dim3 dimThread = dim3(static_cast<unsigned int>(3 * scan.numLmks), 3);
     _calc_dx_m_du_lmk<<<1, dimThread>>>(de_du_d, u_d, position_d, scan.numLmks, scan);
     CHECK_ERROR_MSG("Kernel Error");
-    //scale_array<<<1,scan.numLmks*3*3>>>(de_du_d, scan.numLmks*3*3, -1.0f/sqrtf(scan.numLmks));
+    scale_array<<<1,scan.numLmks*3*3>>>(de_du_d, scan.numLmks*3*3, 1.0f/sqrtf(scan.numLmks));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -140,13 +140,13 @@ static void calc_de_da_lmk(float *de_da_d,
 
     int dimBlock2 = (xRequired*yRequired + 512 - 1) / 512;
     int dimThread2 = 512;
-    //scale_array<<<dimBlock2,dimThread2>>>(de_da_d, scan.numLmks*3*model.rank, -1.0f/sqrtf(scan.numLmks));
+    scale_array<<<dimBlock2,dimThread2>>>(de_da_d, scan.numLmks*3*model.rank, 1.0f/sqrtf(scan.numLmks));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
 void calc_residual_lmk(float *residual_d, const float *position_d, C_ScanPointCloud scan) {
     calc_error_lmk(residual_d, position_d, scan);
-    //scale_array<<<1,scan.numLmks*3>>>(residual_d, scan.numLmks*3, 1.0f/sqrtf(scan.numLmks));
+    scale_array<<<1,scan.numLmks*3>>>(residual_d, scan.numLmks*3, 1.0f/sqrtf(scan.numLmks));
     CHECK_ERROR_MSG("Kernel Error");
 }
 

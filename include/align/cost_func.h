@@ -104,4 +104,37 @@ namespace telef::align{
         C_Params c_params;
         float *position_d;
     };
+
+    class RegularizerFunctor : public ceres::CostFunction {
+    public:
+        RegularizerFunctor(int coeffSize, double multiplier) : coeffSize(coeffSize), multiplier(multiplier) {
+            set_num_residuals(coeffSize);
+            mutable_parameter_block_sizes()->push_back(coeffSize);
+        }
+
+        virtual bool Evaluate(double const* const* parameters,
+                              double* residuals,
+                              double** jacobians) const {
+            double sqrt_lambda = sqrt(multiplier);
+            for (int i=0; i<coeffSize; i++) {
+                residuals[i] = sqrt_lambda*parameters[0][i];
+            }
+            if(jacobians != nullptr) {
+                for(int i=0; i<coeffSize; i++) {
+                    for (int j=0; j<coeffSize; j++) {
+                        if(i==j) {
+                            jacobians[0][coeffSize*j+i] = sqrt_lambda;
+                        }
+                        else {
+                            jacobians[0][coeffSize*j+i] = 0;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+    private:
+        int coeffSize;
+        double multiplier;
+    };
 }
