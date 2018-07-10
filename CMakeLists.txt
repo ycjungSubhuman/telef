@@ -167,8 +167,8 @@ target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
 add_executable(PcaSample app/tools/PcaSample.cpp)
 target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
 
-add_executable(RigidAlighnment app/byproducts/RigidAlighnment.cpp)
-target_link_libraries(RigidAlighnment ${Boost_LIBRARIES} telef)
+add_executable(RigidAlignment app/byproducts/RigidAlignment.cpp)
+target_link_libraries(RigidAlignment ${Boost_LIBRARIES} telef)
 
 add_executable(RigidAlignmentExample app/examples/RigidAlignmentExample.cpp src/io/modelio.cpp)
 target_link_libraries(RigidAlignmentExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
@@ -213,6 +213,4 @@ if (BUILD_TESTS)
 	enable_testing()
 
 	myaddtest(test_cu_quaternion tests/util/test_cu_quaternion.cu)
-	myaddtest(test_cu_loss tests/align/test_cu_loss.cu)
-	myaddtest(test_nonrigid_pca tests/util/test_nonrigid_pca.cu)
 endif()

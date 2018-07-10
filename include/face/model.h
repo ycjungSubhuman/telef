@@ -21,7 +21,7 @@
 #include "io/landmark.h"
 #include "util/eigen_pcl.h"
 
-#define RANK 50
+#define RANK 40
 
 namespace {
     namespace fs = std::experimental::filesystem;

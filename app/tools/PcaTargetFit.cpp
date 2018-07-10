@@ -76,7 +76,7 @@ int main(int ac, const char* const *av) {
 
     po::options_description desc("Captures RGB-D from camera. Generate and write face mesh as ply and obj");
     desc.add_options()
-            ("help,H", "print help message")
+            ("help,H", "print this help message")
             ("model,M", po::value<std::string>(), "specify PCA model path")
             ("output,O", po::value<std::string>(), "specify output PLY file path")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");

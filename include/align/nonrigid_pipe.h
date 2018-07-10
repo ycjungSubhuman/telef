@@ -22,11 +22,6 @@ namespace telef::align {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
-    class PCANonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {
-    private:
-        boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCARigidAlignmentSuite> in) override;
-    };
-
     class PCAGPUNonRigidFittingPipe : public telef::io::Pipe<PCARigidAlignmentSuite, PCANonRigidFittingResult> {
     public:
         PCAGPUNonRigidFittingPipe();

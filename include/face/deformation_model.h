@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include <experimental/filesystem>
-
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/eigen.hpp>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 #include "mesh/mesh.h"
@@ -13,48 +14,15 @@ namespace {
 
     template <int Rank>
     Eigen::Matrix<float, Eigen::Dynamic, Rank> getPCABase(Eigen::MatrixXf data) {
+        cv::Mat input(data.rows(), data.cols(), CV_32F, data.data());
 
-        // Each row is a data. This is to match data matrix dimensions with formulas in Wikipedia.
-        auto d = data.transpose();
-        Eigen::MatrixXf centered = d.rowwise() - d.colwise().mean();
-        // Fast singlular value computation using devide-and-conquer
-        Eigen::BDCSVD<Eigen::MatrixXf> bdc(centered, Eigen::ComputeThinU | Eigen::ComputeThinV);
-
-        // Sort eigenvectors according to (singular value)^2 / (n -1), which is equal to eigenvalues
-        std::vector<std::pair<float, Eigen::VectorXf>> pairs;
-        if (d.rows() <= d.cols()) { //singular values are shorter than position dimension
-            std::cout << "Singular values are shorter then dimension" << std::endl;
-            pairs.resize(static_cast<unsigned long>(bdc.singularValues().rows()));
-        }
-        else { // singular values are exact match with V
-            std::cout << "Exact match" << std::endl;
-            pairs.resize(static_cast<unsigned long>(d.cols()));
-        }
-        std::cout << "Singluar Value **2" << std::endl;
-        for(unsigned long i=0; i<pairs.size(); i++) {
-            auto s = bdc.singularValues()(i);
-            auto s2 = s*s;
-            std::cout << s2 << ", ";
-            pairs[i] = std::make_pair(
-                    s2, // propertional to eigenvalue (omitted /(n-1))
-                    bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
-        }
-        std::cout << std::endl;
-        std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {return l.first > r.first;});
-
-        Eigen::Matrix<float, Eigen::Dynamic, Rank> result(d.cols(), Rank);
-        for (int i = 0; i < std::min(Rank, static_cast<int>(bdc.singularValues().rows())); i++) {
-            result.col(i).swap(pairs[i].second);
-        }
-
-        // Fill in empty basis if given PCA rank is higher than the rank of the data matrix
-        if (Rank > d.cols()) {
-            std::cout << "WARNING : given rank is higher than number of singular values" << std::endl;
-            for (long i = d.cols(); i < Rank; i++) {
-                result.col(i) = Eigen::VectorXf::Zero(d.cols());
-            }
-        }
-        return result;
+        std::cout << "Converting shits" << std::endl;
+        cv::PCA pca(input, cv::Mat(), 1, Rank);
+        std::cout << pca.eigenvectors.rows << "/" << pca.eigenvectors.cols << std::endl;
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> eigenvectors;
+        cv::cv2eigen(pca.eigenvectors, eigenvectors);
+        Eigen::Ref<Eigen::Matrix<float, Rank, Eigen::Dynamic>> result(eigenvectors);
+        return result.transpose();
     }
 }
 

@@ -15,22 +15,6 @@ void _homogeneousPositions(float *h_position_d, const float *position_d, int nPo
 __global__
 void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPoints);
 
-__global__
-void _calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *position_d,
-                            const float *deformBasis_d, int deformB_row, int deformB_col,
-                            const int *lmks_d, const float *scanPoints_d, const int *scanLmks_d,
-                            int numLmks, const bool isJacobianRequired);
-
-/**
- * Calculate residual and jacobian of the loss function representing Landmark distance btw scan and model
- *
- * Loss = (L2 distance btw corresponding landmarks)
- *      + (L2 norm of parameters)
- */
-void calculateLandmarkLoss(float *residual_d, float *jacobian_d, const float *position_d,
-                           const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                           const bool isJacobianRequired);
-
 /**
  * Applies Transformation matrix on CUDA device model
  * @param align_pos_d
