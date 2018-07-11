@@ -136,7 +136,7 @@ add_library(cutelef STATIC
 		src/util/cu_quaternion.cu
 		src/face/cu_model_kernel.cu
 		src/align/cu_loss.cu
-		include/util/cu_reduce.h include/util/cu_array.h
+		include/util/cu_array.h
 		src/util/transform.cpp)
 
 target_include_directories(cutelef

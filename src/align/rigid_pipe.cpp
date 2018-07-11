@@ -19,7 +19,7 @@ namespace telef::align {
             transformation(Eigen::Matrix4f::Identity(4,4))
     {
         // Generate Mean Face Template
-        meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(RANK));
+        meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(SHAPE_RANK));
 
         // Save initial point cloud for rigid fitting
         initShape = telef::util::convert(meanMesh.position);

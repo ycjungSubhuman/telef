@@ -108,16 +108,16 @@ int main(int ac, const char* const *av) {
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
     auto frontend = std::make_shared<ColorMeshPlyWriteFrontEnd>(outputPath);
 
-    auto nonrigid = PCANonRigidFittingPipe();
+    auto nonrigid = PCAGPUNonRigidFittingPipe();
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
-    std::shared_ptr<ClassifiedMorphableModel<RANK>> cmodel;
+    std::shared_ptr<ClassifiedMorphableModel<SHAPE_RANK>> cmodel;
     auto groups = readGroups(fs::path(groupPath.c_str()));
-    cmodel = std::make_shared<ClassifiedMorphableModel<RANK>>(groups);
+    cmodel = std::make_shared<ClassifiedMorphableModel<SHAPE_RANK>>(groups);
 
-    auto classify = ClassifyMorphableModelPipe<RANK>(*cmodel);
-    auto crigid = ClassifiedRigidFittingPipe<RANK>();
+    auto classify = ClassifyMorphableModelPipe<SHAPE_RANK>(*cmodel);
+    auto crigid = ClassifiedRigidFittingPipe<SHAPE_RANK>();
 
     std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;
     auto pipe2 = compose(classify, crigid, nonrigid, fitting2Projection, colorProjection);

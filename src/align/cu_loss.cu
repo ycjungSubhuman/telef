@@ -2,7 +2,6 @@
 #include <math.h>
 #include "align/cu_loss.h"
 #include "util/cu_quaternion.h"
-#include "util/cu_reduce.h"
 #include "util/cu_array.h"
 #include "util/cudautil.h"
 

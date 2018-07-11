@@ -44,7 +44,7 @@ int main (int argc, char** argv) {
         files.emplace_back(path);
     }
 
-    telef::face::MorphableFaceModel<RANK> model(files, true);
+    telef::face::MorphableFaceModel<SHAPE_RANK> model(files, true);
 
     model.save(fs::path(vm["output"].as<std::string>()));
 

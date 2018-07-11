@@ -111,13 +111,13 @@ namespace telef::align {
         /* Setup Optimizer */
 
         std::cout << "Fitting PCA model to scan..." << std::endl;
-        auto cost = new PCAGPULandmarkDistanceFunctor<RANK>(this->c_deformModel, c_scanPointCloud, cublasHandle);
+        auto cost = new PCAGPULandmarkDistanceFunctor<SHAPE_RANK>(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
-        double coeff[RANK] = {0,};
+        double coeff[SHAPE_RANK] = {0,};
         double t[3] = {0.0,0.0, 0.1};
         double u[3] = {0.0,};
         problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), coeff, t, u);
-        problem.AddResidualBlock(new RegularizerFunctor(RANK, 0.0001), NULL, coeff);
+        problem.AddResidualBlock(new RegularizerFunctor(SHAPE_RANK, 0.0001), NULL, coeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
@@ -142,7 +142,7 @@ namespace telef::align {
 
         auto result = boost::make_shared<PCANonRigidFittingResult>();
 
-        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, RANK).cast<float>() * 1;
+        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, SHAPE_RANK).cast<float>() * 1;
 
         std::cout << "Fitted: " << std::endl << result->fitCoeff << std::endl;
         result->image = in->image;

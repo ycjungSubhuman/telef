@@ -21,7 +21,7 @@
 #include "io/landmark.h"
 #include "util/eigen_pcl.h"
 
-#define RANK 40
+#define SHAPE_RANK 40
 
 namespace {
     namespace fs = std::experimental::filesystem;
@@ -35,7 +35,7 @@ namespace telef::face {
     template <int ShapeRank>
     class MorphableFaceModel {
     private:
-        PCADeformationModel<ShapeRank> deformModel;
+        PCADeformationModel<ShapeRank> shapeModel;
         ColorMesh refMesh;
         std::vector<int> landmarks;
         std::random_device rd;
@@ -60,7 +60,7 @@ namespace telef::face {
                     meshes[i].applyTransform(trans);
                 }
             }
-            deformModel = PCADeformationModel<ShapeRank>(meshes, refMesh);
+            shapeModel = PCADeformationModel<ShapeRank>(meshes, refMesh);
             landmarks = std::vector<int>{1, 2, 3, 4, 5};
         };
 
@@ -74,25 +74,25 @@ namespace telef::face {
             mean.resize(refMesh.position.rows());
             readMat((fileName.string()+".deform.base").c_str(), shapeBase);
             readMat((fileName.string()+".deform.mean").c_str(), mean);
-            deformModel = PCADeformationModel<ShapeRank>(shapeBase, mean);
+            shapeModel = PCADeformationModel<ShapeRank>(shapeBase, mean);
             readLmk((fileName.string()+".lmk").c_str(), landmarks);
         }
 
         /** Save this model to a file */
         void save(fs::path fileName) {
-            writeMat((fileName.string()+".deform.base").c_str(), deformModel.shapeBase);
-            writeMat((fileName.string()+".deform.mean").c_str(), deformModel.mean);
+            writeMat((fileName.string()+".deform.base").c_str(), shapeModel.shapeBase);
+            writeMat((fileName.string()+".deform.mean").c_str(), shapeModel.mean);
             telef::io::ply::writePlyMesh(fileName.string() + ".ref.ply", refMesh);
             writeLmk((fileName.string()+".lmk").c_str(), landmarks);
         }
 
         /* Generate a xyzxyz... position vector using given coefficients */
         Eigen::VectorXf genPosition(Eigen::VectorXf shapeCoeff) {
-            return refMesh.position + deformModel.genDeform(shapeCoeff);
+            return refMesh.position + shapeModel.genDeform(shapeCoeff);
         }
 
         Eigen::VectorXf genPosition(const double * const shapeCoeff, int size) {
-            return refMesh.position + deformModel.genDeform(shapeCoeff, size);
+            return refMesh.position + shapeModel.genDeform(shapeCoeff, size);
         }
 
         /**
@@ -101,7 +101,7 @@ namespace telef::face {
          */
         template <typename T>
         Eigen::Matrix<T, Eigen::Dynamic, 1> genPositionCeres(const T* const shapeCoeff, int size) {
-            return refMesh.position.cast<T>() + deformModel.genDeformCeres(shapeCoeff, size);
+            return refMesh.position.cast<T>() + shapeModel.genDeformCeres(shapeCoeff, size);
         }
 
         ColorMesh genMesh(const double * const shapeCoeff, int size) {
@@ -122,11 +122,11 @@ namespace telef::face {
         }
 
         Eigen::MatrixXf getBasisMatrix() {
-            return deformModel.shapeBase;
+            return shapeModel.shapeBase;
         }
 
         Eigen::VectorXf getMeanDeformation() {
-            return deformModel.mean;
+            return shapeModel.mean;
         }
 
         Eigen::VectorXf getReferenceVector() {

@@ -10,9 +10,8 @@
 #include "type.h"
 
 namespace telef::align {
-
     using PCANonRigidFittingResult = struct PCANonRigidFittingResult {
-        std::shared_ptr<telef::face::MorphableFaceModel<RANK>> pca_model;
+        std::shared_ptr<telef::face::MorphableFaceModel<SHAPE_RANK>> pca_model;
         Eigen::VectorXf fitCoeff;
         telef::types::ImagePtrT image;
         Eigen::Matrix4f transformation;
