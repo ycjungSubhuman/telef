@@ -19,7 +19,10 @@ namespace telef::io::align {
     void PCARigidVisualizerFrontEnd::process(InputPtrT input) {
         auto lmksPtCld = input->fittingSuite->landmark3d;
 
-        ColorMesh meanMesh = input->pca_model->genMesh(Eigen::VectorXf::Zero(150));
+        ColorMesh meanMesh = input->pca_model->genMesh(
+                Eigen::VectorXf::Zero(input->pca_model->getShapeRank()),
+                Eigen::VectorXf::Zero(input->pca_model->getExpressionRank())
+        );
         pcl::PointCloud<pcl::PointXYZ>::Ptr pcaPtCld = telef::util::convert(meanMesh.position);
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>());

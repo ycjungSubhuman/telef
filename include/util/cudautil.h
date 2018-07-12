@@ -3,8 +3,13 @@
 #include <cstdio>
 #include <cstdlib>
 
+#ifdef DEBUG
 #define CUDA_CHECK(errarg)   __checkErrorFunc(errarg, __FILE__, __LINE__)
 #define CHECK_ERROR_MSG(errstr) __checkErrMsgFunc(errstr, __FILE__, __LINE__)
+#else
+#define CUDA_CHECK(arg)   arg
+#define CHECK_ERROR_MSG(str) do {} while (0)
+#endif
 
 inline void __checkErrorFunc(cudaError_t errarg, const char* file,
                              const int line)

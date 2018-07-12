@@ -120,8 +120,8 @@ int main(int ac, const char* const *av) {
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
-    std::shared_ptr<MorphableFaceModel<SHAPE_RANK>> model;
-    model = std::make_shared<MorphableFaceModel<SHAPE_RANK>>(fs::path(modelPath.c_str()));
+    std::shared_ptr<MorphableFaceModel> model;
+    model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
 
     PCARigidFittingPipe rigid = PCARigidFittingPipe(model);
     std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;

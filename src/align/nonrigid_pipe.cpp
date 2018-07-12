@@ -82,11 +82,14 @@ namespace telef::align {
 
         std::cout << "Fitting PCA model GPU" << std::endl;
         if(!isModelInitialized) {
-            auto deformBasis = in->pca_model->getBasisMatrix();
+            auto shapeBasis = in->pca_model->getShapeBasisMatrix();
+            auto expressionBasis = in->pca_model->getExpressionBasisMatrix();
             auto ref = in->pca_model->getReferenceVector();
-            auto mean = in->pca_model->getMeanDeformation();
+            auto meanShapeDeformation = in->pca_model->getMeanShapeDeformation();
+            auto meanExpressionDeformation = in->pca_model->getMeanExpressionDeformation();
             auto landmarks = in->pca_model->getLandmarks();
-            loadModelToCUDADevice(&this->c_deformModel, deformBasis, ref, mean, landmarks);
+            loadModelToCUDADevice(&this->c_deformModel, shapeBasis, expressionBasis, ref,
+                                  meanShapeDeformation, meanExpressionDeformation, landmarks);
             isModelInitialized = true;
         }
 
@@ -111,13 +114,14 @@ namespace telef::align {
         /* Setup Optimizer */
 
         std::cout << "Fitting PCA model to scan..." << std::endl;
-        auto cost = new PCAGPULandmarkDistanceFunctor<SHAPE_RANK>(this->c_deformModel, c_scanPointCloud, cublasHandle);
+        auto cost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
-        double coeff[SHAPE_RANK] = {0,};
-        double t[3] = {0.0,0.0, 0.1};
+        double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
+        double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
+        double t[3] = {0.0,};
         double u[3] = {0.0,};
-        problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), coeff, t, u);
-        problem.AddResidualBlock(new RegularizerFunctor(SHAPE_RANK, 0.0001), NULL, coeff);
+        problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, t, u);
+        problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.shapeRank, 0.0001), NULL, shapeCoeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
@@ -141,10 +145,12 @@ namespace telef::align {
         freeScanCUDA(c_scanPointCloud);
 
         auto result = boost::make_shared<PCANonRigidFittingResult>();
+        result->shapeCoeff =
+                Eigen::Map<Eigen::VectorXd>(shapeCoeff, c_deformModel.shapeRank).cast<float>();
+        result->expressionCoeff =
+                Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
 
-        result->fitCoeff = Eigen::Map<Eigen::VectorXd>(coeff, SHAPE_RANK).cast<float>() * 1;
-
-        std::cout << "Fitted: " << std::endl << result->fitCoeff << std::endl;
+        std::cout << "Fitted: " << std::endl << result->shapeCoeff << std::endl;
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->fx = in->fx;
@@ -153,5 +159,4 @@ namespace telef::align {
 
         return result;
     }
-
 }

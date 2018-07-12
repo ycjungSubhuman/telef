@@ -20,7 +20,7 @@ set(CUDA_GENCODES
 		"-gencode arch=compute_52,code=sm_52 -gencode arch=compute_61,code=sm_61 "
 		)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
-set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -DDEBUG")
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
@@ -95,6 +95,8 @@ add_library(telef
         src/util/fake_frame_record_device.cpp
         src/io/landmark.cpp
 		src/face/model_cudahelper.cpp
+		src/face/model.cpp
+		src/face/deformation_model.cpp
 		src/util/transform.cpp)
 
 target_include_directories(telef
@@ -160,12 +162,6 @@ target_link_libraries(LandmarkProject ${Boost_LIBRARIES} telef)
 add_executable(FaceFeatureDetect app/byproducts/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect telef)
-
-add_executable(PcaTest app/byproducts/PcaTest.cpp)
-target_link_libraries(PcaTest stdc++fs telef ${Boost_LIBRARIES})
-
-add_executable(PcaSample app/tools/PcaSample.cpp)
-target_link_libraries(PcaSample stdc++fs telef ${Boost_LIBRARIES})
 
 add_executable(RigidAlignment app/byproducts/RigidAlignment.cpp)
 target_link_libraries(RigidAlignment ${Boost_LIBRARIES} telef)

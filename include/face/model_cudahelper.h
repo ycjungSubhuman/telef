@@ -16,8 +16,10 @@
 
 /** Loads MorphableFaceModel to GPU Device */
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
-                           const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
-                           const Eigen::VectorXf meanDeformation,
+                           const Eigen::MatrixXf shapeDeformBasis, const Eigen::MatrixXf expressionDeformBasis,
+                           const Eigen::VectorXf ref,
+                           const Eigen::VectorXf meanShapeDeformation, 
+                           const Eigen::VectorXf meanExpressionDeformation,
                            const std::vector<int> lmkInds);
 void freeModelCUDA(C_PcaDeformModel deformModel);
 

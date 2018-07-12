@@ -112,12 +112,12 @@ int main(int ac, const char* const *av) {
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
-    std::shared_ptr<ClassifiedMorphableModel<SHAPE_RANK>> cmodel;
+    std::shared_ptr<ClassifiedMorphableModel> cmodel;
     auto groups = readGroups(fs::path(groupPath.c_str()));
-    cmodel = std::make_shared<ClassifiedMorphableModel<SHAPE_RANK>>(groups);
+    cmodel = std::make_shared<ClassifiedMorphableModel>(groups);
 
-    auto classify = ClassifyMorphableModelPipe<SHAPE_RANK>(*cmodel);
-    auto crigid = ClassifiedRigidFittingPipe<SHAPE_RANK>();
+    auto classify = ClassifyMorphableModelPipe(*cmodel);
+    auto crigid = ClassifiedRigidFittingPipe();
 
     std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;
     auto pipe2 = compose(classify, crigid, nonrigid, fitting2Projection, colorProjection);

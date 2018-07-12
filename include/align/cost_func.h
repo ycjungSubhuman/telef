@@ -21,7 +21,6 @@ namespace {
 
 
 namespace telef::align{
-    template<unsigned long CoeffRank>
     class PCAGPULandmarkDistanceFunctor : public ceres::CostFunction {
     public:
         //TODO: If you are going to copy are move this object, implement 'rule of 5'
@@ -31,17 +30,17 @@ namespace telef::align{
                 c_scanPointCloud(c_scanPointCloud),
                 cublasHandle(cublasHandle)
         {
-            allocParamsToCUDADevice(&c_params, CoeffRank, TRANSLATE_COEFF, ROTATE_COEFF);
+            allocParamsToCUDADevice(&c_params, c_deformModel.shapeRank, TRANSLATE_COEFF, ROTATE_COEFF);
             allocPositionCUDA(&position_d, c_deformModel.dim);
             set_num_residuals(c_scanPointCloud.numLmks*3);
-            mutable_parameter_block_sizes()->push_back(CoeffRank);
+            mutable_parameter_block_sizes()->push_back(c_deformModel.shapeRank);
             mutable_parameter_block_sizes()->push_back(TRANSLATE_COEFF);
             mutable_parameter_block_sizes()->push_back(ROTATE_COEFF);
             fresiduals = new float[c_scanPointCloud.numLmks*3];
-            faParams = new float[CoeffRank];
+            faParams = new float[c_deformModel.shapeRank];
             ftParams = new float[TRANSLATE_COEFF];
             fuParams = new float[ROTATE_COEFF];
-            faJacobians = new float[c_scanPointCloud.numLmks*3*CoeffRank];
+            faJacobians = new float[c_scanPointCloud.numLmks*3*c_deformModel.shapeRank];
             ftJacobians = new float[c_scanPointCloud.numLmks*3*TRANSLATE_COEFF];
             fuJacobians = new float[c_scanPointCloud.numLmks*3*ROTATE_COEFF];
         }
@@ -69,11 +68,11 @@ namespace telef::align{
             bool isJacobianRequired = jacobians != nullptr && (jacobians[0] != nullptr || jacobians[1] != nullptr || jacobians[2] != nullptr);
             std::cout << "isJacobianRequired? " << isJacobianRequired << std::endl;
             // Copy to float array
-            convertArray(parameters[0], faParams, CoeffRank);
+            convertArray(parameters[0], faParams, c_deformModel.shapeRank);
             convertArray(parameters[1], ftParams, TRANSLATE_COEFF);
             convertArray(parameters[2], fuParams, ROTATE_COEFF);
 
-            updateParams(c_params, faParams, CoeffRank, ftParams, TRANSLATE_COEFF, fuParams, ROTATE_COEFF);
+            updateParams(c_params, faParams, c_deformModel.shapeRank, ftParams, TRANSLATE_COEFF, fuParams, ROTATE_COEFF);
 
             calculateLoss(fresiduals, faJacobians, ftJacobians, fuJacobians, position_d, cublasHandle,
                           c_params, c_deformModel, c_scanPointCloud, isJacobianRequired);
@@ -82,7 +81,7 @@ namespace telef::align{
             convertArray(fresiduals, residuals, c_scanPointCloud.numLmks*3);
 
             if (isJacobianRequired) {
-                convertArray(faJacobians, jacobians[0], c_scanPointCloud.numLmks*3*CoeffRank);
+                convertArray(faJacobians, jacobians[0], c_scanPointCloud.numLmks*3*c_deformModel.shapeRank);
                 convertArray(ftJacobians, jacobians[1], c_scanPointCloud.numLmks*3*TRANSLATE_COEFF);
                 convertArray(fuJacobians, jacobians[2], c_scanPointCloud.numLmks*3*ROTATE_COEFF);
             }

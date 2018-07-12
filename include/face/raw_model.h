@@ -2,13 +2,16 @@
 
 /** Each struct resides in host memory, while pointer members live in device memory */
 typedef struct C_PcaDeformModel {
-    float *deformBasis_d;
+    float *shapeDeformBasis_d;
+    float *expressionDeformBasis_d;
     float *ref_d;
-    float *mean_d;
+    float *meanShapeDeformation_d;
+    float *meanExpressionDeformation_d;
     int *lmks_d;
 
     int lmkCount;
-    int rank;
+    int shapeRank;
+    int expressionRank;
     int dim;
 } C_PcaDeformModel;
 

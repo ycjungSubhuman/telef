@@ -5,36 +5,51 @@
 
 
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
-                           const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
-                           const Eigen::VectorXf meanDeformation,
+                           const Eigen::MatrixXf shapeDeformBasis, const Eigen::MatrixXf expressionDeformBasis,
+                           const Eigen::VectorXf ref,
+                           const Eigen::VectorXf meanShapeDeformation,
+                           const Eigen::VectorXf meanExpressionDeformation,
                            const std::vector<int> lmkInds) {
-    //std::cout << "deformBasis.size() <<: " << deformBasis.size() << std::endl;
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->deformBasis_d), deformBasis.size()*sizeof(float)));
+    //std::cout << "shapeDeformBasis.size() <<: " << shapeDeformBasis.size() << std::endl;
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->shapeDeformBasis_d), shapeDeformBasis.size()*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->expressionDeformBasis_d), expressionDeformBasis.size()*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->ref_d), ref.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->mean_d), meanDeformation.size()*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->meanShapeDeformation_d),
+                          meanShapeDeformation.size()*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&deformModel->meanExpressionDeformation_d),
+                          meanExpressionDeformation.size()*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&deformModel->lmks_d), lmkInds.size()*sizeof(int)));
 
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->deformBasis_d,
-               deformBasis.data(), deformBasis.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->shapeDeformBasis_d,
+               shapeDeformBasis.data(), shapeDeformBasis.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->expressionDeformBasis_d,
+                          expressionDeformBasis.data(), expressionDeformBasis.size()*sizeof(float),
+                          cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy((void*)deformModel->ref_d,
                ref.data(), ref.size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->mean_d,
-               meanDeformation.data(), meanDeformation.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->meanShapeDeformation_d,
+               meanShapeDeformation.data(), meanShapeDeformation.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)deformModel->meanExpressionDeformation_d,
+                          meanExpressionDeformation.data(), meanExpressionDeformation.size()*sizeof(float),
+                          cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy((void*)deformModel->lmks_d,
                lmkInds.data(), lmkInds.size()*sizeof(int), cudaMemcpyHostToDevice));
 
-    deformModel->rank = (int)deformBasis.cols();
-    deformModel->dim = (int)deformBasis.rows();
+    deformModel->shapeRank = (int)shapeDeformBasis.cols();
+    deformModel->expressionRank = (int)expressionDeformBasis.cols();
+    deformModel->dim = (int)ref.size();
     deformModel->lmkCount = (int)lmkInds.size();
 
-    assert(deformBasis.rows() == ref.size());
+    assert(shapeDeformBasis.rows() == ref.size());
 }
 
 void freeModelCUDA(C_PcaDeformModel deformModel) {
-    cudaFree(deformModel.deformBasis_d);
-    cudaFree(deformModel.ref_d);
-    cudaFree(deformModel.lmks_d);
-    cudaFree(deformModel.mean_d);
+    CUDA_CHECK(cudaFree(deformModel.shapeDeformBasis_d));
+    CUDA_CHECK(cudaFree(deformModel.expressionDeformBasis_d));
+    CUDA_CHECK(cudaFree(deformModel.meanExpressionDeformation_d));
+    CUDA_CHECK(cudaFree(deformModel.meanShapeDeformation_d));
+    CUDA_CHECK(cudaFree(deformModel.ref_d));
+    CUDA_CHECK(cudaFree(deformModel.lmks_d));
 }
 
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,

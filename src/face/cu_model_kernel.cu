@@ -27,11 +27,11 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
     for (int i = start_index; i < deformModel.dim; i += stride) {
 
         position_d[i] = 0;
-        for (int j = 0; j < deformModel.rank; j++) {
-            position_d[i] += params.faParams_d[j] * deformModel.deformBasis_d[i + colDim * j];
+        for (int j = 0; j < deformModel.shapeRank; j++) {
+            position_d[i] += params.faParams_d[j] * deformModel.shapeDeformBasis_d[i + colDim * j];
         }
 
-        position_d[i] += deformModel.mean_d[i] + deformModel.ref_d[i];
+        position_d[i] += deformModel.meanShapeDeformation_d[i] + deformModel.ref_d[i];
     }
 }
 

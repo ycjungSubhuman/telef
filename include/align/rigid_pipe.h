@@ -11,7 +11,7 @@ namespace telef::align {
     //template <int ShapeRank>
     class PCARigidFittingPipe : public telef::io::Pipe<telef::feature::FittingSuite, PCARigidAlignmentSuite> {
     private:
-        using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel<SHAPE_RANK>>;
+        using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel>;
         using BaseT = telef::io::Pipe<telef::feature::FittingSuite, PCARigidAlignmentSuite>;
         using PtCldPtr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
 

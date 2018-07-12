@@ -11,7 +11,7 @@ namespace telef::mesh {
         auto result = boost::make_shared<ProjectionSuite>();
         result->image = in->image;
         result->pca_model = in->pca_model;
-        result->fitResult = in->pca_model->genMesh(in->fitCoeff);
+        result->fitResult = in->pca_model->genMesh(in->shapeCoeff, in->expressionCoeff);
         result->fitResult.applyTransform(in->transformation);
         result->fx = in->fx;
         result->fy = in->fy;

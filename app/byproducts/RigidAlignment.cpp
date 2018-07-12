@@ -230,8 +230,8 @@ int main(int argc, char** argv) {
     pcl::fromPCLPointCloud2(mesh->cloud,*model_ptr);
     Eigen::MatrixXf eig_model = model_ptr->getMatrixXfMap();
 
-    telef::face::MorphableFaceModel<150> model(fs::path("../pcamodels/example"));
-    ColorMesh meanMesh = model.genMesh(Eigen::VectorXf::Zero(150));
+    telef::face::MorphableFaceModel model(fs::path("../pcamodels/example"));
+    ColorMesh meanMesh = model.genMesh(Eigen::VectorXf::Zero(model.getShapeRank()), Eigen::VectorXf::Zero(model.getExpressionRank()));
     std::vector<int> pca_lmks = model.getLandmarks();
     //std::sort(pca_lmks.begin(), pca_lmks.end());
     cout << "PCA LMKs: " << "\n\t";
