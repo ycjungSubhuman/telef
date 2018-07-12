@@ -150,10 +150,11 @@ void calc_residual_lmk(float *residual_d, const float *position_d, C_ScanPointCl
 }
 
 
-void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da_d,
+void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
                           const float *u_d, const float *position_before_tarnsform_d,
                           C_PcaDeformModel model, C_ScanPointCloud scan) {
     calc_de_dt_lmk(dres_dt_d, scan.numLmks);
     calc_de_du_lmk(dres_du_d, u_d, position_before_tarnsform_d, scan);
-    calc_de_da_lmk(dres_da_d, u_d, model, scan);
+    calc_de_da_lmk(dres_da1_d, u_d, model, scan);
+    calc_de_da_lmk(dres_da2_d, u_d, model, scan);
 }

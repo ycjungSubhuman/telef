@@ -91,10 +91,14 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
     cudaFree(scanPointCloud.scanPoints_d);
 }
 
-void allocParamsToCUDADevice(C_Params *params, int numa, int numt, int numu) {
-    CUDA_CHECK(cudaMalloc((void **)(&params->faParams_d), numa*sizeof(float)));
-    float *zeroA = new float[numa]{0,};
-    params->numa = numa;
+void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt, int numu) {
+    CUDA_CHECK(cudaMalloc((void **)(&params->fa1Params_d), numa1*sizeof(float)));
+    float *zeroA1 = new float[numa1]{0,};
+    params->numa1 = numa1;
+
+    CUDA_CHECK(cudaMalloc((void **)(&params->fa2Params_d), numa2*sizeof(float)));
+    float *zeroA2 = new float[numa2]{0,};
+    params->numa2 = numa2;
 
     CUDA_CHECK(cudaMalloc((void **)(&params->ftParams_d), numt*sizeof(float)));
     params->ftParams_h = new float[numt]{0,};
@@ -104,15 +108,17 @@ void allocParamsToCUDADevice(C_Params *params, int numa, int numt, int numu) {
     params->fuParams_h = new float[numu]{0,};
     params->numu = numu;
 
-    updateParams(*params, zeroA, numa, params->ftParams_h, numt, params->fuParams_h, numu);
-    delete[] zeroA;
+    updateParams(*params, zeroA1, numa1, zeroA2, numa2, params->ftParams_h, numt, params->fuParams_h, numu);
+    delete[] zeroA1;
 }
 
 void updateParams(const C_Params params,
-                  const float *const aIn, int numa,
+                  const float *const a1In, int numa1,
+                  const float *const a2In, int numa2,
                   const float *const tIn, int numt,
                   const float *const uIn, int numu) {
-    CUDA_CHECK(cudaMemcpy((void*)params.faParams_d, aIn, numa*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)params.fa1Params_d, a1In, numa1*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy((void*)params.fa2Params_d, a2In, numa2*sizeof(float), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy((void*)params.ftParams_d, tIn, numt*sizeof(float), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy((void*)params.fuParams_d, uIn, numu*sizeof(float), cudaMemcpyHostToDevice));
 
@@ -121,7 +127,8 @@ void updateParams(const C_Params params,
 }
 
 void freeParamsCUDA(C_Params params) {
-    CUDA_CHECK(cudaFree(params.faParams_d));
+    CUDA_CHECK(cudaFree(params.fa1Params_d));
+    CUDA_CHECK(cudaFree(params.fa2Params_d));
     CUDA_CHECK(cudaFree(params.ftParams_d));
     CUDA_CHECK(cudaFree(params.fuParams_d));
 

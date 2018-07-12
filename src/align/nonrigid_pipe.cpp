@@ -120,8 +120,9 @@ namespace telef::align {
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
         double t[3] = {0.0,};
         double u[3] = {0.0,};
-        problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, t, u);
+        problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
         problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.shapeRank, 0.0001), NULL, shapeCoeff);
+        problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.expressionRank, 0.0001), NULL, expressionCoeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
@@ -150,12 +151,18 @@ namespace telef::align {
         result->expressionCoeff =
                 Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
 
-        std::cout << "Fitted: " << std::endl << result->shapeCoeff << std::endl;
+        std::cout << "Fitted(Shape): " << std::endl;
+        std::cout << result->shapeCoeff << std::endl;
+        std::cout << "Fitted(Expression): " << std::endl;
+        std::cout << result->expressionCoeff << std::endl;
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->fx = in->fx;
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;
+
+        delete[] shapeCoeff;
+        delete[] expressionCoeff;
 
         return result;
     }

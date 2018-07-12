@@ -30,14 +30,16 @@ typedef struct C_ScanPointCloud {
 } C_ScanPointCloud;
 
 typedef struct C_Params {
-    float *faParams_d;
+    float *fa1Params_d; //used for shape parameters
+    float *fa2Params_d; //used for expression parameters
     float *ftParams_d;
     float *fuParams_d;
 
     float *ftParams_h;
     float *fuParams_h;
 
-    int numa;
+    int numa1;
+    int numa2;
     int numt;
     int numu;
 } C_Params;

@@ -45,7 +45,7 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
  * Loss = (L2 distance btw corresponding landmarks)
  *      + (L2 norm of parameters)
  */
-void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float *fuJacobian,
+void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                    float *position_d,
                    cublasHandle_t cnpHandle,
                    const C_Params params,
