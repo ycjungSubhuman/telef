@@ -17,15 +17,33 @@ namespace telef::util {
 
         // TODO: Make util vector(xyz,..) to pointcloud
         pcl::PointCloud<pcl::PointXYZ>::Ptr ptCld(new pcl::PointCloud<pcl::PointXYZ>());
-
         for (int idx = 0; idx < vector.size(); idx+=3) {
             ptCld->points.emplace_back(vector[idx],
                                        vector[idx+1],
                                        vector[idx+2]);
         }
-        ptCld->width = (int)ptCld->points.size();
-        ptCld->height = 1;
+//        ptCld->width = (int)ptCld->points.size();
+//        ptCld->height = 1;
+        ptCld->width = 0;
+        ptCld->height = 0;
 
         return ptCld;
+    }
+
+    inline void convert(pcl::PointCloud<pcl::PointXYZ> &ptCld, const Eigen::VectorXf& vector) {
+
+        assert(("Vector doesn't contains (x,y,z) for each n 3D vertex", vector.size() % 3 == 0));
+
+        // TODO: Make util vector(xyz,..) to pointcloud
+        for (int idx = 0; idx < vector.size(); idx+=3) {
+            ptCld.points.emplace_back(vector[idx],
+                                      vector[idx+1],
+                                      vector[idx+2]);
+        }
+//        ptCld->width = (int)ptCld->points.size();
+//        ptCld->height = 1;
+        ptCld.width = 0;
+        ptCld.height = 0;
+
     }
 }

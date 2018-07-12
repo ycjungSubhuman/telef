@@ -76,6 +76,7 @@ add_library(telef
 		include/face/model_cudahelper.h
 		include/face/raw_model.h
 		include/util/transform.h
+		include/io/align/PCAVisualizerPrepPipe.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -95,7 +96,8 @@ add_library(telef
         src/util/fake_frame_record_device.cpp
         src/io/landmark.cpp
 		src/face/model_cudahelper.cpp
-		src/util/transform.cpp)
+		src/util/transform.cpp
+		src/io/align/PCAVisualizerPrepPipe.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -193,6 +195,10 @@ target_link_libraries(RecordFakeFrame ${Boost_LIBRARIES} telef)
 add_executable(FakeDeviceExample app/examples/FakeDeviceExample.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceExample stdc++fs ${Boost_LIBRARIES} telef)
+
+add_executable(PcaDemo app/PcaDemo.cpp src/io/modelio.cpp)
+target_link_libraries(PcaDemo ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(PcaDemo ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)
