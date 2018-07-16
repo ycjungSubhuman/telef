@@ -15,7 +15,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
 endif()
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 ${OpenMP_CXX_FLAGS} -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 ${OpenMP_CXX_FLAGS} -march=native -DUSE_SSE4_INSTRUCTIONS=ON")
 set(CUDA_GENCODES
 		"-gencode arch=compute_52,code=sm_52 -gencode arch=compute_61,code=sm_61 "
 		)
@@ -30,6 +30,7 @@ find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 find_package(Ceres REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
+find_package(dlib REQUIRED)
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
@@ -76,6 +77,9 @@ add_library(telef
 		include/face/model_cudahelper.h
 		include/face/raw_model.h
 		include/util/transform.h
+		include/feature/feature_detect_frontend.h
+        include/io/merger/device_input_merger.h
+		include/feature/face_detect_pipe.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -95,7 +99,8 @@ add_library(telef
         src/util/fake_frame_record_device.cpp
         src/io/landmark.cpp
 		src/face/model_cudahelper.cpp
-		src/util/transform.cpp)
+		src/util/transform.cpp
+		src/feature/face_detect_pipe.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -104,6 +109,7 @@ target_include_directories(telef
         PUBLIC ${Eigen_INCLUDE_DIRS}
         PUBLIC ${Boost_INCLUDE_DIRS}
         PUBLIC ${CERES_INCLUDE_DIRS}
+		PUBLIC ${dlib_INCLUDE_DIRS}
         PUBLIC ${CMAKE_SOURCE_DIR}/include/
 		PUBLIC ${CMAKE_SOURCE_DIR}/include/face
 		)
@@ -125,6 +131,7 @@ target_link_libraries(telef
 		opencv_highgui
 		opencv_flann
 		opencv_ml
+		dlib
 		)
 
 add_library(cutelef STATIC
@@ -193,6 +200,10 @@ target_link_libraries(RecordFakeFrame ${Boost_LIBRARIES} telef)
 add_executable(FakeDeviceExample app/examples/FakeDeviceExample.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceExample stdc++fs ${Boost_LIBRARIES} telef)
+
+add_executable(DNNFaceDetector app/byproducts/DNNFaceDetector.cpp src/io/modelio.cpp)
+target_link_libraries(DNNFaceDetector ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(DNNFaceDetector ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)

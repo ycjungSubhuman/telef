@@ -105,6 +105,12 @@ int main(int ac, const char* const *av) {
     outputPath = vm["output"].as<std::string>();
 
     if (useFakeKinect) {
+
+        if (vm.count("fake") == 0) {
+            std::cout << "Please specify 'path' to fake device"  << std::endl;
+            return 1;
+        }
+
         fakePath = vm["fake"].as<std::string>();
     }
 

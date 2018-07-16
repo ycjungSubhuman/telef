@@ -68,7 +68,7 @@ namespace telef::feature {
                 // Only get valid faces
                 if (score >= notFace) {
                     // Set feature (Return Object)
-                    feature.setBoundingBox(iface);
+                    feature.boundingBox.setBoundingBox(iface);
                     cv::cv2eigen(featCoords, feature.points);
 
                     // Only get first valid face

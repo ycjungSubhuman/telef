@@ -6,6 +6,7 @@
 #include <functional>
 #include "type.h"
 #include "io/pipe.h"
+#include "feature/face.h"
 #include "feature/feature_detector.h"
 #include "io/frontend.h"
 
@@ -100,7 +101,7 @@ namespace telef::io {
             std::vector<int> rawCloudLmkIdx;
             auto mapping = deviceCloud->img2cloudMapping;
             feature::IntraFace featureDetector;
-            auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
+            auto feature = boost::make_shared<Feature>(featureDetector.getFeature(*image));
             for (long i=0; i<feature->points.cols(); i++) {
                 try {
                     auto pointInd = mapping->getMappedPointId(feature->points(0, i), feature->points(1, i));
@@ -144,7 +145,7 @@ namespace telef::io {
             std::vector<int> rawCloudLmkIdx;
             auto mapping = deviceCloud->img2cloudMapping;
             feature::IntraFace featureDetector;
-            auto feature = std::make_shared<Feature>(featureDetector.getFeature(*image));
+            auto feature = boost::make_shared<Feature>(featureDetector.getFeature(*image));
             auto badlmks = std::vector<int>();
             for (long i=0; i<feature->points.cols(); i++) {
                 try {

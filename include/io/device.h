@@ -177,7 +177,7 @@ namespace telef::io {
         FakeImagePointCloudDevice (fs::path recordPath, PlayMode mode=PlayMode::FIRST_FRAME_ONLY) {
             std::cout << "Loading Fake Frames..." << std::endl;
             this->mode = mode;
-            for(int i=1; ; i++) {
+            for(int i=1; i<16; i++) {
                 fs::path framePath = recordPath/(fs::path(std::to_string(i)));
 
                 auto exists = fs::exists(framePath.replace_extension(".pcd"));
