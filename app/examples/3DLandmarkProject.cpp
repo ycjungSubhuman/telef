@@ -11,7 +11,7 @@
 #include "io/ply/meshio.h"
 #include "io/merger/device_input_merger.h"
 #include "feature/feature_detect_frontend.h"
-#include "feature/face_detect_pipe.h"
+#include "feature/feature_detect_pipe.h"
 #include "cloud/cloud_pipe.h"
 
 #include "glog/logging.h"
@@ -74,12 +74,14 @@ int main(int ac, const char* const * av)
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)->decltype(auto){return cloudPipe(in);});
 
-    auto viewFrontend = std::make_shared<FaceDetectFrontEnd>();
+    auto viewFrontend = std::make_shared<FeatureDetectFrontEnd>();
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
+    auto featureDetector = DummyFeatureDetectionPipe(fs::path(fakePath));
+//    auto featureProjection = FeatureProjectionPipe();
 
 
-//    auto pipe1 = compose(faceDetector);
-    auto merger = std::make_shared<DeviceInputPipeMerger<FeatureDetectSuite>>([&faceDetector](auto in)->decltype(auto){return faceDetector(in);});
+    auto pipe1 = compose(faceDetector, featureDetector);
+    auto merger = std::make_shared<DeviceInputPipeMerger<FeatureDetectSuite>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
 
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, FeatureDetectSuite>> device = NULL;
 

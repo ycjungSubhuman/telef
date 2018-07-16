@@ -12,7 +12,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "feature/face_detect_pipe.h"
+#include "util/eigen_file_io.h"
+#include "feature/feature_detect_pipe.h"
 
 using namespace std;
 using namespace dlib;
@@ -20,6 +21,10 @@ using namespace telef::io;
 
 
 namespace telef::feature {
+    /**
+     * DlibFaceDetectionPipe
+     * @param pretrained_model
+     */
     DlibFaceDetectionPipe::DlibFaceDetectionPipe(const std::string &pretrained_model) {
         deserialize(pretrained_model) >> net;
     }
@@ -74,5 +79,34 @@ namespace telef::feature {
         result->feature->boundingBox.setBoundingBox(bbox);
 
         return result;
+    }
+
+    /**
+     *
+     * @param recordPath
+     */
+    DummyFeatureDetectionPipe::DummyFeatureDetectionPipe(fs::path recordPath) : frameLmks() {
+        std::cout << "Loading Fake Landmarks..." << std::endl;
+        for(int i=1; ; i++) {
+            fs::path framePath = recordPath/(fs::path(std::to_string(i)));
+
+            auto exists = fs::exists(framePath.replace_extension(".3dlmk.txt"));
+
+            if(!exists) {
+                break;
+            }
+
+            auto lmks = telef::util::readCSVtoEigan(framePath);
+            frameLmks.push(*lmks);
+            std::cout << "Loaded landmarks " << std::to_string(i) << std::endl;
+        }
+    }
+
+    FeatureDetectSuite::Ptr DummyFeatureDetectionPipe::_processData(InputPtrT in) {
+        auto currentLmks = frameLmks.front();
+        in->feature->points = currentLmks;
+        frameLmks.pop();
+
+        return in;
     }
 }

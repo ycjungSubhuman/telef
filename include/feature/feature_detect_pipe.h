@@ -1,5 +1,7 @@
 #pragma once
 
+#include <experimental/filesystem>
+
 #include <dlib/dnn.h>
 
 #include "io/pipe.h"
@@ -36,7 +38,7 @@ namespace telef::feature {
 //    };
 
     /**
-     * Face Detection using Dlib CNN, Not realtime
+     * Face Detection using Dlib CNN, realtime on Titain X GPU ~20ms per frame
      */
     class DlibFaceDetectionPipe : public FaceDetectionPipe {
     private:
@@ -58,5 +60,20 @@ namespace telef::feature {
 
     public:
         DlibFaceDetectionPipe(const std::string &pretrained_model);
+    };
+
+    /**
+     * Fake Face Feature Detection
+    */
+    class DummyFeatureDetectionPipe : public telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite> {
+    private:
+        using BaseT = telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite>;
+        using InputPtrT = FeatureDetectSuite::Ptr;
+        std::queue<Eigen::MatrixXf> frameLmks;
+
+        FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
+
+    public:
+        DummyFeatureDetectionPipe(fs::path recordPath);
     };
 }

@@ -35,7 +35,7 @@ namespace telef::feature {
         using ConstPtr = boost::shared_ptr<const Feature>;
 
         // Dynamically sized Matrix is used in the case we use 2D or 3D features
-        Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> points;
+        Eigen::MatrixXf points;
 
         // Bounding box for face
         BoundingBox boundingBox;

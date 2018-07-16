@@ -79,7 +79,8 @@ add_library(telef
 		include/util/transform.h
 		include/feature/feature_detect_frontend.h
         include/io/merger/device_input_merger.h
-		include/feature/face_detect_pipe.h
+        include/feature/feature_detect_pipe.h
+		include/util/eigen_file_io.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -102,7 +103,7 @@ add_library(telef
 		src/face/model.cpp
 		src/face/deformation_model.cpp
 		src/util/transform.cpp
-        src/feature/face_detect_pipe.cpp)
+        src/feature/feature_detect_pipe.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -200,6 +201,10 @@ target_link_libraries(FakeDeviceExample stdc++fs ${Boost_LIBRARIES} telef)
 add_executable(DNNFaceDetector app/byproducts/DNNFaceDetector.cpp src/io/modelio.cpp)
 target_link_libraries(DNNFaceDetector ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(DNNFaceDetector ${Boost_LIBRARIES} telef)
+
+add_executable(3DLandmarkProject app/examples/3DLandmarkProject.cpp src/io/modelio.cpp)
+target_link_libraries(3DLandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(3DLandmarkProject ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)

@@ -11,7 +11,7 @@
 #include "io/ply/meshio.h"
 #include "io/merger/device_input_merger.h"
 #include "feature/feature_detect_frontend.h"
-#include "feature/face_detect_pipe.h"
+#include "feature/feature_detect_pipe.h"
 #include "cloud/cloud_pipe.h"
 
 #include "glog/logging.h"
