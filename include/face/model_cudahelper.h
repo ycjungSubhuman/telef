@@ -16,8 +16,10 @@
 
 /** Loads MorphableFaceModel to GPU Device */
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
-                           const Eigen::MatrixXf deformBasis, const Eigen::VectorXf ref,
-                           const Eigen::VectorXf meanDeformation,
+                           const Eigen::MatrixXf shapeDeformBasis, const Eigen::MatrixXf expressionDeformBasis,
+                           const Eigen::VectorXf ref,
+                           const Eigen::VectorXf meanShapeDeformation,
+                           const Eigen::VectorXf meanExpressionDeformation,
                            const std::vector<int> lmkInds);
 void freeModelCUDA(C_PcaDeformModel deformModel);
 
@@ -35,9 +37,10 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud);
  *
  * If update is true, doesn't malloc. uses previously allocated address
  */
-void allocParamsToCUDADevice(C_Params *params, int numa, int numt, int numu);
+void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt, int numu);
 void updateParams(const C_Params params,
-                  const float *const aIn, int numa,
+                  const float *const a1In, int numa1,
+                  const float *const a2In, int numa2,
                   const float *const tIn, int numt,
                   const float *const uIn, int numu);
 void freeParamsCUDA(C_Params params);

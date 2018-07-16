@@ -63,12 +63,13 @@ void calc_residual_lmk(float *residual_d, const float *position_d, C_ScanPointCl
  *
  * @param dres_dt_d               de_dt_d[j] = de_dtj. ((number of landmarks)x3x3)-element array
  * @param dres_du_d               de_du_d[j] = de_duj. ((number of landmarks)x3x3)-element array
- * @param dres_da_d               de_da_d[j] = de_daj. ((number of landmarks)x3x(rank of pca model))-element array
+ * @param dres_da1_d              de_da1_d[j] = de_da1j. ((number of landmarks)x3x(rank of pca model))-element array
+ * @param dres_da2_d              de_da2_d[j] = de_da2j. ((number of landmarks)x3x(rank of pca model))-element array
  * @param u_d                   rotation parameter. 3-element array. Axis-angle notation (see cu_quaternion.h)
  * @param position_before_transform_d    calculated mesh vertex positions before rigid transformation specified by t, u
  * @param model
  * @param scan
  */
-void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da_d,
+void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
                           const float *u_d, const float *position_before_tarnsform_d,
                           C_PcaDeformModel model, C_ScanPointCloud scan);

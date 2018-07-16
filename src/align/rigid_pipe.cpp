@@ -19,7 +19,8 @@ namespace telef::align {
             transformation(Eigen::Matrix4f::Identity(4,4))
     {
         // Generate Mean Face Template
-        meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(RANK));
+        meanMesh = pca_model->genMesh(Eigen::VectorXf::Zero(pca_model->getShapeRank()),
+                Eigen::VectorXf::Zero(pca_model->getExpressionRank()));
 
         // Save initial point cloud for rigid fitting
         initShape = telef::util::convert(meanMesh.position);
@@ -28,7 +29,6 @@ namespace telef::align {
     boost::shared_ptr<PCARigidAlignmentSuite> PCARigidFittingPipe::_processData(boost::shared_ptr<FittingSuite> in) {
         std::vector<int> pca_lmks = pca_model->getLandmarks();
         auto in_lmks = in->landmark3d;
-
 
         std::vector<int> corr_tgt(in_lmks->points.size());
         std::iota(std::begin(corr_tgt), std::end(corr_tgt), 0); // Fill with range 0, ..., n.
@@ -44,8 +44,6 @@ namespace telef::align {
                 iter_data = pca_lmks.erase(iter_data);
                 riter++;
             }
-
-            //cout << "PCA Lmks: " << pca_lmks.size() << " - Detected: " << in_lmks->points.size();
 
             Eigen::Matrix4f currentTransform;
             pcl::registration::TransformationEstimationSVDScale<pcl::PointXYZ, pcl::PointXYZRGBA> svd;

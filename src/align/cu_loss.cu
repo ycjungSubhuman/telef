@@ -2,7 +2,6 @@
 #include <math.h>
 #include "align/cu_loss.h"
 #include "util/cu_quaternion.h"
-#include "util/cu_reduce.h"
 #include "util/cu_array.h"
 #include "util/cudautil.h"
 
@@ -111,7 +110,7 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, C_
     const int x_size = num_points * 3;
     const int x_step = blockDim.x * gridDim.x;
     const int y_start = blockIdx.y * blockDim.y + threadIdx.y;
-    const int y_size = model.rank;
+    const int y_size = model.shapeRank;
     const int y_step = blockDim.y * gridDim.y;
     for(int ind=x_start; ind<x_size; ind+=x_step) {
         for (int j=y_start; j<y_size; j+=y_step) {
@@ -119,11 +118,11 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, C_
             const int k = ind / 3;
             float sum = 0.0f;
 
-            sum += r[0*3 + i] * model.deformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 0];
-            sum += r[1*3 + i] * model.deformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 1];
-            sum += r[2*3 + i] * model.deformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 2];
+            sum += r[0*3 + i] * model.shapeDeformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 0];
+            sum += r[1*3 + i] * model.shapeDeformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 1];
+            sum += r[2*3 + i] * model.shapeDeformBasis_d[model.dim*j + 3*scan.validModelLmks_d[k] + 2];
 
-            dx_m_da[3*model.rank*k+model.rank*i+j] = -sum;
+            dx_m_da[3*model.shapeRank*k+model.shapeRank*i+j] = -sum;
         }
     }
 }
@@ -132,7 +131,7 @@ static void calc_de_da_lmk(float *de_da_d,
                            const float *u_d, C_PcaDeformModel model, C_ScanPointCloud scan) {
     const int numThread = 32;
     const int xRequired = scan.numLmks * 3;
-    const int yRequired = model.rank;
+    const int yRequired = model.shapeRank;
     dim3 dimBlock((xRequired + numThread - 1) / numThread, (yRequired + numThread - 1) / numThread);
     dim3 dimThread(numThread, numThread);
     _calc_dx_da_lmk<<<dimBlock, dimThread>>>(de_da_d, u_d, scan.numLmks, model, scan);
@@ -140,7 +139,7 @@ static void calc_de_da_lmk(float *de_da_d,
 
     int dimBlock2 = (xRequired*yRequired + 512 - 1) / 512;
     int dimThread2 = 512;
-    scale_array<<<dimBlock2,dimThread2>>>(de_da_d, scan.numLmks*3*model.rank, 1.0f/sqrtf(scan.numLmks));
+    scale_array<<<dimBlock2,dimThread2>>>(de_da_d, scan.numLmks*3*model.shapeRank, 1.0f/sqrtf(scan.numLmks));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -151,10 +150,11 @@ void calc_residual_lmk(float *residual_d, const float *position_d, C_ScanPointCl
 }
 
 
-void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da_d,
+void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
                           const float *u_d, const float *position_before_tarnsform_d,
                           C_PcaDeformModel model, C_ScanPointCloud scan) {
     calc_de_dt_lmk(dres_dt_d, scan.numLmks);
     calc_de_du_lmk(dres_du_d, u_d, position_before_tarnsform_d, scan);
-    calc_de_da_lmk(dres_da_d, u_d, model, scan);
+    calc_de_da_lmk(dres_da1_d, u_d, model, scan);
+    calc_de_da_lmk(dres_da2_d, u_d, model, scan);
 }

@@ -19,8 +19,7 @@ namespace telef::align {
 
         boost::shared_ptr<telef::feature::FittingSuite> fittingSuite;
 
-        // PCA
-        std::shared_ptr<telef::face::MorphableFaceModel<RANK>> pca_model;
+        std::shared_ptr<telef::face::MorphableFaceModel> pca_model;
         // Rigid alignment
         Eigen::Matrix4f transformation;
         telef::types::ImagePtrT image;

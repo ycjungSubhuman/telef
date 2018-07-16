@@ -27,11 +27,18 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
     for (int i = start_index; i < deformModel.dim; i += stride) {
 
         position_d[i] = 0;
-        for (int j = 0; j < deformModel.rank; j++) {
-            position_d[i] += params.faParams_d[j] * deformModel.deformBasis_d[i + colDim * j];
+        for (int j = 0; j < deformModel.shapeRank; j++) {
+            position_d[i] += params.fa1Params_d[j] * deformModel.shapeDeformBasis_d[i + colDim * j];
         }
 
-        position_d[i] += deformModel.mean_d[i] + deformModel.ref_d[i];
+        for (int j = 0; j < deformModel.expressionRank; j++) {
+            position_d[i] += params.fa2Params_d[j] * deformModel.expressionDeformBasis_d[i + colDim * j];
+        }
+
+        position_d[i] +=
+                deformModel.meanShapeDeformation_d[i]
+                + deformModel.meanExpressionDeformation_d[i]
+                + deformModel.ref_d[i];
     }
 }
 
@@ -103,8 +110,7 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                         matC, bRows/*leading dim*/); //(4xN) or (mxk)
 
     if (status != CUBLAS_STATUS_SUCCESS) {
-        printf("MatMul Failed\n");
-        return;
+        throw std::runtime_error("MatMul Failed\n");
     }
 }
 
@@ -140,12 +146,12 @@ void applyRigidAlignment(float *align_pos_d, cublasHandle_t cnpHandle,
     cudaFree(matC);
 }
 
-void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float *fuJacobian, float *position_d,
-                   cublasHandle_t cnpHandle,
+void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                   float *position_d, cublasHandle_t cnpHandle,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                    const bool isJacobianRequired) {
 
-    float *residual_d, *faJacobian_d, *ftJacobian_d, *fuJacobian_d;
+    float *residual_d, *fa1Jacobian_d, *fa2Jacobian_d, *ftJacobian_d, *fuJacobian_d;
     float *align_pos_d, *result_pos_d;
     float align_pos[deformModel.dim];
 
@@ -155,7 +161,8 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
     CUDA_CHECK(cudaMalloc((void **) &residual_d, scanPointCloud.numLmks*3*sizeof(float)));
 
     // Compute Jacobians for each parameter
-    CUDA_CHECK(cudaMalloc((void **) &faJacobian_d, scanPointCloud.numLmks*3*params.numa*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &fa1Jacobian_d, scanPointCloud.numLmks*3*params.numa1*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &fa2Jacobian_d, scanPointCloud.numLmks*3*params.numa2*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void **) &ftJacobian_d, scanPointCloud.numLmks*3*params.numt*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void **) &fuJacobian_d, scanPointCloud.numLmks*3*params.numu*sizeof(float)));
 
@@ -185,7 +192,7 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
     // Calculate residual & jacobian for Landmarks
     calc_residual_lmk(residual_d, result_pos_d, scanPointCloud);
     if (isJacobianRequired) {
-        calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, faJacobian_d,
+        calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
                              params.fuParams_d, align_pos_d, deformModel, scanPointCloud);
     }
 
@@ -193,15 +200,17 @@ void calculateLoss(float *residual, float *faJacobian, float *ftJacobian, float 
      * Copy computed residual and jacobian to Host
      */
     CUDA_CHECK(cudaMemcpy(residual, residual_d, scanPointCloud.numLmks*3*sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(faJacobian, faJacobian_d, scanPointCloud.numLmks*3*params.numa * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(fa1Jacobian, fa1Jacobian_d, scanPointCloud.numLmks*3*params.numa1 * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(fa2Jacobian, fa2Jacobian_d, scanPointCloud.numLmks*3*params.numa2 * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(ftJacobian, ftJacobian_d, scanPointCloud.numLmks*3*params.numt * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(fuJacobian, fuJacobian_d, scanPointCloud.numLmks*3*params.numu * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(align_pos, align_pos_d, deformModel.dim * sizeof(float), cudaMemcpyDeviceToHost));
 
-    cudaFree(residual_d);
-    cudaFree(faJacobian_d);
-    cudaFree(ftJacobian_d);
-    cudaFree(fuJacobian_d);
-    cudaFree(align_pos_d);
-    cudaFree(result_pos_d);
+    CUDA_CHECK(cudaFree(residual_d));
+    CUDA_CHECK(cudaFree(fa1Jacobian_d));
+    CUDA_CHECK(cudaFree(fa2Jacobian_d));
+    CUDA_CHECK(cudaFree(ftJacobian_d));
+    CUDA_CHECK(cudaFree(fuJacobian_d));
+    CUDA_CHECK(cudaFree(align_pos_d));
+    CUDA_CHECK(cudaFree(result_pos_d));
 }
