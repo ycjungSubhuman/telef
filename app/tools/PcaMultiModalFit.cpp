@@ -108,7 +108,7 @@ int main(int ac, const char* const *av) {
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
     auto frontend = std::make_shared<ColorMeshPlyWriteFrontEnd>(outputPath);
 
-    auto nonrigid = PCANonRigidFittingPipe();
+    auto nonrigid = PCAGPUNonRigidFittingPipe();
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
