@@ -30,6 +30,7 @@ find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 find_package(Ceres REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
+find_package(TensorflowCC REQUIRED COMPONENTS Shared)
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
@@ -75,6 +76,7 @@ add_library(telef
 		include/util/convert_arr.h
 		include/face/model_cudahelper.h
 		include/face/raw_model.h
+        include/face/prnet.h
 		include/util/transform.h
 
         src/cloud/cloud_pipe.cpp
@@ -97,8 +99,8 @@ add_library(telef
 		src/face/model_cudahelper.cpp
 		src/face/model.cpp
 		src/face/deformation_model.cpp
+        src/face/prnet.cpp
 		src/util/transform.cpp)
-
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
         PUBLIC ${CUDA_INCLUDE_DIRS}
@@ -112,6 +114,7 @@ target_include_directories(telef
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
+        TensorflowCC::Shared
 		stdc++fs
 		cutelef
 		${CERES_LIBRARIES}
@@ -194,12 +197,22 @@ if (BUILD_TESTS)
 	function(myaddtest testname testpath)
 		add_executable(${testname} ${testpath})
 		target_link_libraries(${testname} gtest gtest_main gmock ${CBLAS_LIBRARIES})
-		target_link_libraries(${testname} cutelef -lm)
+		target_link_libraries(${testname} telef -lm)
+        target_link_libraries(${testname} TensorflowCC::Shared)
+        target_link_libraries(${testname}
+                stdc++fs
+                opencv_core
+                opencv_objdetect
+                opencv_imgproc
+                opencv_highgui
+                opencv_flann
+                opencv_ml)
 		target_include_directories(${testname}
 				PRIVATE ${CMAKE_SOURCE_DIR}/include
 				PRIVATE lib/googletest/googletest/include
 				PRIVATE lib/googletest/googlemock/include
 				PRIVATE ${CBLAS_INCLUDE_DIRS}
+                PRIVATE ${EIGEN_INCLUDE_DIRS}
 				)
 		add_test(NAME ${testname} COMMAND ${testname})
 	endfunction(myaddtest)
@@ -209,4 +222,5 @@ if (BUILD_TESTS)
 	enable_testing()
 
 	myaddtest(test_cu_quaternion tests/util/test_cu_quaternion.cu)
+    myaddtest(test_prnet tests/face/test_prnet.cpp)
 endif()
