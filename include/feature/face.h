@@ -28,6 +28,21 @@ namespace telef::feature {
             width = rect_.width();
             height = rect_.height();
         }
+
+        dlib::rectangle getRect() const {
+            dlib::rectangle rect;
+            long left = x;
+            long top = y;
+            long right = left + width;
+            long bottom = top + height;
+
+            rect.set_bottom(bottom);
+            rect.set_left(left);
+            rect.set_right(right);
+            rect.set_top(top);
+
+            return rect;
+        }
     };
 
     using Feature = struct Feature {

@@ -2,10 +2,14 @@
 
 #include <experimental/filesystem>
 
+#include <Eigen/Dense>
+
 #include <dlib/dnn.h>
 
 #include "io/pipe.h"
 #include "feature/face.h"
+
+#include "face/prnet.h"
 
 
 namespace {
@@ -75,5 +79,27 @@ namespace telef::feature {
 
     public:
         DummyFeatureDetectionPipe(fs::path recordPath);
+    };
+
+
+    /**
+     * Fake Face Feature Detection
+    */
+    class PRNetFeatureDetectionPipe : public telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite> {
+    private:
+        using BaseT = telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite>;
+        using InputPtrT = FeatureDetectSuite::Ptr;
+
+        telef::face::PRNetLandmarkDetector lmkDetector;
+        int prnetIntputSize;
+
+        FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
+
+        void calculateTransformation(cv::Mat& transform, const cv::Mat& image, const BoundingBox& bbox, const int dst_size);
+        void warpImage(cv::Mat& warped, const cv::Mat& image, const cv::Mat& transform, const int dst_size);
+        void restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transformation);
+
+    public:
+        PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath);
     };
 }

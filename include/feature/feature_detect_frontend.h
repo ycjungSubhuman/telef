@@ -13,6 +13,7 @@
 #include "io/frontend.h"
 #include "feature/face.h"
 #include "util/eigen_pcl.h"
+#include "face.h"
 
 namespace {
     using namespace telef::feature;
@@ -42,18 +43,7 @@ namespace telef::io {
             win.clear_overlay();
             win.set_image(img);
 
-            dlib::rectangle rect;
-            long left = input->feature->boundingBox.x;
-            long top = input->feature->boundingBox.y;
-            long right = left + input->feature->boundingBox.width;
-            long bottom = top + input->feature->boundingBox.height;
-
-            rect.set_bottom(bottom);
-            rect.set_left(left);
-            rect.set_right(right);
-            rect.set_top(top);
-
-            win.add_overlay(rect);
+            win.add_overlay(input->feature->boundingBox.getRect());
         }
     };
 

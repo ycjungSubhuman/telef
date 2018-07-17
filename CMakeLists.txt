@@ -84,6 +84,7 @@ add_library(telef
         include/feature/feature_detect_pipe.h
 		include/util/eigen_file_io.h
         include/feature/face.h
+		include/util/pcl_cv.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -140,6 +141,7 @@ target_link_libraries(telef
 		opencv_highgui
 		opencv_flann
 		opencv_ml
+		opencv_video
 		dlib
 		)
 

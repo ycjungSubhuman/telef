@@ -8,11 +8,16 @@
 #include <dlib/opencv/cv_image.h>
 #include <dlib/gui_widgets.h>
 
+#include <Eigen/Dense>
+
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/eigen.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/video/video.hpp>
 
 #include "util/eigen_file_io.h"
+#include "util/pcl_cv.h"
 #include "feature/feature_detect_pipe.h"
 
 using namespace std;
@@ -82,8 +87,9 @@ namespace telef::feature {
     }
 
     /**
+     * Dummy Detector path based on PRNet (Python), Doesn't give compatible landmarks with our FW
      *
-     * @param recordPath
+     * @param recordPath, Path given to fake device with captured landmarks
      */
     DummyFeatureDetectionPipe::DummyFeatureDetectionPipe(fs::path recordPath) : frameLmks() {
         std::cout << "Loading Fake Landmarks..." << std::endl;
@@ -104,8 +110,95 @@ namespace telef::feature {
 
     FeatureDetectSuite::Ptr DummyFeatureDetectionPipe::_processData(InputPtrT in) {
         auto currentLmks = frameLmks.front();
+
         in->feature->points = currentLmks;
         frameLmks.pop();
+
+        return in;
+    }
+
+    PRNetFeatureDetectionPipe::PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath)
+            : lmkDetector(graphPath, checkpointPath), prnetIntputSize(256)
+
+    {}
+
+    void PRNetFeatureDetectionPipe::calculateTransformation(cv::Mat& transform,
+                                                            const cv::Mat& image,
+                                                            const BoundingBox& bbox,
+                                                            const int dst_size){
+        dlib::rectangle rect = bbox.getRect();
+        long left = rect.left(), right = rect.right(), top = rect.top(), bottom = rect.bottom();
+        float old_size = (right - left + bottom - top)/2.0f;
+        //Eigen::Vector2f center({right - (right - left) / 2.0f, bottom - (bottom - top) / 2.0f + old_size*0.14f});
+        float center[2] = {right - (right - left) / 2.0f, bottom - (bottom - top) / 2.0f + old_size*0.14f};
+        int size = int(old_size*1.58f);
+
+
+        float src_pts[] = {center[0]-size/2, center[1]-size/2,
+                           center[0] - size/2, center[1]+size/2,
+                           center[0]+size/2, center[1]-size/2};
+
+
+        float dst_pts[] = {0,0,
+                           0,dst_size - 1,
+                           dst_size - 1, 0};
+
+        auto src = cv::Mat(3, 2, CV_32F, &src_pts);
+        auto dst = cv::Mat(3, 2, CV_32F, &dst_pts);
+
+        // Compute 5-DOF similarity transform (translation, rotation, and uniform scaling)
+        // basicially if FullAffine=True, then it will compute 6-DOF including sheer and we don't want sheer
+        // The result is a 2x3 affine matrix
+        cv::Mat R = cv::estimateRigidTransform(src, dst, /*Full Affine*/false);
+
+        // extend rigid transformation to use perspective transform for square matrix for inverting:
+        cv::Mat H = cv::Mat::eye(3,3,R.type());
+        R.copyTo(H.rowRange(0,2));
+        transform *= H;
+    }
+
+    void PRNetFeatureDetectionPipe::warpImage(cv::Mat& warped,
+                   const cv::Mat& image,
+                   const cv::Mat& transform,
+                   const int dst_size){
+        auto normImage = image / 255.0;
+
+        // Transform is automatically inverted
+        // Takes 2x3 Matrix
+//        cv::warpAffine(normImage, warped, transform, cv::Size(resolution_inp, resolution_inp) );
+        // Takes 3x3 Matrix, square for inverse
+        cv::warpPerspective(normImage, warped, transform, cv::Size(dst_size, dst_size) );
+    }
+
+    void PRNetFeatureDetectionPipe::restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transform){
+        cv::Mat resultMat;
+        cv::eigen2cv(result, resultMat);
+
+        // We are expecting only uniform scaling, so we use the x scaling term
+        float scale = transform.at<float>(0,0);
+        cv::Mat z = resultMat.row(2)/scale;
+        resultMat.row(2).setTo(1);
+        cv::Mat verticies = transform.inv() * resultMat;
+        verticies.row(2).setTo(z);
+
+        cv::cv2eigen(verticies, restored);
+    }
+
+    FeatureDetectSuite::Ptr PRNetFeatureDetectionPipe::_processData(InputPtrT in) {
+        auto pclImage = in->deviceInput->rawImage;
+
+        auto matImg = telef::util::convert(pclImage);
+
+        cv::Mat transform = cv::Mat::eye(3,3,CV_32F);
+        calculateTransformation(transform, *matImg, in->feature->boundingBox, prnetIntputSize);
+
+        cv::Mat warped;
+        warpImage(warped, *matImg, transform, prnetIntputSize);
+
+        // Detect Landmarks
+        Eigen::MatrixXf result = lmkDetector.Run((float*)warped.data);
+
+        restore(in->feature->points, result, transform );
 
         return in;
     }

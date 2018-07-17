@@ -38,6 +38,8 @@ int main(int ac, const char* const * av)
     desc.add_options()
             ("help,H", "print help message")
             ("detector,D", po::value<std::string>(), "specify Dlib pretrained Face detection model path")
+            ("graph,G", po::value<std::string>(), "specify path to PRNet graph definition")
+            ("checkpoint,C", po::value<std::string>(), "specify path to pretrained PRNet checkpoint")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
 
     po::variables_map vm;
@@ -56,10 +58,24 @@ int main(int ac, const char* const * av)
         return 1;
     }
 
+    if (vm.count("graph") == 0) {
+        std::cout << "graph specify 'PRNet Graph path'"  << std::endl;
+        return 1;
+    }
+
+    if (vm.count("checkpoint") == 0) {
+        std::cout << "Please specify 'PRNet Checkpoint path'"  << std::endl;
+        return 1;
+    }
+
     std::string detectModelPath;
+    std::string prnetGraphPath;
+    std::string prnetChkptPath;
     std::string fakePath("");
 
     detectModelPath = vm["detector"].as<std::string>();
+    prnetGraphPath = vm["graph"].as<std::string>();
+    prnetChkptPath = vm["checkpoint"].as<std::string>();
 
     if (useFakeKinect) {
         fakePath = vm["fake"].as<std::string>();
@@ -76,7 +92,7 @@ int main(int ac, const char* const * av)
 
     auto viewFrontend = std::make_shared<FeatureDetectFrontEnd>();
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
-    auto featureDetector = DummyFeatureDetectionPipe(fs::path(fakePath));
+    auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
 //    auto featureProjection = FeatureProjectionPipe();
 
 
