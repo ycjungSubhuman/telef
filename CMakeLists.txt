@@ -31,6 +31,7 @@ find_package(Ceres REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(dlib REQUIRED)
+find_package(TensorflowCC REQUIRED COMPONENTS Shared)
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
@@ -76,11 +77,13 @@ add_library(telef
 		include/util/convert_arr.h
 		include/face/model_cudahelper.h
 		include/face/raw_model.h
+        include/face/prnet.h
 		include/util/transform.h
 		include/feature/feature_detect_frontend.h
         include/io/merger/device_input_merger.h
         include/feature/feature_detect_pipe.h
 		include/util/eigen_file_io.h
+        include/feature/face.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -103,7 +106,9 @@ add_library(telef
 		src/face/model.cpp
 		src/face/deformation_model.cpp
 		src/util/transform.cpp
-        src/feature/feature_detect_pipe.cpp)
+        src/feature/feature_detect_pipe.cpp
+        src/face/prnet.cpp
+		src/util/transform.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -112,13 +117,14 @@ target_include_directories(telef
         PUBLIC ${Eigen_INCLUDE_DIRS}
         PUBLIC ${Boost_INCLUDE_DIRS}
         PUBLIC ${CERES_INCLUDE_DIRS}
-		PUBLIC ${dlib_INCLUDE_DIRS}
         PUBLIC ${CMAKE_SOURCE_DIR}/include/
 		PUBLIC ${CMAKE_SOURCE_DIR}/include/face
+        PUBLIC /usr/local/include
 		)
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
+        TensorflowCC::Shared
 		stdc++fs
 		cutelef
 		${CERES_LIBRARIES}
@@ -210,12 +216,22 @@ if (BUILD_TESTS)
 	function(myaddtest testname testpath)
 		add_executable(${testname} ${testpath})
 		target_link_libraries(${testname} gtest gtest_main gmock ${CBLAS_LIBRARIES})
-		target_link_libraries(${testname} cutelef -lm)
+		target_link_libraries(${testname} telef -lm)
+        target_link_libraries(${testname} TensorflowCC::Shared)
+        target_link_libraries(${testname}
+                stdc++fs
+                opencv_core
+                opencv_objdetect
+                opencv_imgproc
+                opencv_highgui
+                opencv_flann
+                opencv_ml)
 		target_include_directories(${testname}
 				PRIVATE ${CMAKE_SOURCE_DIR}/include
 				PRIVATE lib/googletest/googletest/include
 				PRIVATE lib/googletest/googlemock/include
 				PRIVATE ${CBLAS_INCLUDE_DIRS}
+                PRIVATE ${EIGEN_INCLUDE_DIRS}
 				)
 		add_test(NAME ${testname} COMMAND ${testname})
 	endfunction(myaddtest)
@@ -225,4 +241,5 @@ if (BUILD_TESTS)
 	enable_testing()
 
 	myaddtest(test_cu_quaternion tests/util/test_cu_quaternion.cu)
+    myaddtest(test_prnet tests/face/test_prnet.cpp)
 endif()

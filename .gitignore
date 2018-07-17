@@ -11,5 +11,6 @@ include/face/Marcos.h
 include/face/XXDescriptor.h
 models/*.bin
 models/*.xml
+models/256*
 data/
 lib/libface.a

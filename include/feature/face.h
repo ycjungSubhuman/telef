@@ -2,7 +2,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <cxcore.h>
-#include <local/include/dlib/geometry/rectangle.h>
+#include <dlib/geometry/rectangle.h>
 #include "type.h"
 #include "io/merger/device_input.h"
 

@@ -38,3 +38,8 @@ RUN /bin/bash -c "sudo chown user:user /home/user/ncurses5-compat-libs"
 RUN /bin/bash -c "cd /home/user/ncurses5-compat-libs && makepkg -si --noconfirm"
 RUN /bin/bash -c "yaourt -S --noconfirm gdb"
 RUN /bin/bash -c "rm -rf /home/user/ncurses5-compat-libs"
+
+RUN /bin/bash -c "cd /home/user && git clone https://github.com/FloopCZ/tensorflow_cc"
+RUN /bin/bash -c "yaourt -S --noconfirm unzip mlocate python python-numpy wget gcc7 bazel cudnn"
+RUN /bin/bash -c "yaourt -S --noconfirm dlib"
+RUN /bin/bash -c "cd /home/user/tensorflow_cc/tensorflow_cc && mkdir build && cd build && cmake -DTENSORFLOW_STATIC=OFF -DTENSORFLOW_SHARED=ON ../ && make && sudo make install && rm -rf /home/user/tensorflow_cc"
