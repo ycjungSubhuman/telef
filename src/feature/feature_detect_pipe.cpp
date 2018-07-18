@@ -70,6 +70,7 @@ namespace telef::feature {
         double detection_confidence = 0;
 
         // Get best face detected
+        // TODO: Handle face detection failure
         for (auto &&d : dets) {
             if (d.detection_confidence > detection_confidence) {
                 detection_confidence = d.detection_confidence;
@@ -120,7 +121,8 @@ namespace telef::feature {
     PRNetFeatureDetectionPipe::PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath)
             : lmkDetector(graphPath, checkpointPath), prnetIntputSize(256)
 
-    {}
+    {
+    }
 
     void PRNetFeatureDetectionPipe::calculateTransformation(cv::Mat& transform,
                                                             const cv::Mat& image,
@@ -134,12 +136,12 @@ namespace telef::feature {
         int size = int(old_size*1.58f);
 
         // Use std::vector<cv::Point> to tell estimateRigidTransform it is a set of points, not an image
-        std::vector<cv::Point> src_pts;
+        std::vector<cv::Point2f> src_pts;
         src_pts.emplace_back(center[0]-size/2, center[1]-size/2);
         src_pts.emplace_back(center[0] - size/2, center[1]+size/2);
         src_pts.emplace_back(center[0]+size/2, center[1]-size/2);
 
-        std::vector<cv::Point> dst_pts;
+        std::vector<cv::Point2f> dst_pts;
         dst_pts.emplace_back(0,0);
         dst_pts.emplace_back(0, dst_size - 1);
         dst_pts.emplace_back(dst_size - 1, 0);
@@ -147,35 +149,30 @@ namespace telef::feature {
         // Compute 5-DOF similarity transform (translation, rotation, and uniform scaling)
         // basicially if FullAffine=True, then it will compute 6-DOF including sheer and we don't want sheer
         // The result is a 2x3 affine matrix
-        cv::Mat R = cv::estimateRigidTransform(src_pts, dst_pts, /*Full Affine*/false);
-
-        // extend rigid transformation to use perspective transform for square matrix for inverting,
-        // also convert to float from double returned from estimation
-        cv::Mat H = cv::Mat::eye(3,3,CV_32F);
-        R.copyTo(H.rowRange(0,2));
-        transform *= H;
+        transform = cv::estimateRigidTransform(src_pts, dst_pts, /*Full Affine*/false);
     }
 
     void PRNetFeatureDetectionPipe::warpImage(cv::Mat& warped,
                    const cv::Mat& image,
                    const cv::Mat& transform,
                    const int dst_size){
-//        cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
 
-        // Convert CV_8UC3 to CV32FC3 to normalize intensities between 0 and 1
+        // Convert CV_8UC3 to CV32FC3, which automatically normalizes intensities between 0 and 1
         cv::Mat normImage;
         image.convertTo(normImage, CV_32FC3);
-        normImage /= 255.0;
 
-//        cv::imshow("Display window", normImage);
 //        cv::waitKey(0);
         // Transform is automatically inverted
         // Takes 2x3 Matrix
 //        cv::warpAffine(normImage, warped, transform, cv::Size(resolution_inp, resolution_inp) );
         // Takes 3x3 Matrix, square for inverse
-        cv::warpPerspective(normImage, warped, transform, cv::Size(dst_size, dst_size) );
-//        cv::imshow("Display window", warped);
-//        cv::waitKey(0);
+//        cv::Mat P = cv::Mat::eye(3,3,CV_32F);
+//        transform.copyTo(P.rowRange(0,2));
+//        cv::warpPerspective(normImage, warped, P, cv::Size(dst_size, dst_size) );
+        //cout << " " << affMat << endl;
+        //cv::Mat temp(dst_size, dst_size, CV_32FC3);
+
+        cv::warpAffine(normImage, warped, transform, cv::Size(dst_size, dst_size) );
     }
 
     void PRNetFeatureDetectionPipe::restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transform){
@@ -198,7 +195,7 @@ namespace telef::feature {
 
         auto matImg = telef::util::convert(pclImage);
 
-        cv::Mat transform = cv::Mat::eye(3,3,CV_32F);
+        cv::Mat transform; // = cv::Mat::eye(3,3,CV_64F);
         calculateTransformation(transform, *matImg, in->feature->boundingBox, prnetIntputSize);
 
         cv::Mat warped;
@@ -207,7 +204,13 @@ namespace telef::feature {
         // Detect Landmarks
         Eigen::MatrixXf result = lmkDetector.Run((float*)warped.data);
 
-        restore(in->feature->points, result, transform );
+
+        // extend rigid transformation to use perspective transform for square matrix for inverting,
+        // also convert to float from double returned from estimation for compatable matmul with out floating point data
+        cv::Mat squareTransf = cv::Mat::eye(3,3,CV_32F);
+        transform.convertTo(squareTransf.rowRange(0,2), CV_32F);
+
+        restore(in->feature->points, result, squareTransf );
 
         return in;
     }
