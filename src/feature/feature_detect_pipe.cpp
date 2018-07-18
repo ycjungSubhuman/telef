@@ -128,31 +128,30 @@ namespace telef::feature {
                                                             const int dst_size){
         dlib::rectangle rect = bbox.getRect();
         long left = rect.left(), right = rect.right(), top = rect.top(), bottom = rect.bottom();
-        float old_size = (right - left + bottom - top)/2.0f;
+        float old_size = (right - left + bottom - top)/2.f;
         //Eigen::Vector2f center({right - (right - left) / 2.0f, bottom - (bottom - top) / 2.0f + old_size*0.14f});
-        float center[2] = {right - (right - left) / 2.0f, bottom - (bottom - top) / 2.0f + old_size*0.14f};
+        float center[2] = {right - rect.width() / 2.f, bottom - rect.height() / 2.f + old_size*0.14f};
         int size = int(old_size*1.58f);
 
+        // Use std::vector<cv::Point> to tell estimateRigidTransform it is a set of points, not an image
+        std::vector<cv::Point> src_pts;
+        src_pts.emplace_back(center[0]-size/2, center[1]-size/2);
+        src_pts.emplace_back(center[0] - size/2, center[1]+size/2);
+        src_pts.emplace_back(center[0]+size/2, center[1]-size/2);
 
-        float src_pts[] = {center[0]-size/2, center[1]-size/2,
-                           center[0] - size/2, center[1]+size/2,
-                           center[0]+size/2, center[1]-size/2};
-
-
-        float dst_pts[] = {0,0,
-                           0,dst_size - 1,
-                           dst_size - 1, 0};
-
-        auto src = cv::Mat(3, 2, CV_32F, &src_pts);
-        auto dst = cv::Mat(3, 2, CV_32F, &dst_pts);
+        std::vector<cv::Point> dst_pts;
+        dst_pts.emplace_back(0,0);
+        dst_pts.emplace_back(0, dst_size - 1);
+        dst_pts.emplace_back(dst_size - 1, 0);
 
         // Compute 5-DOF similarity transform (translation, rotation, and uniform scaling)
         // basicially if FullAffine=True, then it will compute 6-DOF including sheer and we don't want sheer
         // The result is a 2x3 affine matrix
-        cv::Mat R = cv::estimateRigidTransform(src, dst, /*Full Affine*/false);
+        cv::Mat R = cv::estimateRigidTransform(src_pts, dst_pts, /*Full Affine*/false);
 
-        // extend rigid transformation to use perspective transform for square matrix for inverting:
-        cv::Mat H = cv::Mat::eye(3,3,R.type());
+        // extend rigid transformation to use perspective transform for square matrix for inverting,
+        // also convert to float from double returned from estimation
+        cv::Mat H = cv::Mat::eye(3,3,CV_32F);
         R.copyTo(H.rowRange(0,2));
         transform *= H;
     }
@@ -161,25 +160,35 @@ namespace telef::feature {
                    const cv::Mat& image,
                    const cv::Mat& transform,
                    const int dst_size){
-        auto normImage = image / 255.0;
+//        cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
 
+        // Convert CV_8UC3 to CV32FC3 to normalize intensities between 0 and 1
+        cv::Mat normImage;
+        image.convertTo(normImage, CV_32FC3);
+        normImage /= 255.0;
+
+//        cv::imshow("Display window", normImage);
+//        cv::waitKey(0);
         // Transform is automatically inverted
         // Takes 2x3 Matrix
 //        cv::warpAffine(normImage, warped, transform, cv::Size(resolution_inp, resolution_inp) );
         // Takes 3x3 Matrix, square for inverse
         cv::warpPerspective(normImage, warped, transform, cv::Size(dst_size, dst_size) );
+//        cv::imshow("Display window", warped);
+//        cv::waitKey(0);
     }
 
     void PRNetFeatureDetectionPipe::restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transform){
-        cv::Mat resultMat;
+        cv::Mat resultMat; //(result.rows(), result.cols(), transform.type());
+        // Cast result to double to match cv::datatypes
         cv::eigen2cv(result, resultMat);
 
         // We are expecting only uniform scaling, so we use the x scaling term
         float scale = transform.at<float>(0,0);
         cv::Mat z = resultMat.row(2)/scale;
-        resultMat.row(2).setTo(1);
+        resultMat.row(2).setTo(cv::Scalar(1.0));
         cv::Mat verticies = transform.inv() * resultMat;
-        verticies.row(2).setTo(z);
+        z.copyTo(verticies.row(2));
 
         cv::cv2eigen(verticies, restored);
     }
