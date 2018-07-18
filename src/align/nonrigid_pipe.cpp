@@ -80,7 +80,7 @@ namespace telef::align {
     PCAGPUNonRigidFittingPipe::_processData(boost::shared_ptr<PCARigidAlignmentSuite> in) {
         /* Load data to cuda device */
 
-        std::cout << "Fitting PCA model GPU" << std::endl;
+        //std::cout << "Fitting PCA model GPU" << std::endl;
         if(!isModelInitialized) {
             auto shapeBasis = in->pca_model->getShapeBasisMatrix();
             auto expressionBasis = in->pca_model->getExpressionBasisMatrix();
@@ -93,11 +93,10 @@ namespace telef::align {
             isModelInitialized = true;
         }
 
-        std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
+        //std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
         // Filter out non-detected Deformable Model landmarks
         std::vector<int> validLmks = in->pca_model->getLandmarks();
         auto riter = in->fittingSuite->invalid3dLandmarks.rbegin();
-        pcl::io::savePLYFile("captured.ply", *in->rawCloud);
         while (riter != in->fittingSuite->invalid3dLandmarks.rend())
         {
             auto iter_data = validLmks.begin() + *riter;
@@ -113,7 +112,7 @@ namespace telef::align {
 
         /* Setup Optimizer */
 
-        std::cout << "Fitting PCA model to scan..." << std::endl;
+        //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto cost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
         double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
@@ -124,13 +123,13 @@ namespace telef::align {
         problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.shapeRank, 0.0001), NULL, shapeCoeff);
         problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.expressionRank, 0.0001), NULL, expressionCoeff);
         ceres::Solver::Options options;
-        options.minimizer_progress_to_stdout = true;
+        options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
 
         /* Run Optimization */
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
-        std::cout << summary.FullReport() << std::endl;
+        //std::cout << summary.FullReport() << std::endl;
 
         float fu[3];
         float ft[3];
@@ -151,12 +150,13 @@ namespace telef::align {
         result->expressionCoeff =
                 Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
 
-        std::cout << "Fitted(Shape): " << std::endl;
-        std::cout << result->shapeCoeff << std::endl;
-        std::cout << "Fitted(Expression): " << std::endl;
-        std::cout << result->expressionCoeff << std::endl;
+        //std::cout << "Fitted(Shape): " << std::endl;
+        //std::cout << result->shapeCoeff << std::endl;
+        //std::cout << "Fitted(Expression): " << std::endl;
+        //std::cout << result->expressionCoeff << std::endl;
         result->image = in->image;
         result->pca_model = in->pca_model;
+        result->cloud = in->rawCloud;
         result->fx = in->fx;
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;

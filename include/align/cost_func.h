@@ -73,7 +73,6 @@ namespace telef::align{
             // optimization methods. if either is null, we don't have to compute jacobian
             // FIXME: Change to indicate which one to calcualte
             bool isJacobianRequired = jacobians != nullptr;
-            std::cout << "isJacobianRequired? " << isJacobianRequired << std::endl;
             // Copy to float array
             convertArray(parameters[0], fa1Params, c_deformModel.shapeRank);
             convertArray(parameters[1], fa2Params, c_deformModel.expressionRank);

@@ -78,6 +78,7 @@ add_library(telef
 		include/face/raw_model.h
         include/face/prnet.h
 		include/util/transform.h
+        include/vis/fitting_visualizer.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -100,7 +101,8 @@ add_library(telef
 		src/face/model.cpp
 		src/face/deformation_model.cpp
         src/face/prnet.cpp
-		src/util/transform.cpp)
+		src/util/transform.cpp
+        src/vis/fitting_visualizer.cpp)
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
         PUBLIC ${CUDA_INCLUDE_DIRS}
@@ -130,6 +132,9 @@ target_link_libraries(telef
 		opencv_highgui
 		opencv_flann
 		opencv_ml
+        -lGLEW
+        -lGL
+        glfw
 		)
 
 add_library(cutelef STATIC
@@ -192,6 +197,9 @@ target_link_libraries(RecordFakeFrame ${Boost_LIBRARIES} telef)
 add_executable(FakeDeviceExample app/examples/FakeDeviceExample.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceExample stdc++fs ${Boost_LIBRARIES} telef)
+
+add_executable(Visualizer app/byproducts/Visualizer.cpp)
+target_link_libraries(Visualizer telef)
 
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)

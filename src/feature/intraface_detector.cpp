@@ -25,9 +25,10 @@ namespace telef::feature {
         string faceDetectionModel("../models/haarcascade_frontalface_alt2.xml");
 
         // Convert PCL image to OpenCV Mat
+        auto imgrgb = cv::Mat(image.getHeight(), image.getWidth(), CV_8UC3);
         auto img = cv::Mat(image.getHeight(), image.getWidth(), CV_8UC3);
-        image.fillRGB(img.cols, img.rows, img.data, img.step);
-        cvtColor(img, img, CV_RGB2BGR);
+        image.fillRGB(imgrgb.cols, imgrgb.rows, imgrgb.data, imgrgb.step);
+        cvtColor(imgrgb, img, CV_RGB2BGR);
 
         // Initialize Face and Feature Detectors
         // TODO: Store detectors as member, to not need instantiation each time used
