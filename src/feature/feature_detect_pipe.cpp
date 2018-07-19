@@ -159,6 +159,7 @@ namespace telef::feature {
         // Convert CV_8UC3 to CV32FC3, which automatically normalizes intensities between 0 and 1
         cv::Mat normImage;
         image.convertTo(normImage, CV_32FC3);
+        normImage /= 255.0f;
 
         // Transform is automatically inverted
         // Takes 2x3 Matrix
@@ -178,7 +179,9 @@ namespace telef::feature {
 
         // We are expecting only uniform scaling, so we use the x scaling term
         float scale = transform.at<float>(0,0);
-        cv::Mat z = resultMat.row(2)/scale;
+        cv::Mat z;
+        resultMat.row(2).copyTo(z);
+        z /= scale;
         resultMat.row(2).setTo(cv::Scalar(1.0));
         cv::Mat verticies = transform.inv() * resultMat;
         z.copyTo(verticies.row(2));
@@ -213,6 +216,27 @@ namespace telef::feature {
         transform.convertTo(squareTransf.rowRange(0,2), CV_32F);
 
         restore(landmarks, result, squareTransf );
+
+        //warped Lmk Result
+        cv::Mat warpedCpy;
+        warped.convertTo(warpedCpy, CV_8UC3);
+
+
+        int myradius=3;
+        for (int i=0;i<result.cols();i++)
+            cv::circle(warpedCpy,cvPoint(result(0,i),result(1,i)),myradius,CV_RGB(0,255,0),-1,8,0);
+
+        cv::imshow("Warped Landmarks", warpedCpy);
+
+        // Result
+        cv::Mat imgCpy;
+        matImg->copyTo(imgCpy);
+
+        for (int i=0;i<landmarks.cols();i++)
+            cv::circle(imgCpy,cvPoint(landmarks(0,i),landmarks(1,i)),myradius,CV_RGB(0,255,0),-1,8,0);
+
+        cv::imshow("Landmarks", imgCpy);
+        cv::waitKey(0);
 
         in->feature->points = landmarks;
         return in;
