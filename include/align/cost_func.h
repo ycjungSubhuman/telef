@@ -118,9 +118,9 @@ namespace telef::align{
         float *position_d;
     };
 
-    class RegularizerFunctor : public ceres::CostFunction {
+    class L2RegularizerFunctor : public ceres::CostFunction {
     public:
-        RegularizerFunctor(int coeffSize, double multiplier) : coeffSize(coeffSize), multiplier(multiplier) {
+        L2RegularizerFunctor(int coeffSize, double multiplier) : coeffSize(coeffSize), multiplier(multiplier) {
             set_num_residuals(coeffSize);
             mutable_parameter_block_sizes()->push_back(coeffSize);
         }
@@ -135,13 +135,9 @@ namespace telef::align{
             if(jacobians != nullptr) {
                 for(int i=0; i<coeffSize; i++) {
                     for (int j=0; j<coeffSize; j++) {
-                        if(i==j) {
-                            jacobians[0][coeffSize*j+i] = sqrt_lambda;
-                        }
-                        else {
-                            jacobians[0][coeffSize*j+i] = 0;
-                        }
+                        jacobians[0][coeffSize*i + j] = 0;
                     }
+                    jacobians[0][coeffSize*i + i] = sqrt_lambda;
                 }
             }
             return true;
@@ -149,5 +145,197 @@ namespace telef::align{
     private:
         int coeffSize;
         double multiplier;
+    };
+
+    /*
+     * high linear slope on x < 0
+     *                .  |           .
+     *                .  |          .
+     *                 . |         .
+     *                 . |        .
+     *                  .|     .
+     *                  .| .
+     * ---------------------------------------
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *
+     */
+    class BarrieredL2Functor : public ceres::CostFunction {
+    public:
+        BarrieredL2Functor(int coeffSize, double multiplier, double barrierSlope)
+                : coeffSize(coeffSize),
+                  multiplier(multiplier),
+                  barrierSlope(barrierSlope) {
+            set_num_residuals(coeffSize);
+            mutable_parameter_block_sizes()->push_back(coeffSize);
+        }
+
+        virtual bool Evaluate(double const* const* parameters,
+                              double* residuals,
+                              double** jacobians) const {
+
+            for (int i = 0; i < coeffSize; i++) {
+                const double x = parameters[0][i];
+                if(x < 0) {
+                    residuals[i] = sqrt(multiplier * (-barrierSlope * x));
+
+                    if(jacobians != nullptr) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[0][coeffSize*i + j] = 0.0;
+                        }
+                        jacobians[0][coeffSize*i + i] = 0.5 * (1.0/residuals[i]) * (-multiplier*barrierSlope);
+                    }
+                }
+                else {
+                    residuals[i] = sqrt(multiplier) * x;
+
+                    if(jacobians != nullptr) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[0][coeffSize*i + j] = 0.0;
+                        }
+                        jacobians[0][coeffSize*i + i] = sqrt(multiplier);
+                    }
+                }
+            }
+
+            return true;
+        }
+
+    private:
+        int coeffSize;
+        double multiplier;
+        double barrierSlope;
+    };
+
+    /*
+     * high linear slope on x < 0
+     *                .  |
+     *                .  |
+     *                 . |
+     *                 . |
+     *                  .|
+     *                  .| . . .  . . . . .
+     * ---------------------------------------
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *
+     */
+    class LinearBarrierFunctor : public ceres::CostFunction {
+    public:
+        LinearBarrierFunctor(int coeffSize, double multiplier, double barrierSlope)
+                : coeffSize(coeffSize),
+                  multiplier(multiplier),
+                  barrierSlope(barrierSlope) {
+            set_num_residuals(coeffSize);
+            mutable_parameter_block_sizes()->push_back(coeffSize);
+        }
+
+        virtual bool Evaluate(double const* const* parameters,
+                              double* residuals,
+                              double** jacobians) const {
+
+            for (int i = 0; i < coeffSize; i++) {
+                const double x = parameters[0][i];
+                if(x < 0) {
+                    residuals[i] = sqrt(multiplier * (-barrierSlope * x));
+
+                    if(jacobians != nullptr) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[0][coeffSize*i + j] = 0.0;
+                        }
+                        jacobians[0][coeffSize*i + i] = 0.5 * (1.0/residuals[i]) * (-multiplier*barrierSlope);
+                    }
+                }
+                else {
+                    residuals[i] = 0;
+
+                    if(jacobians != nullptr) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[0][coeffSize*i + j] = 0.0;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+    private:
+        int coeffSize;
+        double multiplier;
+        double barrierSlope;
+    };
+
+    /*
+     * high linear slope on x > barrier
+     *                   |   .
+     *                   |   .
+     *                   |  .
+     *                   |  .
+     *                   | .
+     *   ................| .
+     * ---------------------------------------
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *                   |
+     *
+     */
+    class LinearUpperBarrierFunctor : public ceres::CostFunction {
+    public:
+        LinearUpperBarrierFunctor(int coeffSize, double multiplier, double barrierSlope, double barrier)
+                : coeffSize(coeffSize),
+                  multiplier(multiplier),
+                  barrierSlope(barrierSlope),
+                  barrier(barrier) {
+            set_num_residuals(coeffSize);
+            mutable_parameter_block_sizes()->push_back(coeffSize);
+        }
+
+        virtual bool Evaluate(double const* const* parameters,
+                              double* residuals,
+                              double** jacobians) const {
+
+            for (int i = 0; i < coeffSize; i++) {
+                const double x = parameters[0][i];
+                if(x > 0) {
+                    residuals[i] = sqrt(multiplier * (barrierSlope * x));
+
+                    if(jacobians != nullptr) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[0][coeffSize*i + j] = 0.0;
+                        }
+                        jacobians[0][coeffSize*i + i] = 0.5 * (1.0/residuals[i]) * (multiplier*barrierSlope);
+                    }
+                }
+                else {
+                    residuals[i] = 0;
+
+                    if(jacobians != nullptr) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[0][coeffSize*i + j] = 0.0;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+    private:
+        int coeffSize;
+        double multiplier;
+        double barrierSlope;
+        double barrier;
     };
 }
