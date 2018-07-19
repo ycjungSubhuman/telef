@@ -146,6 +146,9 @@ int main(int ac, const char* const *av) {
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
     auto frontend = std::make_shared<ColorMeshPlyWriteFrontEnd>(outputPath);
 
+    std::shared_ptr<MorphableFaceModel> model;
+    model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
+
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
     auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
     auto lmkToScanFitting = LmkToScanRigidFittingPipe();
@@ -154,10 +157,7 @@ int main(int ac, const char* const *av) {
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
-    std::shared_ptr<MorphableFaceModel> model;
-    model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
-
-    std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;
+    std::shared_ptr<DeviceInputPipeMerger<ColorMesh>> merger;
     auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting, rigid, nonrigid, fitting2Projection, colorProjection);
     merger = std::make_shared<DeviceInputPipeMerger<ColorMesh>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
