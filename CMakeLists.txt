@@ -191,6 +191,10 @@ add_executable(PcaTargetFit app/tools/PcaTargetFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(PcaTargetFit ${Boost_LIBRARIES} telef)
 
+add_executable(PRNetPcaTargetFit app/tools/PRNetPcaTargetFit.cpp src/io/modelio.cpp)
+target_link_libraries(PRNetPcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(PRNetPcaTargetFit ${Boost_LIBRARIES} telef)
+
 add_executable(PcaMultiModelFit app/tools/PcaMultiModalFit.cpp src/io/modelio.cpp)
 target_link_libraries(PcaMultiModelFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(PcaMultiModelFit ${Boost_LIBRARIES} telef)
