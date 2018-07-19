@@ -59,12 +59,12 @@ namespace telef::feature {
         // better parallelism out of your GPU hardware.  However, all the images must be
         // the same size.  To avoid this requirement on images being the same size we
         // process them individually in this example.
-        auto begin = chrono::high_resolution_clock::now();
+//        auto begin = chrono::high_resolution_clock::now();
         auto dets = net(img);
-        auto end = chrono::high_resolution_clock::now();
-        auto dur = end - begin;
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
-        cout << "Face Detection(ms):" << ms << endl;
+//        auto end = chrono::high_resolution_clock::now();
+//        auto dur = end - begin;
+//        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+//        cout << "Face Detection(ms):" << ms << endl;
 
         dlib::rectangle bbox;
         double detection_confidence = 0;
@@ -193,7 +193,7 @@ namespace telef::feature {
         auto pclImage = in->deviceInput->rawImage;
 
         if (in->feature->boundingBox.width <= 0 || in->feature->boundingBox.height <= 0) {
-            std::cout << "Face Detection Failed, returning previous landmarks...";
+            std::cout << "Face Detection Failed, returning previous PRNet landmarks...\n";
             in->feature->points = landmarks;
             return in;
         }
@@ -216,27 +216,6 @@ namespace telef::feature {
         transform.convertTo(squareTransf.rowRange(0,2), CV_32F);
 
         restore(landmarks, result, squareTransf );
-
-        //warped Lmk Result
-        cv::Mat warpedCpy;
-        warped.convertTo(warpedCpy, CV_8UC3);
-
-
-        int myradius=3;
-        for (int i=0;i<result.cols();i++)
-            cv::circle(warpedCpy,cvPoint(result(0,i),result(1,i)),myradius,CV_RGB(0,255,0),-1,8,0);
-
-        cv::imshow("Warped Landmarks", warpedCpy);
-
-        // Result
-        cv::Mat imgCpy;
-        matImg->copyTo(imgCpy);
-
-        for (int i=0;i<landmarks.cols();i++)
-            cv::circle(imgCpy,cvPoint(landmarks(0,i),landmarks(1,i)),myradius,CV_RGB(0,255,0),-1,8,0);
-
-        cv::imshow("Landmarks", imgCpy);
-        cv::waitKey(0);
 
         in->feature->points = landmarks;
         return in;
