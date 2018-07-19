@@ -31,6 +31,9 @@ namespace telef::align {
             auto mapping = in->deviceInput->img2cloudMapping;
             auto prnetCorr = boost::make_shared<CloudT>();
             auto scanCorr = boost::make_shared<CloudT>();
+
+            std::vector<int> rigidCorr;
+            int validLmkCount = 0;
             for (long i=0; i<feature->points.cols(); i++) {
                 try {
                     auto pointInd = mapping->getMappedPointId(feature->points(0, i), feature->points(1, i));
@@ -47,6 +50,11 @@ namespace telef::align {
                     lmkPoint.z = feature->points(2, i);
                     prnetCorr->push_back(lmkPoint);
 
+                    // Only do rigid fitting on most rigid landmarks (exclude chin for scan alignment)
+                    if (i > 16) { // && i < 48){
+                        rigidCorr.push_back(validLmkCount);
+                    }
+                    validLmkCount++;
                 } catch (std::out_of_range &e) {
                     badlmks.push_back(i);
                 }
@@ -60,7 +68,7 @@ namespace telef::align {
 //            std::iota(std::begin(corr), std::end(corr), 0);
 
             pcl::registration::TransformationEstimationSVDScale<pcl::PointXYZRGBA, pcl::PointXYZRGBA> svd;
-            svd.estimateRigidTransformation(*prnetCorr, *scanCorr, currentTransform);
+            svd.estimateRigidTransformation(*prnetCorr, rigidCorr, *scanCorr, rigidCorr, currentTransform);
 
 //            std::cout << "\n lmk to Scan Transformtion Matrix: \n" << currentTransform << std::endl;
             // Return Aligned 3D Landmarks via PointCloud
@@ -70,7 +78,9 @@ namespace telef::align {
 
             landmark3d.swap(transformed_lmks);
             transformation = currentTransform;
-        }
+        } else {
+            std::cout << "No Landmarks detected, using previous frames...\n";
+        };
 
         boost::shared_ptr<FittingSuite> output = boost::make_shared<FittingSuite>();
         output->landmark3d = landmark3d;
