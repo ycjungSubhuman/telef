@@ -48,34 +48,31 @@ namespace telef::io {
     };
 
     /** Visualize Pointcloud through PCL Visualizer */
-    class FeatureDetectFrontEnd : public FaceDetectFrontEnd {
+    class FeatureDetectFrontEnd : public FrontEnd<telef::feature::FittingSuite > {
     private:
-        using InputPtrT = const boost::shared_ptr<telef::feature::FeatureDetectSuite>;
+        using InputPtrT = const boost::shared_ptr<telef::feature::FittingSuite>;
 
         std::unique_ptr<vis::PCLVisualizer> visualizer;
 
     public:
 
         void process(InputPtrT input) override {
-                // TODO: Better combine Face and Feature detection!!!!
-                // Display Face Detection
-                FaceDetectFrontEnd::process(input);
+            // Display Features in 3D
+            auto lmks = input->landmark3d;
 
-                // Display Features in 3D
-                auto cloud = telef::util::convert(input->feature->points);
-                if (!visualizer) {
-                        visualizer = std::make_unique<vis::PCLVisualizer>();
-                        visualizer->setBackgroundColor(0, 0, 0);
-                }
+            if (!visualizer) {
+                    visualizer = std::make_unique<vis::PCLVisualizer>();
+                    visualizer->setBackgroundColor(0, 0, 0);
+            }
 
-                visualizer->spinOnce();
-                if(!visualizer->updatePointCloud(cloud)) {
-                        visualizer->addPointCloud(cloud);
-                        visualizer->setPosition (0, 0);
-                        visualizer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5);
-                        //visualizer->setSize (cloud->width, cloud->height);
-                        visualizer->initCameraParameters();
-                }
+            visualizer->spinOnce();
+            if(!visualizer->updatePointCloud(lmks)) {
+                    visualizer->addPointCloud(lmks);
+                    visualizer->setPosition (0, 0);
+                    visualizer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5);
+                    //visualizer->setSize (cloud->width, cloud->height);
+                    visualizer->initCameraParameters();
+            }
         }
     };
 }

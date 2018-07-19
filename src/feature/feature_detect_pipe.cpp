@@ -131,7 +131,6 @@ namespace telef::feature {
         dlib::rectangle rect = bbox.getRect();
         long left = rect.left(), right = rect.right(), top = rect.top(), bottom = rect.bottom();
         float old_size = (right - left + bottom - top)/2.f;
-        //Eigen::Vector2f center({right - (right - left) / 2.0f, bottom - (bottom - top) / 2.0f + old_size*0.14f});
         float center[2] = {right - rect.width() / 2.f, bottom - rect.height() / 2.f + old_size*0.14f};
         int size = int(old_size*1.58f);
 
@@ -161,18 +160,15 @@ namespace telef::feature {
         cv::Mat normImage;
         image.convertTo(normImage, CV_32FC3);
 
-//        cv::waitKey(0);
         // Transform is automatically inverted
         // Takes 2x3 Matrix
-//        cv::warpAffine(normImage, warped, transform, cv::Size(resolution_inp, resolution_inp) );
+        cv::warpAffine(normImage, warped, transform, cv::Size(dst_size, dst_size) );
+
         // Takes 3x3 Matrix, square for inverse
-//        cv::Mat P = cv::Mat::eye(3,3,CV_32F);
+//        cv::Mat P = cv::Mat::eye(3,3,CV_64F);
 //        transform.copyTo(P.rowRange(0,2));
 //        cv::warpPerspective(normImage, warped, P, cv::Size(dst_size, dst_size) );
-        //cout << " " << affMat << endl;
-        //cv::Mat temp(dst_size, dst_size, CV_32FC3);
 
-        cv::warpAffine(normImage, warped, transform, cv::Size(dst_size, dst_size) );
     }
 
     void PRNetFeatureDetectionPipe::restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transform){
@@ -193,6 +189,12 @@ namespace telef::feature {
     FeatureDetectSuite::Ptr PRNetFeatureDetectionPipe::_processData(InputPtrT in) {
         auto pclImage = in->deviceInput->rawImage;
 
+        if (in->feature->boundingBox.width <= 0 || in->feature->boundingBox.height <= 0) {
+            std::cout << "Face Detection Failed, returning previous landmarks...";
+            in->feature->points = landmarks;
+            return in;
+        }
+
         auto matImg = telef::util::convert(pclImage);
 
         cv::Mat transform; // = cv::Mat::eye(3,3,CV_64F);
@@ -210,8 +212,9 @@ namespace telef::feature {
         cv::Mat squareTransf = cv::Mat::eye(3,3,CV_32F);
         transform.convertTo(squareTransf.rowRange(0,2), CV_32F);
 
-        restore(in->feature->points, result, squareTransf );
+        restore(landmarks, result, squareTransf );
 
+        in->feature->points = landmarks;
         return in;
     }
 }

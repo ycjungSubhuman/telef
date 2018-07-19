@@ -92,6 +92,7 @@ namespace telef::feature {
 
         telef::face::PRNetLandmarkDetector lmkDetector;
         int prnetIntputSize;
+        Eigen::MatrixXf landmarks;
 
         FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
 
@@ -102,4 +103,5 @@ namespace telef::feature {
     public:
         PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath);
     };
+
 }

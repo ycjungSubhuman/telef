@@ -109,7 +109,8 @@ add_library(telef
 		src/util/transform.cpp
         src/feature/feature_detect_pipe.cpp
         src/face/prnet.cpp
-		src/util/transform.cpp)
+		src/util/transform.cpp
+		src/align/lmk_scan_rigid_pipe.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}

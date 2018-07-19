@@ -13,12 +13,13 @@
 #include "feature/feature_detect_frontend.h"
 #include "feature/feature_detect_pipe.h"
 #include "cloud/cloud_pipe.h"
+#include "align/rigid_pipe.h"
 
 #include "glog/logging.h"
 
 namespace {
     using namespace telef::io;
-    using namespace telef::io;
+    using namespace telef::align;
     using namespace telef::types;
     using namespace telef::cloud;
     using namespace telef::feature;
@@ -93,27 +94,27 @@ int main(int ac, const char* const * av)
     auto viewFrontend = std::make_shared<FeatureDetectFrontEnd>();
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
     auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
-//    auto featureProjection = FeatureProjectionPipe();
+    auto lmkToScanFitting = LmkToScanRigidFittingPipe();
 
 
-    auto pipe1 = compose(faceDetector, featureDetector);
-    auto merger = std::make_shared<DeviceInputPipeMerger<FeatureDetectSuite>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
+    auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting);
+    auto merger = std::make_shared<DeviceInputPipeMerger<FittingSuite >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
 
-    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, FeatureDetectSuite>> device = NULL;
+    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, FittingSuite>> device = NULL;
 
     if (useFakeKinect) {
         device = std::make_shared<FakeImagePointCloudDevice <
                 DeviceCloudConstT,
                 ImageT,
                 DeviceInputSuite,
-                FeatureDetectSuite>>(fs::path(fakePath), PlayMode::FPS_30);
+                FittingSuite>>(fs::path(fakePath), PlayMode::FPS_30);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<
                 DeviceCloudConstT,
                 ImageT,
                 DeviceInputSuite,
-                FeatureDetectSuite>>(std::move(grabber), false);
+                FittingSuite>>(std::move(grabber), false);
     }
 
     device->setCloudChannel(cloudChannel);

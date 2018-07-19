@@ -29,6 +29,20 @@ namespace telef::align {
         PCARigidFittingPipe(MModelTptr model);
     };
 
+    class LmkToScanRigidFittingPipe : public telef::io::Pipe<telef::feature::FeatureDetectSuite, telef::feature::FittingSuite> {
+    private:
+        using BaseT = telef::io::Pipe<telef::feature::FeatureDetectSuite, telef::feature::FittingSuite>;
+        //using PtCldPtr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
+
+        Eigen::Matrix4f transformation;
+        pcl::PointCloud<pcl::PointXYZRGBA>::Ptr landmark3d;
+
+        boost::shared_ptr<telef::feature::FittingSuite> _processData(telef::feature::FeatureDetectSuite::Ptr in) override;
+
+    public:
+        LmkToScanRigidFittingPipe();
+    };
+
     Eigen::VectorXf alignLandmark(telef::types::CloudConstPtrT scanCloud, telef::types::CloudConstPtrT landmarkCloud,
                        Eigen::VectorXf meshPosition, std::vector<int> landmarkIndices);
 }
