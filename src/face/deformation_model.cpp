@@ -2,10 +2,12 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/eigen.hpp>
 
+#include "io/matrix.h"
 
 namespace {
     namespace fs = std::experimental::filesystem;
     using namespace telef::mesh;
+    using namespace telef::io;
 
     Eigen::MatrixXf getPCABase(Eigen::MatrixXf data, int maxRank) {
         std::cout << "Calculating PCA Basis..." << std::endl;
@@ -52,14 +54,35 @@ namespace {
         std::cout << "PCA Basis Calculation Done" << std::endl;
         return result;
     }
+
+    Eigen::VectorXf linearSum(const Eigen::MatrixXf basisMatrix, const Eigen::VectorXf center,
+                              const double *coeff, int rank) {
+        if(rank != basisMatrix.cols()) {
+            throw std::runtime_error("Coefficient dimension mismatch");
+        }
+        Eigen::VectorXf result = Eigen::VectorXf::Zero(basisMatrix.rows());
+        for (long i=0; i<rank; i++) {
+            result += coeff[i] * basisMatrix.col(i);
+        }
+        return center + result;
+    }
 }
 
 namespace telef::face {
 
-    PCADeformationModel::PCADeformationModel(Eigen::MatrixXf shapeBase, Eigen::VectorXf mean, int rank)
-            : pcaBasisVectors(shapeBase), mean(mean), rank(rank) {}
+    int PCADeformationModel::getRank() {
+        return rank;
+    }
 
-    PCADeformationModel::PCADeformationModel(std::vector<ColorMesh> &samples, ColorMesh &refMesh, int rank) {
+    Eigen::VectorXf PCADeformationModel::getCenter() {
+        return mean;
+    }
+
+    Eigen::MatrixXf PCADeformationModel::getBasisMatrix() {
+        return pcaBasisVectors;
+    }
+
+    PCADeformationModel::PCADeformationModel(const std::vector<ColorMesh> &samples, const ColorMesh &refMesh, int rank) {
         pcaBasisVectors.resize(samples.size(), rank);
         auto numData = samples.size();
         auto dataDim = refMesh.position.size();
@@ -73,27 +96,72 @@ namespace telef::face {
 
         pcaBasisVectors = getPCABase(positions, rank);
         mean = positions.rowwise().mean();
+        this->rank = rank;
+    }
+
+    PCADeformationModel::PCADeformationModel(fs::path path) {
+        readMat((path.string()+".base").c_str(), pcaBasisVectors);
+        readMat((path.string()+".mean").c_str(), mean);
+        this->rank = static_cast<int>(pcaBasisVectors.cols());
     }
 
     Eigen::VectorXf PCADeformationModel::genDeform(Eigen::VectorXf coeff) {
-        if(coeff.rows() != pcaBasisVectors.cols()) {
-            throw std::runtime_error("Coefficient dimension mismatch");
-        }
-        Eigen::VectorXf result = Eigen::VectorXf::Zero(pcaBasisVectors.rows());
-        for (long i=0; i<rank; i++) {
-            result += coeff(i) * pcaBasisVectors.col(i);
-        }
-        return mean + result;
+        Eigen::VectorXd c = coeff.cast<double>();
+        return linearSum(pcaBasisVectors, mean, c.data(), rank);
     }
 
-    Eigen::VectorXf PCADeformationModel::genDeform(const double *const coeff, int size) {
-        if(size != pcaBasisVectors.cols()) {
-            throw std::runtime_error("Coefficient dimension mismatch");
+    Eigen::VectorXf PCADeformationModel::genDeform(const double *coeff, int size) {
+        assert(size==rank);
+        return linearSum(pcaBasisVectors, mean, coeff, rank);
+    }
+
+    void PCADeformationModel::save(fs::path path) {
+        writeMat((path.string()+".base").c_str(), pcaBasisVectors);
+        writeMat((path.string()+".mean").c_str(), mean);
+    }
+
+    BlendShapeDeformationModel::BlendShapeDeformationModel(const std::vector<ColorMesh> &samples,
+                                                           const ColorMesh &refMesh, int rank) {
+        assert(samples.size() == rank && samples.size() > 0);
+        assert(refMesh.position.size() == samples[0].position.size());
+        blendShapeVectors.resize(refMesh.position.size(), rank);
+        for(int i=0; i<rank; i++) {
+            Eigen::VectorXf deformation = samples[i].position - refMesh.position;
+            std::copy_n(deformation.data(),
+                        deformation.size(),
+                        blendShapeVectors.data()+i*refMesh.position.size());
         }
-        Eigen::VectorXf result = Eigen::VectorXf::Zero(pcaBasisVectors.rows());
-        for (long i=0; i<rank; i++) {
-            result += coeff[i] * pcaBasisVectors.col(i);
-        }
-        return mean + result;
+        this->rank = rank;
+    }
+
+    BlendShapeDeformationModel::BlendShapeDeformationModel(fs::path path) {
+        readMat((path.string()+".base").c_str(), blendShapeVectors);
+        this->rank = static_cast<int>(blendShapeVectors.cols());
+    }
+
+    int BlendShapeDeformationModel::getRank() {
+        return rank;
+    }
+
+    Eigen::VectorXf BlendShapeDeformationModel::getCenter() {
+        return Eigen::VectorXf::Zero(blendShapeVectors.rows());
+    }
+
+    Eigen::MatrixXf BlendShapeDeformationModel::getBasisMatrix() {
+        return blendShapeVectors;
+    }
+
+    Eigen::VectorXf BlendShapeDeformationModel::genDeform(Eigen::VectorXf coeff) {
+        Eigen::VectorXd c = coeff.cast<double>();
+        return linearSum(blendShapeVectors, getCenter(), c.data(), rank);
+    }
+
+    Eigen::VectorXf BlendShapeDeformationModel::genDeform(const double *coeff, int size) {
+        assert(size==rank);
+        return linearSum(blendShapeVectors, getCenter(), coeff, rank);
+    }
+
+    void BlendShapeDeformationModel::save(fs::path path) {
+        writeMat((path.string()+".base").c_str(), blendShapeVectors);
     }
 }

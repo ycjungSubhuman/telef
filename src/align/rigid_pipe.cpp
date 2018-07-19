@@ -50,10 +50,10 @@ namespace telef::align {
             svd.estimateRigidTransformation(*initShape, pca_lmks, *in_lmks, corr_tgt, currentTransform);
             this->transformation = currentTransform;
         } else {
-            std::cout << "\n Didn't detect all landmarks, using last transformation:" << std::endl;
+           // std::cout << "\n Didn't detect all landmarks, using last transformation:" << std::endl;
         }
 
-        std::cout << "\n Transformtion Matrix: \n" << this->transformation << std::endl;
+        //std::cout << "\n Transformtion Matrix: \n" << this->transformation << std::endl;
         auto alignment = boost::shared_ptr<PCARigidAlignmentSuite>(new PCARigidAlignmentSuite());
         alignment->fittingSuite = in;
         alignment->pca_model = pca_model;

@@ -154,7 +154,8 @@ namespace telef::io {
     enum PlayMode {
         FIRST_FRAME_ONLY,       // Use the first frame only and terminate
         ONE_FRAME_PER_ENTER,    // Proceed to the next frame every time you press enter
-        FPS_30                  // Play at 30 FPS
+        FPS_30,                  // Play at 30 FPS
+        FPS_30_LOOP             // Play at 30 FPS + Loop
     };
 
     /** Fake device for easy experiments */
@@ -199,7 +200,7 @@ namespace telef::io {
 
         void run() override {
             while (!frames.empty()) {
-		auto frameProcessStartTime = std::chrono::system_clock::now();
+                auto frameProcessStartTime = std::chrono::system_clock::now();
                 auto frame = frames.front();
                 frames.pop();
 
@@ -212,9 +213,9 @@ namespace telef::io {
                 for(auto &m : this->mergers) {
                     m->run(imageOut, cloudOut);
                 }
-		auto frameProcessEndTime = std::chrono::system_clock::now();
+                auto frameProcessEndTime = std::chrono::system_clock::now();
 
-		auto frameProcessTime = frameProcessEndTime - frameProcessStartTime;
+                auto frameProcessTime = frameProcessEndTime - frameProcessStartTime;
 
                 if(mode==PlayMode::FIRST_FRAME_ONLY) {
                     break;
@@ -223,11 +224,15 @@ namespace telef::io {
                     std::cout << "Press Enter to proceed to the next frame.." << std::endl;
                     getchar();
                 }
-                else if (mode==PlayMode::FPS_30) {
-		    auto sleepTime = 33ms - frameProcessTime;
-		    if (sleepTime.count() >= 0) {
-			std::this_thread::sleep_for(sleepTime);
-		    }
+                else if (mode==PlayMode::FPS_30 || mode==PlayMode::FPS_30_LOOP) {
+                    auto sleepTime = 33ms - frameProcessTime;
+                    if (sleepTime.count() >= 0) {
+                        std::this_thread::sleep_for(sleepTime);
+                    }
+
+                    if(mode == PlayMode::FPS_30_LOOP) {
+                        frames.push(frame);
+                    }
                 }
             }
         }

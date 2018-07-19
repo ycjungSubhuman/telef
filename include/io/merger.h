@@ -157,13 +157,8 @@ namespace telef::io {
                 }
             }
 
-            if (badlmks.size() > 0) {
-                std::cout << "WARNING: Landmark Points at Hole." << std::endl;
-            }
-
             landmark3d->height = rawCloud->height;
             landmark3d->width = rawCloud->width;
-            std::cout << "3D Lmks: " << landmark3d->size() <<std::endl;
 
             auto result = boost::make_shared<FittingSuite>();
             result->landmark2d = feature;

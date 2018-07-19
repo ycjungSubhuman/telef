@@ -15,6 +15,7 @@
 #include "io/ply/meshio.h"
 #include "io/align/align_frontend.h"
 #include "cloud/cloud_pipe.h"
+#include "vis/fitting_visualizer.h"
 
 #include "mesh/mesh.h"
 #include "mesh/color_projection_pipe.h"
@@ -28,6 +29,7 @@ namespace {
     using namespace telef::align;
     using namespace telef::face;
     using namespace telef::mesh;
+    using namespace telef::vis;
 
     namespace fs = std::experimental::filesystem;
 
@@ -78,7 +80,6 @@ int main(int ac, const char* const *av) {
     desc.add_options()
             ("help,H", "print this help message")
             ("model,M", po::value<std::string>(), "specify PCA model path")
-            ("output,O", po::value<std::string>(), "specify output PLY file path")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -91,18 +92,10 @@ int main(int ac, const char* const *av) {
         return 1;
     }
 
-    if (vm.count("output") == 0) {
-        std::cout << "Please specify 'output'"  << std::endl;
-        return 1;
-    }
-
-
     std::string modelPath;
-    std::string outputPath;
     std::string fakePath("");
 
     modelPath = vm["model"].as<std::string>();
-    outputPath = vm["output"].as<std::string>();
 
     if (useFakeKinect) {
 
@@ -117,10 +110,10 @@ int main(int ac, const char* const *av) {
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     auto imagePipe = IdentityPipe<ImageT>();
-    auto cloudPipe = RemoveNaNPoints();
+    auto cloudPipe = IdentityPipe<DeviceCloudConstT>();
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
-    auto frontend = std::make_shared<ColorMeshPlyWriteFrontEnd>(outputPath);
+    auto frontend = std::make_shared<FittingVisualizer>();
 
     auto nonrigid = PCAGPUNonRigidFittingPipe();
     auto fitting2Projection = Fitting2ProjectionPipe();
@@ -130,18 +123,19 @@ int main(int ac, const char* const *av) {
     model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
 
     PCARigidFittingPipe rigid = PCARigidFittingPipe(model);
-    std::shared_ptr<FittingSuitePipeMerger<ColorMesh>> merger;
-    auto pipe1 = compose(rigid, nonrigid, fitting2Projection, colorProjection);
-    merger = std::make_shared<FittingSuitePipeMerger<ColorMesh>>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
+    std::shared_ptr<FittingSuitePipeMerger<PCANonRigidFittingResult >> merger;
+    //auto pipe1 = compose(rigid, nonrigid, fitting2Projection, colorProjection);
+    auto pipe1 = compose(rigid, nonrigid);
+    merger = std::make_shared<FittingSuitePipeMerger<PCANonRigidFittingResult >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
 
-    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>> device = NULL;
+    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, PCANonRigidFittingResult>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(fs::path(fakePath));
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
-        device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, ColorMesh>>(std::move(grabber), false);
+        device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, PCANonRigidFittingResult >>(std::move(grabber), false);
     }
 
     device->setCloudChannel(cloudChannel);

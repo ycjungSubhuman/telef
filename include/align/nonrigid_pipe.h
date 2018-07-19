@@ -15,6 +15,7 @@ namespace telef::align {
         Eigen::VectorXf shapeCoeff;
         Eigen::VectorXf expressionCoeff;
         telef::types::ImagePtrT image;
+        telef::types::CloudConstPtrT cloud;
         Eigen::Matrix4f transformation;
         float fx;
         float fy;
