@@ -32,21 +32,19 @@ namespace telef::face {
     /** PCA face model using PCA model of deformation btw reference mesh and samples*/
     class MorphableFaceModel {
     private:
-        PCADeformationModel shapeModel;
-        PCADeformationModel expressionModel;
+        std::shared_ptr<LinearModel> shapeModel;
+        std::shared_ptr<LinearModel> expressionModel;
         ColorMesh refMesh;
         std::vector<int> landmarks;
         std::random_device rd;
         std::mt19937 mt;
-        int shapeRank;
-        int expressionRank;
     public:
         /** Construct PCA Model using a list of mesh files */
         MorphableFaceModel(fs::path refSamplePath,
                            const std::vector<fs::path> &shapeSamplePaths,
                            const std::vector<fs::path> &expressionSamplePaths,
                            fs::path landmarkIdxPath,
-                           int shapeRank, int expressionRank);;
+                           int shapeRank, int expressionRank);
 
         /** Load from existing model file */
         explicit MorphableFaceModel(fs::path fileName);
@@ -72,11 +70,11 @@ namespace telef::face {
         /** Returns PCA basis matrix for expression */
         Eigen::MatrixXf getExpressionBasisMatrix();
 
-        /** Returns mean deformation for shape */
-        Eigen::VectorXf getMeanShapeDeformation();
+        /** Returns deformation center for shape */
+        Eigen::VectorXf getShapeDeformationCenter();
 
-        /** Returns mean deformation for expression */
-        Eigen::VectorXf getMeanExpressionDeformation();
+        /** Returns deformation center for expression */
+        Eigen::VectorXf getExpressionDeformationCenter();
 
         /** Returns reference model vertex position vector */
         Eigen::VectorXf getReferenceVector();

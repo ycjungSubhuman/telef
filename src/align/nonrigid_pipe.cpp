@@ -85,8 +85,8 @@ namespace telef::align {
             auto shapeBasis = in->pca_model->getShapeBasisMatrix();
             auto expressionBasis = in->pca_model->getExpressionBasisMatrix();
             auto ref = in->pca_model->getReferenceVector();
-            auto meanShapeDeformation = in->pca_model->getMeanShapeDeformation();
-            auto meanExpressionDeformation = in->pca_model->getMeanExpressionDeformation();
+            auto meanShapeDeformation = in->pca_model->getShapeDeformationCenter();
+            auto meanExpressionDeformation = in->pca_model->getExpressionDeformationCenter();
             auto landmarks = in->pca_model->getLandmarks();
             loadModelToCUDADevice(&this->c_deformModel, shapeBasis, expressionBasis, ref,
                                   meanShapeDeformation, meanExpressionDeformation, landmarks);
@@ -118,18 +118,18 @@ namespace telef::align {
         double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
         double t[3] = {0.0,};
-        double u[3] = {0.0,};
+        double u[3] = {3.14, 0.0, 0.0};
         problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
         problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.shapeRank, 0.0001), NULL, shapeCoeff);
         problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.expressionRank, 0.0001), NULL, expressionCoeff);
         ceres::Solver::Options options;
-        options.minimizer_progress_to_stdout = false;
+        options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
 
         /* Run Optimization */
         auto summary = ceres::Solver::Summary();
         ceres::Solve(options, &problem, &summary);
-        //std::cout << summary.FullReport() << std::endl;
+        std::cout << summary.FullReport() << std::endl;
 
         float fu[3];
         float ft[3];
@@ -150,10 +150,10 @@ namespace telef::align {
         result->expressionCoeff =
                 Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
 
-        //std::cout << "Fitted(Shape): " << std::endl;
-        //std::cout << result->shapeCoeff << std::endl;
-        //std::cout << "Fitted(Expression): " << std::endl;
-        //std::cout << result->expressionCoeff << std::endl;
+        std::cout << "Fitted(Shape): " << std::endl;
+        std::cout << result->shapeCoeff << std::endl;
+        std::cout << "Fitted(Expression): " << std::endl;
+        std::cout << result->expressionCoeff << std::endl;
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->cloud = in->rawCloud;

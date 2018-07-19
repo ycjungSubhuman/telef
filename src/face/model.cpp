@@ -10,7 +10,7 @@ namespace telef::face {
     MorphableFaceModel::MorphableFaceModel(fs::path refSamplePath, const std::vector<fs::path> &shapeSamplePaths,
                                            const std::vector<fs::path> &expressionSamplePaths, fs::path landmarkIdxPath,
                                            int shapeRank, int expressionRank)
-            : mt(rd()), shapeRank(shapeRank), expressionRank(expressionRank)
+            : mt(rd())
     {
         assert(shapeSamplePaths.size() > 0);
         assert(expressionSamplePaths.size() > 0);
@@ -22,48 +22,37 @@ namespace telef::face {
         std::transform(expressionSamplePaths.begin(), expressionSamplePaths.end(), expressionSamples.begin(),
                        [](auto &a){return telef::io::ply::readPlyMesh(a);});
 
-        shapeModel = PCADeformationModel(shapeSamples, refMesh, shapeRank);
-        expressionModel = PCADeformationModel(expressionSamples, refMesh, expressionRank);
+        shapeModel = std::make_shared<PCADeformationModel>(shapeSamples, refMesh, shapeRank);
+        expressionModel = std::make_shared<BlendShapeDeformationModel>(expressionSamples, refMesh, expressionRank);
         readLmk(landmarkIdxPath.c_str(), landmarks);
     }
 
     MorphableFaceModel::MorphableFaceModel(fs::path fileName) : mt(rd()) {
         refMesh = telef::io::ply::readPlyMesh(fileName.string() + ".ref.ply");
-
-        Eigen::MatrixXf shapeBase, expressionBase;
-        Eigen::VectorXf shapeMean, expressionMean;
-        readMat((fileName.string()+".shape.base").c_str(), shapeBase);
-        readMat((fileName.string()+".shape.mean").c_str(), shapeMean);
-        readMat((fileName.string() + ".exp.base").c_str(), expressionBase);
-        readMat((fileName.string() + ".exp.mean").c_str(), expressionMean);
-        shapeRank = static_cast<int>(shapeBase.cols());
-        expressionRank = static_cast<int>(expressionBase.cols());
-        shapeModel = PCADeformationModel(shapeBase, shapeMean, shapeRank);
-        expressionModel = PCADeformationModel(expressionBase, expressionMean, expressionRank);
+        shapeModel = std::make_shared<PCADeformationModel>(fs::path(fileName.string()+".shape"));
+        expressionModel = std::make_shared<BlendShapeDeformationModel>(fs::path(fileName.string()+".exp"));
         readLmk((fileName.string()+".lmk").c_str(), landmarks);
     }
 
     void MorphableFaceModel::save(fs::path fileName) {
-        writeMat((fileName.string()+".shape.base").c_str(), shapeModel.pcaBasisVectors);
-        writeMat((fileName.string()+".exp.base").c_str(), expressionModel.pcaBasisVectors);
-        writeMat((fileName.string()+".shape.mean").c_str(), shapeModel.mean);
-        writeMat((fileName.string()+".exp.mean").c_str(), expressionModel.mean);
+        shapeModel->save(fileName.string()+".shape");
+        expressionModel->save(fileName.string()+".exp");
         telef::io::ply::writePlyMesh(fileName.string() + ".ref.ply", refMesh);
         writeLmk((fileName.string()+".lmk").c_str(), landmarks);
     }
 
     Eigen::VectorXf MorphableFaceModel::genPosition(Eigen::VectorXf shapeCoeff, Eigen::VectorXf expressionCoeff) {
         return refMesh.position
-               + shapeModel.genDeform(shapeCoeff)
-               + expressionModel.genDeform(expressionCoeff);
+               + shapeModel->genDeform(shapeCoeff)
+               + expressionModel->genDeform(expressionCoeff);
     }
 
     Eigen::VectorXf
     MorphableFaceModel::genPosition(const double *shapeCoeff, int shapeCoeffSize, const double *expressionCoeff,
                                     int expressionCoeffSize) {
         return refMesh.position
-               + shapeModel.genDeform(shapeCoeff, shapeCoeffSize)
-               + expressionModel.genDeform(expressionCoeff, expressionCoeffSize);
+               + shapeModel->genDeform(shapeCoeff, shapeCoeffSize)
+               + expressionModel->genDeform(expressionCoeff, expressionCoeffSize);
     }
 
     ColorMesh MorphableFaceModel::genMesh(Eigen::VectorXf shapeCoeff, Eigen::VectorXf expressionCoeff) {
@@ -84,19 +73,19 @@ namespace telef::face {
     }
 
     Eigen::MatrixXf MorphableFaceModel::getShapeBasisMatrix() {
-        return shapeModel.pcaBasisVectors;
+        return shapeModel->getBasisMatrix();
     }
 
     Eigen::MatrixXf MorphableFaceModel::getExpressionBasisMatrix() {
-        return expressionModel.pcaBasisVectors;
+        return expressionModel->getBasisMatrix();
     }
 
-    Eigen::VectorXf MorphableFaceModel::getMeanShapeDeformation() {
-        return shapeModel.mean;
+    Eigen::VectorXf MorphableFaceModel::getShapeDeformationCenter() {
+        return shapeModel->getCenter();
     }
 
-    Eigen::VectorXf MorphableFaceModel::getMeanExpressionDeformation() {
-        return expressionModel.mean;
+    Eigen::VectorXf MorphableFaceModel::getExpressionDeformationCenter() {
+        return expressionModel->getCenter();
     }
 
     Eigen::VectorXf MorphableFaceModel::getReferenceVector() {
@@ -104,11 +93,11 @@ namespace telef::face {
     }
 
     int MorphableFaceModel::getShapeRank() {
-        return shapeRank;
+        return shapeModel->getRank();
     }
 
     int MorphableFaceModel::getExpressionRank() {
-        return expressionRank;
+        return expressionModel->getRank();
     }
 
     void MorphableFaceModel::setLandmarks(std::vector<int> lmk) {

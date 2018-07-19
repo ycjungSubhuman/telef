@@ -22,6 +22,7 @@ set(CUDA_GENCODES
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -DDEBUG")
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
+set(CMAKE_CUDA_HOST_COMPILER gcc-7)
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -31,6 +32,10 @@ find_package(Ceres REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(TensorflowCC REQUIRED COMPONENTS Shared)
+
+get_property(core_options TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS)
+string(REPLACE "-fPIC" "" new_core_options ${core_options})
+set_property(TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS ${new_core_options})
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
@@ -197,9 +202,6 @@ target_link_libraries(RecordFakeFrame ${Boost_LIBRARIES} telef)
 add_executable(FakeDeviceExample app/examples/FakeDeviceExample.cpp src/io/modelio.cpp)
 target_link_libraries(FakeDeviceExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceExample stdc++fs ${Boost_LIBRARIES} telef)
-
-add_executable(Visualizer app/byproducts/Visualizer.cpp)
-target_link_libraries(Visualizer telef)
 
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)
