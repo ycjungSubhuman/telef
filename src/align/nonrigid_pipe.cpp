@@ -80,24 +80,23 @@ namespace telef::align {
     PCAGPUNonRigidFittingPipe::_processData(boost::shared_ptr<PCARigidAlignmentSuite> in) {
         /* Load data to cuda device */
 
-        std::cout << "Fitting PCA model GPU" << std::endl;
+        //std::cout << "Fitting PCA model GPU" << std::endl;
         if(!isModelInitialized) {
             auto shapeBasis = in->pca_model->getShapeBasisMatrix();
             auto expressionBasis = in->pca_model->getExpressionBasisMatrix();
             auto ref = in->pca_model->getReferenceVector();
-            auto meanShapeDeformation = in->pca_model->getMeanShapeDeformation();
-            auto meanExpressionDeformation = in->pca_model->getMeanExpressionDeformation();
+            auto meanShapeDeformation = in->pca_model->getShapeDeformationCenter();
+            auto meanExpressionDeformation = in->pca_model->getExpressionDeformationCenter();
             auto landmarks = in->pca_model->getLandmarks();
             loadModelToCUDADevice(&this->c_deformModel, shapeBasis, expressionBasis, ref,
                                   meanShapeDeformation, meanExpressionDeformation, landmarks);
             isModelInitialized = true;
         }
 
-        std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
+        //std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
         // Filter out non-detected Deformable Model landmarks
         std::vector<int> validLmks = in->pca_model->getLandmarks();
         auto riter = in->fittingSuite->invalid3dLandmarks.rbegin();
-        pcl::io::savePLYFile("captured.ply", *in->rawCloud);
         while (riter != in->fittingSuite->invalid3dLandmarks.rend())
         {
             auto iter_data = validLmks.begin() + *riter;
@@ -113,16 +112,17 @@ namespace telef::align {
 
         /* Setup Optimizer */
 
-        std::cout << "Fitting PCA model to scan..." << std::endl;
+        //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto cost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
         double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
         double t[3] = {0.0,};
-        double u[3] = {0.0,};
+        double u[3] = {3.14, 0.0, 0.0};
         problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
-        problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.shapeRank, 0.0001), NULL, shapeCoeff);
-        problem.AddResidualBlock(new RegularizerFunctor(c_deformModel.expressionRank, 0.0001), NULL, expressionCoeff);
+        problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
+        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0001, 1), NULL, expressionCoeff);
+        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00001, 5, 1.5), NULL, expressionCoeff);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 1000;
@@ -157,6 +157,7 @@ namespace telef::align {
         std::cout << result->expressionCoeff << std::endl;
         result->image = in->image;
         result->pca_model = in->pca_model;
+        result->cloud = in->rawCloud;
         result->fx = in->fx;
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;

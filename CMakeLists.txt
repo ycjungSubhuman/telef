@@ -22,6 +22,7 @@ set(CUDA_GENCODES
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -rdc=true ${CUDA_GENCODES}")
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -DDEBUG")
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
+set(CMAKE_CUDA_HOST_COMPILER gcc-7)
 
 find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
 find_package(Eigen 3.3.4 REQUIRED)
@@ -32,6 +33,10 @@ find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(dlib REQUIRED)
 find_package(TensorflowCC REQUIRED COMPONENTS Shared)
+
+get_property(core_options TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS)
+string(REPLACE "-fPIC" "" new_core_options ${core_options})
+set_property(TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS ${new_core_options})
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
@@ -85,6 +90,7 @@ add_library(telef
 		include/util/eigen_file_io.h
         include/feature/face.h
 		include/util/pcl_cv.h
+        include/vis/fitting_visualizer.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -110,7 +116,8 @@ add_library(telef
         src/feature/feature_detect_pipe.cpp
         src/face/prnet.cpp
 		src/util/transform.cpp
-		src/align/lmk_scan_rigid_pipe.cpp)
+		src/align/lmk_scan_rigid_pipe.cpp
+        src/vis/fitting_visualizer.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -144,6 +151,9 @@ target_link_libraries(telef
 		opencv_ml
 		opencv_video
 		dlib
+        -lGLEW
+        -lGL
+        glfw
 		)
 
 add_library(cutelef STATIC

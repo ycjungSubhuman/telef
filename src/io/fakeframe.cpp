@@ -1,5 +1,6 @@
 #include "io/fakeframe.h"
 #include <boost/make_shared.hpp>
+#include <pcl/io/image_rgb24.h>
 
 namespace {
     namespace fs = std::experimental::filesystem;
@@ -27,6 +28,10 @@ namespace telef::io {
     }
 
     ImagePtrT FakeFrame::getImage() {
-        return this->image;
+        std::vector<uint8_t> raw(static_cast<unsigned long>(image->getDataSize()));
+        image->fillRaw(raw.data());
+        pcl::io::FrameWrapper::Ptr wrapper = boost::make_shared<BufferFrameWrapper>(raw, image->getWidth(), image->getHeight());
+        ImagePtrT copy = boost::make_shared<pcl::io::ImageRGB24>(wrapper);
+        return copy;
     }
 }
