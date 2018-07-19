@@ -86,7 +86,7 @@ int main(int ac, const char* const * av)
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
 
     auto imagePipe = IdentityPipe<ImageT>();
-    auto cloudPipe = RemoveNaNPoints();
+    auto cloudPipe = FastBilateralFilterPipe(); //RemoveNaNPoints();
 
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)->decltype(auto){return cloudPipe(in);});
@@ -100,7 +100,7 @@ int main(int ac, const char* const * av)
     auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting);
     auto merger = std::make_shared<DeviceInputPipeMerger<FittingSuite >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
 
-    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, FittingSuite>> device = NULL;
+    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, FittingSuite>> device;
 
     if (useFakeKinect) {
         device = std::make_shared<FakeImagePointCloudDevice <
