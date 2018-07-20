@@ -229,6 +229,10 @@ add_executable(3DLandmarkProject app/examples/3DLandmarkProject.cpp src/io/model
 target_link_libraries(3DLandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(3DLandmarkProject ${Boost_LIBRARIES} telef)
 
+add_executable(OrganizedPointKSearch app/byproducts/OrganizedPointKSearch.cpp src/io/modelio.cpp)
+target_link_libraries(OrganizedPointKSearch ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(OrganizedPointKSearch ${Boost_LIBRARIES} telef)
+
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)
 		add_executable(${testname} ${testpath})
