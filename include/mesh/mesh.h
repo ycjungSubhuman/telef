@@ -12,6 +12,6 @@ namespace telef::mesh {
         std::vector<uint8_t> color;
         std::vector<std::vector<int>> triangles;
 
-        void applyTransform(Eigen::Matrix4f transform);
+        void applyTransform(Eigen::MatrixXf transform);
     };
 }
