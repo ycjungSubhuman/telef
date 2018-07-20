@@ -41,8 +41,6 @@ namespace telef::align {
                     scanCorr->push_back(scanPoint);
                     rawCloudLmkIdx.push_back(pointInd);
 
-//                    prnetCorr->points.emplace_back(feature->points(0, i), feature->points(1, i), feature->points(2, i));
-
                     pcl::PointXYZRGBA lmkPoint;
                     pcl::copyPoint(scanPoint,lmkPoint);
                     lmkPoint.x = feature->points(0, i);
@@ -51,7 +49,7 @@ namespace telef::align {
                     prnetCorr->push_back(lmkPoint);
 
                     // Only do rigid fitting on most rigid landmarks (exclude chin for scan alignment)
-                    if (i > 16) { // && i < 48){
+                    if (i > 16) {
                         rigidCorr.push_back(validLmkCount);
                     }
                     validLmkCount++;
@@ -64,19 +62,23 @@ namespace telef::align {
             Eigen::Matrix4f currentTransform;
 
             // Fill correspondance list with range 0, ..., n valid landmarks.
-//            std::vector<int> corr(prnetCorr->points.size());
-//            std::iota(std::begin(corr), std::end(corr), 0);
-
             pcl::registration::TransformationEstimationSVDScale<pcl::PointXYZRGBA, pcl::PointXYZRGBA> svd;
             svd.estimateRigidTransformation(*prnetCorr, rigidCorr, *scanCorr, rigidCorr, currentTransform);
 
-//            std::cout << "\n lmk to Scan Transformtion Matrix: \n" << currentTransform << std::endl;
             // Return Aligned 3D Landmarks via PointCloud
             auto transformed_lmks = boost::make_shared<CloudT>();
             // You can either apply transform_1 or transform_2; they are the same
             pcl::transformPointCloud (*prnetCorr, *transformed_lmks, currentTransform);
 
-            landmark3d.swap(transformed_lmks);
+            Eigen::MatrixXf finalTransformedLmks = transformation * (in->feature->points.colwise().homogeneous().matrix());
+            CloudPtrT lmk3d = boost::make_shared<CloudT>();
+            lmk3d->resize(static_cast<size_t>(finalTransformedLmks.cols()));
+            for(int i=0; i<finalTransformedLmks.cols(); i++) {
+                lmk3d->points[i].x = finalTransformedLmks(0, i);
+                lmk3d->points[i].y = finalTransformedLmks(1, i);
+                lmk3d->points[i].z = finalTransformedLmks(2, i);
+            }
+            landmark3d.swap(lmk3d);
             transformation = currentTransform;
         } else {
             std::cout << "No Landmarks detected, using previous frames...\n";

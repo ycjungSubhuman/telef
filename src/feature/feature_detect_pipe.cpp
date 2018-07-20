@@ -37,7 +37,6 @@ namespace telef::feature {
     FeatureDetectSuite::Ptr
     DlibFaceDetectionPipe::_processData(InputPtrT in) {
         matrix<rgb_pixel> img;
-        //    load_image(img, argv[i]);
 
         // Convert PCL image to dlib image
         auto pclImage = in->rawImage;
@@ -49,23 +48,7 @@ namespace telef::feature {
         dlib::assign_image(img, cvImg);
 
 
-        // Downsampling the image will allow us to use real time, but user will have to be very close to camera
-//        pyramid_down<2> myDownSampler;
-//        while (img.size() > 256 * 256)
-//            myDownSampler(img);
-       
-        // Note that you can process a bunch of images in a std::vector at once and it runs
-        // much faster, since this will form mini-batches of images and therefore get
-        // better parallelism out of your GPU hardware.  However, all the images must be
-        // the same size.  To avoid this requirement on images being the same size we
-        // process them individually in this example.
-//        auto begin = chrono::high_resolution_clock::now();
         auto dets = net(img);
-//        auto end = chrono::high_resolution_clock::now();
-//        auto dur = end - begin;
-//        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
-//        cout << "Face Detection(ms):" << ms << endl;
-
         dlib::rectangle bbox;
         double detection_confidence = 0;
 
@@ -119,10 +102,7 @@ namespace telef::feature {
     }
 
     PRNetFeatureDetectionPipe::PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath)
-            : lmkDetector(graphPath, checkpointPath), prnetIntputSize(256)
-
-    {
-    }
+            : lmkDetector(graphPath, checkpointPath), prnetIntputSize(256) { }
 
     void PRNetFeatureDetectionPipe::calculateTransformation(cv::Mat& transform,
                                                             const cv::Mat& image,
@@ -164,16 +144,10 @@ namespace telef::feature {
         // Transform is automatically inverted
         // Takes 2x3 Matrix
         cv::warpAffine(normImage, warped, transform, cv::Size(dst_size, dst_size) );
-
-        // Takes 3x3 Matrix, square for inverse
-//        cv::Mat P = cv::Mat::eye(3,3,CV_64F);
-//        transform.copyTo(P.rowRange(0,2));
-//        cv::warpPerspective(normImage, warped, P, cv::Size(dst_size, dst_size) );
-
     }
 
     void PRNetFeatureDetectionPipe::restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transform){
-        cv::Mat resultMat; //(result.rows(), result.cols(), transform.type());
+        cv::Mat resultMat;
         // Cast result to double to match cv::datatypes
         cv::eigen2cv(result, resultMat);
 
