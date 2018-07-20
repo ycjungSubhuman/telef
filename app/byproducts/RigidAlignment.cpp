@@ -44,7 +44,6 @@
 
 #include "face/model.h"
 #include "util/eigen_pcl.h"
-#include "align/rigid.h"
 
 namespace {
     namespace fs = std::experimental::filesystem;

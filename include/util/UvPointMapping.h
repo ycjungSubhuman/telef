@@ -10,6 +10,8 @@ namespace telef::util {
     /**
      * Mapping from UV point ({0 ~ imageWidth}, {0 ~ imageHeight}) -> size_t
      */
+    // TODO: Remove This class and use internal structure of pcl::PointCloud.
+    // This approach is only useful when we use unstructured point cloud
     class UvPointMapping {
     private:
         size_t uvToInd(int u, int v);

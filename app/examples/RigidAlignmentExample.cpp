@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     auto rigidFitPipe = telef::align::PCARigidFittingPipe(model);
 
     //auto rigidFitPipe = std::make_shared<telef::align::PCARigidFittingPipe>();
-    auto merger = std::make_shared<FittingSuitePipeMerger<telef::align::PCARigidAlignmentSuite>>([&rigidFitPipe](auto in)->decltype(auto){return rigidFitPipe(in);});
+    auto merger = std::make_shared<FittingSuitePipeMerger<telef::align::PCANonRigidAlignmentSuite>>([&rigidFitPipe](auto in)->decltype(auto){return rigidFitPipe(in);});
 
 
     //auto merger = std::make_shared<RigidAlignFrontEnd>();
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     merger->addFrontEnd(viewFrontend);
 
     ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT,
-            FittingSuite, telef::align::PCARigidAlignmentSuite> device{std::move(grabber)};
+            FittingSuite, telef::align::PCANonRigidAlignmentSuite> device{std::move(grabber)};
 
     device.setCloudChannel(cloudChannel);
     device.setImageChannel(imageChannel);

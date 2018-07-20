@@ -43,7 +43,6 @@ link_directories(${OpenCV_LIBRARY_DIRS})
 
 add_library(telef
         include/align/nonrigid_pipe.h
-        include/align/rigid.h
         include/align/rigid_pipe.h
         include/cloud/cloud_pipe.h
         include/face/binary_model_file.h
@@ -91,6 +90,8 @@ add_library(telef
         include/feature/face.h
 		include/util/pcl_cv.h
         include/vis/fitting_visualizer.h
+        include/util/po_util.h
+        include/face/feeder.h
 
         src/cloud/cloud_pipe.cpp
         src/feature/intraface_detector.cpp
@@ -117,7 +118,9 @@ add_library(telef
         src/face/prnet.cpp
 		src/util/transform.cpp
 		src/align/lmk_scan_rigid_pipe.cpp
-        src/vis/fitting_visualizer.cpp)
+        src/vis/fitting_visualizer.cpp
+        src/util/po_util.cpp
+        src/face/feeder.cpp)
 
 target_include_directories(telef
 		PUBLIC ${OpenCV_INCLUDE_DIRS}

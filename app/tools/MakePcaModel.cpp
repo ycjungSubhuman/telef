@@ -4,16 +4,10 @@
 #include <boost/program_options.hpp>
 
 #include "face/model.h"
+#include "util/po_util.h"
 
 namespace po = boost::program_options;
-
-void require(const po::variables_map &vm, const std::string argname) {
-    if(vm.count(argname) == 0) {
-        std::cout << "Please specify " << argname << std::endl;
-        std::cout << "Give '--help' option to see all available options" << argname << std::endl;
-        exit(1);
-    }
-}
+using namespace telef::util;
 
 int main (int argc, char** argv) {
     po::options_description desc("Constructs a PCA model from multiple meshes in vertex-wise correspondence");
