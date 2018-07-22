@@ -24,9 +24,10 @@
  *
  * @param residual_d            calculated residual. ((number of landmarks) * 3)-element array
  * @param position_d            calculated mesh vertex positions
+ * @param model
  * @param scan
  */
-void calc_residual_lmk(float *residual_d, const float *position_d, C_ScanPointCloud scan);
+void calc_residual_lmk(float *residual_d, const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan);
 
 /**
  * Calculate derivatives of landmark term

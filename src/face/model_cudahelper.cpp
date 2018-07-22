@@ -2,38 +2,38 @@
 
 #include "util/cudautil.h"
 #include "face/model_cudahelper.h"
+#include "type.h"
+
+namespace {
+    using namespace telef::types;
+
+    void copyPointCloudPosition(float *position, CloudConstPtrT cloud) {
+        for (int i=0; i<cloud->points.size(); i++) {
+            position[3*i] = cloud->points[i].x;
+            position[3*i+1] = cloud->points[i].y;
+            position[3*i+2] = cloud->points[i].z;
+        }
+    }
+}
 
 
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
                            const Eigen::MatrixXf shapeDeformBasis, const Eigen::MatrixXf expressionDeformBasis,
                            const Eigen::VectorXf ref,
-                           const Eigen::VectorXf meanShapeDeformation,
-                           const Eigen::VectorXf meanExpressionDeformation,
+                           const Eigen::VectorXf shapeDeformationCenter,
+                           const Eigen::VectorXf expressionDeformationCenter,
                            const std::vector<int> lmkInds) {
-    //std::cout << "shapeDeformBasis.size() <<: " << shapeDeformBasis.size() << std::endl;
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->shapeDeformBasis_d), shapeDeformBasis.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->expressionDeformBasis_d), expressionDeformBasis.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->ref_d), ref.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->meanShapeDeformation_d),
-                          meanShapeDeformation.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->meanExpressionDeformation_d),
-                          meanExpressionDeformation.size()*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&deformModel->lmks_d), lmkInds.size()*sizeof(int)));
-
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->shapeDeformBasis_d,
-               shapeDeformBasis.data(), shapeDeformBasis.size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->expressionDeformBasis_d,
-                          expressionDeformBasis.data(), expressionDeformBasis.size()*sizeof(float),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->ref_d,
-               ref.data(), ref.size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->meanShapeDeformation_d,
-               meanShapeDeformation.data(), meanShapeDeformation.size()*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->meanExpressionDeformation_d,
-                          meanExpressionDeformation.data(), meanExpressionDeformation.size()*sizeof(float),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)deformModel->lmks_d,
-               lmkInds.data(), lmkInds.size()*sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_ALLOC_AND_COPY(&deformModel->shapeDeformBasis_d, shapeDeformBasis.data(),
+                        static_cast<size_t>(shapeDeformBasis.size()));
+    CUDA_ALLOC_AND_COPY(&deformModel->expressionDeformBasis_d, expressionDeformBasis.data(),
+                        static_cast<size_t>(expressionDeformBasis.size()));
+    CUDA_ALLOC_AND_COPY(&deformModel->ref_d, ref.data(),
+                        static_cast<size_t>(ref.size()));
+    CUDA_ALLOC_AND_COPY(&deformModel->meanShapeDeformation_d, shapeDeformationCenter.data(),
+                        static_cast<size_t>(shapeDeformationCenter.size()));
+    CUDA_ALLOC_AND_COPY(&deformModel->meanExpressionDeformation_d, expressionDeformationCenter.data(),
+                        static_cast<size_t>(expressionDeformationCenter.size()));
+    CUDA_ALLOC_AND_COPY(&deformModel->lmks_d, lmkInds.data(), lmkInds.size());
 
     deformModel->shapeRank = (int)shapeDeformBasis.cols();
     deformModel->expressionRank = (int)expressionDeformBasis.cols();
@@ -44,41 +44,30 @@ void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
 }
 
 void freeModelCUDA(C_PcaDeformModel deformModel) {
-    CUDA_CHECK(cudaFree(deformModel.shapeDeformBasis_d));
-    CUDA_CHECK(cudaFree(deformModel.expressionDeformBasis_d));
-    CUDA_CHECK(cudaFree(deformModel.meanExpressionDeformation_d));
-    CUDA_CHECK(cudaFree(deformModel.meanShapeDeformation_d));
-    CUDA_CHECK(cudaFree(deformModel.ref_d));
-    CUDA_CHECK(cudaFree(deformModel.lmks_d));
+    CUDA_FREE(deformModel.shapeDeformBasis_d);
+    CUDA_FREE(deformModel.expressionDeformBasis_d);
+    CUDA_FREE(deformModel.meanExpressionDeformation_d);
+    CUDA_FREE(deformModel.meanShapeDeformation_d);
+    CUDA_FREE(deformModel.ref_d);
+    CUDA_FREE(deformModel.lmks_d);
 }
 
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                           boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
                           float fx, float fy,
-                          const std::vector<int> scanLmkIdx,
-                          const std::vector<int> validLmks,
-                          const Eigen::MatrixXf rigidTransform) {
-
-    CUDA_CHECK(cudaMalloc((void**)(&scanPointCloud->scanPoints_d), scan->points.size()*3*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void**)(&scanPointCloud->validModelLmks_d), validLmks.size()*sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void**)(&scanPointCloud->scanLmks_d), scanLmkIdx.size()*sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void**)(&scanPointCloud->rigidTransform_d), rigidTransform.size()*sizeof(float)));
-
+                          std::vector<int> modelLandmarkSelection,
+                          Eigen::Matrix4f rigidTransform, CloudConstPtrT landmark3d) {
     float *scanPoints = new float[scan->points.size()*3];
-    for (int i=0; i<scan->points.size(); i++) {
-        scanPoints[3*i] = scan->points[i].x;
-        scanPoints[3*i+1] = scan->points[i].y;
-        scanPoints[3*i+2] = scan->points[i].z;
-    }
+    float *scanLandmarks = new float[landmark3d->points.size()*3];
+    copyPointCloudPosition(scanPoints, scan);
+    copyPointCloudPosition(scanLandmarks, landmark3d);
 
-    CUDA_CHECK(cudaMemcpy((void*)scanPointCloud->scanPoints_d,
-               scanPoints, scan->points.size()*3*sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)scanPointCloud->validModelLmks_d,
-               validLmks.data(), validLmks.size()*sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)scanPointCloud->scanLmks_d,
-               scanLmkIdx.data(), scanLmkIdx.size()*sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy((void*)scanPointCloud->rigidTransform_d,
-               rigidTransform.data(), rigidTransform.size()*sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_ALLOC_AND_COPY(&scanPointCloud->scanPoints_d, scanPoints, scan->points.size()*3);
+    CUDA_ALLOC_AND_COPY(&scanPointCloud->rigidTransform_d, rigidTransform.data(),
+                        static_cast<size_t>(rigidTransform.size()));
+    CUDA_ALLOC_AND_COPY(&scanPointCloud->scanLandmark_d, scanLandmarks, landmark3d->points.size()*3);
+    CUDA_ALLOC_AND_COPY(&scanPointCloud->modelLandmarkSelection_d, modelLandmarkSelection.data(),
+                        modelLandmarkSelection.size());
 
     scanPointCloud->width = scan->width;
     scanPointCloud->height = scan->height;
@@ -88,15 +77,16 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
     scanPointCloud->cy = (static_cast<float>(scan->height) - 1.f) / 2.f;
 
     scanPointCloud->numPoints = static_cast<int>(scan->points.size());
-    scanPointCloud->transformCols = (int)rigidTransform.cols();
-    scanPointCloud->transformRows = (int)rigidTransform.rows();
-    scanPointCloud->numLmks = static_cast<int>(scanLmkIdx.size());
+    scanPointCloud->numLmks = static_cast<int>(modelLandmarkSelection.size());
 
-    assert(scanLmkIdx.size() == validLmks.size());
+    delete[] scanPoints;
+    delete[] scanLandmarks;
 }
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
-    cudaFree(scanPointCloud.scanPoints_d);
+    CUDA_FREE(scanPointCloud.scanPoints_d);
+    CUDA_FREE(scanPointCloud.rigidTransform_d);
+    CUDA_FREE(scanPointCloud.scanLandmark_d);
 }
 
 void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt, int numu) {
@@ -135,10 +125,10 @@ void updateParams(const C_Params params,
 }
 
 void freeParamsCUDA(C_Params params) {
-    CUDA_CHECK(cudaFree(params.fa1Params_d));
-    CUDA_CHECK(cudaFree(params.fa2Params_d));
-    CUDA_CHECK(cudaFree(params.ftParams_d));
-    CUDA_CHECK(cudaFree(params.fuParams_d));
+    CUDA_FREE(params.fa1Params_d);
+    CUDA_FREE(params.fa2Params_d);
+    CUDA_FREE(params.ftParams_d);
+    CUDA_FREE(params.fuParams_d);
 
     delete[] params.ftParams_h;
     delete[] params.fuParams_h;
@@ -149,6 +139,6 @@ void allocPositionCUDA(float **position_d, int dim) {
 }
 
 void freePositionCUDA(float *position_d) {
-    CUDA_CHECK(cudaFree(position_d));
+    CUDA_FREE(position_d);
 }
 

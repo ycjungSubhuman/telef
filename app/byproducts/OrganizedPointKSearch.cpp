@@ -132,7 +132,7 @@ int main(int ac, const char* const *av) {
     float fx = 571.401;
     float fy = 571.401;
     std::vector<int> scanLmkIdx;
-    std::vector<int> validLmks;
+//    std::vector<int> validLmks;
     Eigen::Matrix4f rigidTransform;
     int nMeshPoints = mesh.position.rows()/3;
     int nMeshSize = mesh.position.rows();
@@ -147,6 +147,8 @@ int main(int ac, const char* const *av) {
 
     float* mesh_d;
 
+    pcl::PointCloud<PointT>::Ptr emptyLmks (new pcl::PointCloud<PointT>);
+
 
     CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), nMeshSize*sizeof(int)));
     CUDA_CHECK(cudaMalloc((void**)(&distance_d), nMeshSize*sizeof(float)));
@@ -154,7 +156,7 @@ int main(int ac, const char* const *av) {
     CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
     CUDA_CHECK(cudaMemcpy(mesh_d,mesh.position.data(), nMeshSize*sizeof(float), cudaMemcpyHostToDevice));
 
-    loadScanToCUDADevice(&scan, cloudIn, fx, fy, scanLmkIdx, validLmks, rigidTransform);
+    loadScanToCUDADevice(&scan, cloudIn, fx, fy, scanLmkIdx, rigidTransform, emptyLmks);
 
     auto begin = chrono::high_resolution_clock::now();
 

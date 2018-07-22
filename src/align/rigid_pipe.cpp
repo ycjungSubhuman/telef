@@ -26,7 +26,7 @@ namespace telef::align {
         initShape = telef::util::convert(meanMesh.position);
     }
 
-    boost::shared_ptr<PCARigidAlignmentSuite> PCARigidFittingPipe::_processData(boost::shared_ptr<FittingSuite> in) {
+    boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(boost::shared_ptr<FittingSuite> in) {
         std::vector<int> pca_lmks = pca_model->getLandmarks();
         auto in_lmks = in->landmark3d;
 
@@ -54,7 +54,7 @@ namespace telef::align {
         }
 
         //std::cout << "\n Transformtion Matrix: \n" << this->transformation << std::endl;
-        auto alignment = boost::shared_ptr<PCARigidAlignmentSuite>(new PCARigidAlignmentSuite());
+        auto alignment = boost::shared_ptr<PCANonRigidAlignmentSuite>(new PCANonRigidAlignmentSuite());
         alignment->fittingSuite = in;
         alignment->pca_model = pca_model;
         alignment->transformation = this->transformation;
