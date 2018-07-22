@@ -66,6 +66,7 @@ namespace {
             "out vec3 color; \n"
             "void main() { \n"
             "  gl_Position = mvp * pos; \n"
+            "  gl_PointSize = 2.0; \n"
             "  float r = float((floatBitsToInt(_rgb) >> 16) & 0x0000ff) / 255.0; \n"
             "  float g = float((floatBitsToInt(_rgb) >> 8) & 0x0000ff) / 255.0; \n"
             "  float b = float(floatBitsToInt(_rgb) & 0x0000ff) / 255.0; \n"
