@@ -70,6 +70,7 @@ namespace telef::align {
             // You can either apply transform_1 or transform_2; they are the same
             pcl::transformPointCloud (*prnetCorr, *transformed_lmks, currentTransform);
 
+            transformation = currentTransform;
             Eigen::MatrixXf finalTransformedLmks = transformation * (in->feature->points.colwise().homogeneous().matrix());
             CloudPtrT lmk3d = boost::make_shared<CloudT>();
             lmk3d->resize(static_cast<size_t>(finalTransformedLmks.cols()));
@@ -79,7 +80,6 @@ namespace telef::align {
                 lmk3d->points[i].z = finalTransformedLmks(2, i);
             }
             landmark3d.swap(lmk3d);
-            transformation = currentTransform;
         } else {
             std::cout << "No Landmarks detected, using previous frames...\n";
         };
