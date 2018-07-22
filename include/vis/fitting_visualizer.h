@@ -22,7 +22,8 @@ namespace telef::vis {
         void stop() override;
         void mousePositionCallback(GLFWwindow *window, double xpos, double ypos);
         void mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset);
-        void mouseButtonCallbackGLFW(GLFWwindow *window, int button, int action, int mods);
+        void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+        void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
     private:
         void render();
@@ -30,16 +31,19 @@ namespace telef::vis {
         Eigen::Matrix4f getMvpMatrix();
 
         void drawPointCloud(CloudConstPtrT cloud);
-        void drawMesh(const ColorMesh &mesh, ImagePtrT image);
+        void drawMesh(const ColorMesh &mesh, const std::vector<float> &normal, ImagePtrT image);
         void drawColorPoints(const std::vector<float> &points, float pointSize, float r, float g, float b);
         void drawCorrespondence(const std::vector<float> &pointSet1, const std::vector<float> &pointSet2,
                                 float r, float g, float b);
+        void cycleMeshMode();
+        void resetCamera();
 
         volatile bool renderRunning;
         GLFWwindow *window;
         InputPtrT renderTarget;
         std::thread renderThread;
         std::mutex renderMutex;
+        float prevTime;
 
         GLuint pointCloud;
         GLuint scanLandmark;
@@ -47,6 +51,7 @@ namespace telef::vis {
         GLuint meshTriangles;
         GLuint meshPosition;
         GLuint meshTexture;
+        GLuint meshNormal;
         GLuint meshUVCoords;
         GLuint colorPointPosition;
         GLuint lineCorrespondence;
@@ -74,5 +79,9 @@ namespace telef::vis {
         float theta;
         float translation[3];
         float zoom;
+
+        // 0: Color, 1: No Color, 2: wireframe
+        static constexpr int meshModeCount = 3;
+        int meshMode;
     };
 }

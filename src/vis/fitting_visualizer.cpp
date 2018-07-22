@@ -25,7 +25,7 @@ namespace {
 
     void mouseButtonCallbackGLFW(GLFWwindow *window, int button, int action, int mods) {
         FittingVisualizer *visualizer = static_cast<FittingVisualizer *>(glfwGetWindowUserPointer(window));
-        visualizer->mouseButtonCallbackGLFW(window, button, action, mods);
+        visualizer->mouseButtonCallback(window, button, action, mods);
     }
 
     void mousePositionCallbackGLFW(GLFWwindow *window, double xpos, double ypos) {
@@ -36,6 +36,11 @@ namespace {
     void mouseScrollCallbackGLFW(GLFWwindow *window, double xoffset, double yoffset) {
         FittingVisualizer *visualizer = static_cast<FittingVisualizer *>(glfwGetWindowUserPointer(window));
         visualizer->mouseScrollCallback(window, xoffset, yoffset);
+    }
+
+    void keyCallbackGLFW(GLFWwindow *window, int key, int scancode, int action, int mods) {
+        FittingVisualizer *visualizer = static_cast<FittingVisualizer *>(glfwGetWindowUserPointer(window));
+        visualizer->keyCallback(window, key, scancode, action, mods);
     }
 
     GLFWwindow *getWindow (FittingVisualizer *visualizer) {
@@ -49,6 +54,7 @@ namespace {
         glfwSetMouseButtonCallback(window, mouseButtonCallbackGLFW);
         glfwSetCursorPosCallback(window, mousePositionCallbackGLFW);
         glfwSetScrollCallback(window, mouseScrollCallbackGLFW);
+        glfwSetKeyCallback(window, keyCallbackGLFW);
 
         glfwMakeContextCurrent(window);
         if(glewInit() != GLEW_OK) {
@@ -58,7 +64,7 @@ namespace {
         return window;
     }
 
-    static const char *pointcloud_vertex_shader =
+    const char *pointcloud_vertex_shader =
             "#version 460 \n"
             "uniform mat4 mvp; \n"
             "in vec4 pos; \n"
@@ -74,7 +80,7 @@ namespace {
             "} \n "
             "";
 
-    static const char *pointcloud_fragment_shader =
+    const char *pointcloud_fragment_shader =
             "#version 460 \n"
             "in vec3 color; \n"
             "out vec4 color_out;"
@@ -83,30 +89,41 @@ namespace {
             "} \n"
             "";
 
-    static const char *mesh_vertex_shader =
+    const char *mesh_vertex_shader =
             "#version 460 \n"
             "uniform mat4 mvp; \n"
             "in vec4 pos; \n"
             "in vec2 _uv; \n"
+            "in vec3 _normal; \n"
             "out vec2 uv; \n"
+            "out vec3 normal; \n"
             "void main() { \n"
             "  gl_Position = mvp * pos; \n"
             "  uv = _uv; \n"
+            "  normal = normalize(_normal); \n"
             "} \n "
             "";
 
-    static const char *mesh_fragment_shader =
+    const char *mesh_fragment_shader =
             "#version 460 \n"
             "uniform sampler2D tex; \n"
+            "uniform int mesh_mode; \n"
             "in vec2 uv; \n"
+            "in vec3 normal; \n"
             "out vec4 out_color; \n"
             "void main() { \n"
-            "  vec2 flipped_uv = vec2(uv.x, 1.0-uv.y);\n"
-            "  out_color = texture(tex, flipped_uv);\n"
+            "  const vec2 flipped_uv = vec2(uv.x, 1.0-uv.y);\n"
+            "  const vec3 light = normalize(vec3(0.0, 0.0, 1.0)); \n"
+            "  const float intensity = clamp(dot(light, normalize(normal)), 0.0, 1.0); \n"
+            "  if(0 == mesh_mode) { \n"
+            "    out_color = intensity * texture(tex, flipped_uv);\n"
+            "  } else { \n"
+            "    out_color = vec4(intensity * vec3(1.0, 1.0, 1.0), 1.0);\n"
+            "  } \n"
             "} \n"
             "";
 
-    static const char *point_vertex_shader =
+    const char *point_vertex_shader =
             "#version 460 \n"
             "uniform mat4 mvp; \n"
             "uniform float point_size; \n"
@@ -117,7 +134,7 @@ namespace {
             "} \n "
             "";
 
-    static const char *color_fragment_shader =
+    const char *color_fragment_shader =
             "#version 460 \n"
             "uniform vec3 color; \n"
             "out vec4 color_out; \n"
@@ -128,6 +145,7 @@ namespace {
 
     using Frame = struct Frame {
         ColorMesh mesh;
+        std::vector<float> vertexNormal;
         CloudConstPtrT cloud;
         ImagePtrT image;
         std::vector<float> scanLandmarks;
@@ -137,6 +155,29 @@ namespace {
     Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input) {
         auto model = input->pca_model;
         auto mesh = model->genMesh(input->shapeCoeff, input->expressionCoeff);
+
+        std::vector<float> vertexNormal(static_cast<unsigned long>(mesh.position.size()), 0.0f);
+        for(int i=0; i<mesh.triangles.size(); i++) {
+            const auto v1Ind = mesh.triangles[i][0];
+            const auto v2Ind = mesh.triangles[i][1];
+            const auto v3Ind = mesh.triangles[i][2];
+            Eigen::Vector3f v1 = mesh.position.segment(3*v1Ind, 3);
+            Eigen::Vector3f v2 = mesh.position.segment(3*v2Ind, 3);
+            Eigen::Vector3f v3 = mesh.position.segment(3*v3Ind, 3);
+            Eigen::Vector3f unnormalizedNormal = (v2 - v1).cross(v3 - v1).normalized();
+            vertexNormal[3*v1Ind + 0] += unnormalizedNormal[0];
+            vertexNormal[3*v1Ind + 1] += unnormalizedNormal[1];
+            vertexNormal[3*v1Ind + 2] += unnormalizedNormal[2];
+
+            vertexNormal[3*v2Ind + 0] += unnormalizedNormal[0];
+            vertexNormal[3*v2Ind + 1] += unnormalizedNormal[1];
+            vertexNormal[3*v2Ind + 2] += unnormalizedNormal[2];
+
+            vertexNormal[3*v3Ind + 0] += unnormalizedNormal[0];
+            vertexNormal[3*v3Ind + 1] += unnormalizedNormal[1];
+            vertexNormal[3*v3Ind + 2] += unnormalizedNormal[2];
+        }
+
         auto image = input->image;
         mesh.applyTransform(input->transformation);
         projectColor(image, mesh, input->fx, input->fy);
@@ -155,7 +196,7 @@ namespace {
             scanLandmarks[3*i+2] = input->landmark3d->points[i].z;
         }
 
-        return Frame {.mesh=mesh, .cloud=cloud, .image=image,
+        return Frame {.mesh=mesh, .vertexNormal=vertexNormal, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
                 .meshLandmarks=meshLandmarks};
     }
@@ -200,7 +241,8 @@ namespace telef::vis {
               theta{0.0f},
               trackballMode(None),
               translation{0.0f, 0.0f, 0.8f},
-              zoom{1.0f} {}
+              zoom{1.0f},
+              meshMode(0) {}
 
     FittingVisualizer::~FittingVisualizer() {
         renderRunning = false;
@@ -231,6 +273,7 @@ namespace telef::vis {
         glGenBuffers(1, &meshUVCoords);
         glGenBuffers(1, &colorPointPosition);
         glGenBuffers(1, &lineCorrespondence);
+        glGenBuffers(1, &meshNormal);
 
         pointCloudShader = getShaderProgram(pointcloud_vertex_shader, pointcloud_fragment_shader);
         meshShader = getShaderProgram(mesh_vertex_shader, mesh_fragment_shader);
@@ -253,11 +296,24 @@ namespace telef::vis {
             // Start drawing
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+            glViewport(0, 0, 960, 540);
             drawPointCloud(frame.cloud);
-            drawMesh(frame.mesh, frame.image);
+            drawMesh(frame.mesh, frame.vertexNormal, frame.image);
             drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
             drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
             drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
+
+            glViewport(0, 540, 960, 540);
+            drawMesh(frame.mesh, frame.vertexNormal, frame.image);
+
+            glViewport(960, 0, 960, 540);
+            drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
+            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
+            drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
+
+            glViewport(960, 540, 960, 540);
+            drawPointCloud(frame.cloud);
+            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
 
             glfwSwapBuffers(window);
         }
@@ -289,7 +345,7 @@ namespace telef::vis {
         glDisableVertexAttribArray(1);
     }
 
-    void FittingVisualizer::drawMesh(const ColorMesh &mesh, ImagePtrT image) {
+    void FittingVisualizer::drawMesh(const ColorMesh &mesh, const std::vector<float> &normal, ImagePtrT image) {
         std::vector<unsigned int> triangles(mesh.triangles.size()*3);
         for(int i=0; i<mesh.triangles.size(); i++) {
             std::copy_n(mesh.triangles[i].data(), 3, &triangles[3*i]);
@@ -299,8 +355,10 @@ namespace telef::vis {
         glUseProgram(meshShader);
         GLint mvpPosition = glGetUniformLocation(meshShader, "mvp");
         glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
+        glUniform1i(glGetUniformLocation(meshShader, "mesh_mode"), meshMode);
         glEnableVertexAttribArray(0); //pos
         glEnableVertexAttribArray(1); //_uv
+        glEnableVertexAttribArray(2); //_normal
         glBindBuffer(GL_ARRAY_BUFFER, meshPosition);
         glBufferData(GL_ARRAY_BUFFER,
                      mesh.position.size()*sizeof(float),
@@ -313,6 +371,12 @@ namespace telef::vis {
                      mesh.uv.data(),
                      GL_STREAM_DRAW);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+        glBindBuffer(GL_ARRAY_BUFFER, meshNormal);
+        glBufferData(GL_ARRAY_BUFFER,
+                     normal.size()*sizeof(float),
+                     normal.data(),
+                     GL_STREAM_DRAW);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshTriangles);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size()*sizeof(int), triangles.data(), GL_STREAM_DRAW);
 
@@ -328,9 +392,17 @@ namespace telef::vis {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+        if(meshMode != 2) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+        else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()), GL_UNSIGNED_INT, NULL);
         glDisableVertexAttribArray(0); //pos
         glDisableVertexAttribArray(1); //_uv
+        glDisableVertexAttribArray(2); //_normal
     }
 
     void FittingVisualizer::drawColorPoints(const std::vector<float> &points,
@@ -457,7 +529,7 @@ namespace telef::vis {
         this->zoom = static_cast<float>(zoom + 0.01*yoffset);
     }
 
-    void FittingVisualizer::mouseButtonCallbackGLFW(GLFWwindow *window, int button, int action, int mods) {
+    void FittingVisualizer::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
         if(action == GLFW_PRESS) {
             switch (button) {
                 case GLFW_MOUSE_BUTTON_LEFT:
@@ -474,5 +546,32 @@ namespace telef::vis {
         if(action == GLFW_RELEASE) {
             trackballMode = FittingVisualizer::None;
         }
+    }
+
+    void FittingVisualizer::keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+        if(action != GLFW_PRESS) {
+            return;
+        }
+
+        if(key == GLFW_KEY_2) {
+            cycleMeshMode();
+        }
+
+        if(key == GLFW_KEY_R) {
+            resetCamera();
+        }
+    }
+
+    void FittingVisualizer::cycleMeshMode() {
+        meshMode = (meshMode+1) % meshModeCount;
+    }
+
+    void FittingVisualizer::resetCamera() {
+        phi = static_cast<float>(M_PI);
+        theta = 0.0f;
+        translation[0] = 0.0f;
+        translation[1] = 0.0f;
+        translation[2] = 0.0f;
+        zoom = 1.0f;
     }
 }

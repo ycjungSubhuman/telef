@@ -49,6 +49,10 @@ namespace telef::util {
     }
 
     size_t UvPointMapping::getMappedPointId(int u, int v) {
+        if(u >= imageWidth || v >= imageHeight) {
+            throw std::out_of_range("Mapping Does Not Exist");
+        }
+
         auto o = (*mapping)[uvToInd(u, v)];
         if (o == None) {
             throw std::out_of_range("Mapping Does Not Exist");
