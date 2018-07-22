@@ -3,8 +3,9 @@
 #include <string>
 #include <ostream>
 #include <cuda_runtime_api.h>
+#include <feature/feature_detect_pipe.h>
 
-#include "align/rigid_pipe.h"
+#include "face/feeder.h"
 #include "align/nonrigid_pipe.h"
 #include "face/classify_pipe.h"
 #include "feature/feature_detector.h"
@@ -14,6 +15,7 @@
 #include "io/frontend.h"
 #include "io/ply/meshio.h"
 #include "io/align/align_frontend.h"
+#include "io/merger/device_input_merger.h"
 #include "cloud/cloud_pipe.h"
 #include "vis/fitting_visualizer.h"
 
@@ -21,6 +23,7 @@
 #include "mesh/color_projection_pipe.h"
 #include "glog/logging.h"
 #include "util/cudautil.h"
+#include "util/po_util.h"
 
 namespace {
     using namespace telef::io::align;
@@ -30,6 +33,7 @@ namespace {
     using namespace telef::face;
     using namespace telef::mesh;
     using namespace telef::vis;
+    using namespace telef::util;
 
     namespace fs = std::experimental::filesystem;
 
@@ -80,30 +84,32 @@ int main(int ac, const char* const *av) {
     desc.add_options()
             ("help,H", "print this help message")
             ("model,M", po::value<std::string>(), "specify PCA model path")
+            ("detector,D", po::value<std::string>(), "specify Dlib pretrained Face detection model path")
+            ("graph,G", po::value<std::string>(), "specify path to PRNet graph definition")
+            ("checkpoint,C", po::value<std::string>(), "specify path to pretrained PRNet checkpoint")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
     po::notify(vm);
 
-    bool useFakeKinect = vm.count("fake") > 0;
+    require(vm, "model");
+    require(vm, "detector");
+    require(vm, "graph");
+    require(vm, "checkpoint");
 
     if(vm.count("help") > 0) {
         std::cout << desc << std::endl;
         return 1;
     }
 
-    std::string modelPath;
+    std::string modelPath = vm["model"].as<std::string>();
+    std::string detectModelPath = vm["detector"].as<std::string>();
+    std::string prnetGraphPath = vm["graph"].as<std::string>();
+    std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
+
     std::string fakePath("");
-
-    modelPath = vm["model"].as<std::string>();
-
+    bool useFakeKinect = vm.count("fake") > 0;
     if (useFakeKinect) {
-
-        if (vm.count("fake") == 0) {
-            std::cout << "Please specify 'path' to fake device"  << std::endl;
-            return 1;
-        }
-
         fakePath = vm["fake"].as<std::string>();
     }
 
@@ -122,20 +128,22 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<MorphableFaceModel> model;
     model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
 
-    PCARigidFittingPipe rigid = PCARigidFittingPipe(model);
-    std::shared_ptr<FittingSuitePipeMerger<PCANonRigidFittingResult >> merger;
-    //auto pipe1 = compose(rigid, nonrigid, fitting2Projection, colorProjection);
-    auto pipe1 = compose(rigid, nonrigid);
-    merger = std::make_shared<FittingSuitePipeMerger<PCANonRigidFittingResult >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
+    auto modelFeeder = MorphableModelFeederPipe(model);
+    std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult >> merger;
+    auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
+    auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
+    auto lmkToScanFitting = LmkToScanRigidFittingPipe();
+    auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting, modelFeeder, nonrigid);
+    merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     merger->addFrontEnd(frontend);
 
-    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, FittingSuite, PCANonRigidFittingResult>> device = NULL;
+    std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, FittingSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
-        device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FittingSuite, PCANonRigidFittingResult >>(std::move(grabber), false);
+        device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(std::move(grabber), false);
     }
 
     device->setCloudChannel(cloudChannel);

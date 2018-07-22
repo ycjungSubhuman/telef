@@ -32,3 +32,24 @@ inline void __checkErrMsgFunc(const char* errstr, const char* file,
     }
 }
 
+template<typename T>
+inline void CUDA_MALLOC(T **dst_d, size_t count) {
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(dst_d), count*sizeof(T)));
+}
+
+template<typename T>
+inline void CUDA_ALLOC_AND_COPY(T **dst_d, const T *src_h, size_t count) {
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(dst_d), count*sizeof(T)));
+    CUDA_CHECK(cudaMemcpy(*dst_d, src_h, count*sizeof(T), cudaMemcpyHostToDevice));
+}
+
+template<typename T>
+inline void CUDA_RETRIEVE(T *dst_h, const T *src_d, size_t count) {
+    CUDA_CHECK(cudaMemcpy(*dst_h, src_d, count*sizeof(T), cudaMemcpyDeviceToHost));
+}
+
+template<typename T>
+inline void CUDA_FREE(T *p_d) {
+    CUDA_CHECK(cudaFree(p_d));
+}
+

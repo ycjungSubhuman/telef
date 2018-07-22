@@ -71,6 +71,10 @@ namespace telef::face {
 
             std::copy_n(&positionMap[v*3*256 + 3*u], 3, &result.data()[3*i]);
         }
+        for(int i=0; i<68; i++) {
+            float z = result(2,i);
+            result(2, i) = 1.0f - z;
+        }
 
         return result*256.0f*1.1f;
     }

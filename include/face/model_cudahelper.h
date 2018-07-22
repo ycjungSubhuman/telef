@@ -5,30 +5,28 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-/* Includes, cuda */
 #include <cuda_runtime.h>
-//#include <cublas_v2.h>
-
-
 #include "face/raw_model.h"
+#include "type.h"
 
-
+namespace {
+    using namespace telef::types;
+}
 
 /** Loads MorphableFaceModel to GPU Device */
 void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
                            const Eigen::MatrixXf shapeDeformBasis, const Eigen::MatrixXf expressionDeformBasis,
                            const Eigen::VectorXf ref,
-                           const Eigen::VectorXf meanShapeDeformation,
-                           const Eigen::VectorXf meanExpressionDeformation,
+                           const Eigen::VectorXf shapeDeformationCenter,
+                           const Eigen::VectorXf expressionDeformationCenter,
                            const std::vector<int> lmkInds);
 void freeModelCUDA(C_PcaDeformModel deformModel);
 
 /** Loads PointCloud to GPU Device */
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                           boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
-                          const std::vector<int> scanLmkIdx,
-                          const std::vector<int> validLmks,
-                          const Eigen::MatrixXf rigidTransform);
+                          std::vector<int> modelLandmarkSelection,
+                          Eigen::Matrix4f rigidTransform, CloudConstPtrT landmark3d);
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud);
 

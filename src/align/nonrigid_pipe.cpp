@@ -77,7 +77,7 @@ namespace telef::align {
     }
 
     boost::shared_ptr<PCANonRigidFittingResult>
-    PCAGPUNonRigidFittingPipe::_processData(boost::shared_ptr<PCARigidAlignmentSuite> in) {
+    PCAGPUNonRigidFittingPipe::_processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) {
         /* Load data to cuda device */
 
         //std::cout << "Fitting PCA model GPU" << std::endl;
@@ -93,22 +93,9 @@ namespace telef::align {
             isModelInitialized = true;
         }
 
-        //std::cout << "Initializing Frame Data for GPU fitting" << std::endl;
-        // Filter out non-detected Deformable Model landmarks
-        std::vector<int> validLmks = in->pca_model->getLandmarks();
-        auto riter = in->fittingSuite->invalid3dLandmarks.rbegin();
-        while (riter != in->fittingSuite->invalid3dLandmarks.rend())
-        {
-            auto iter_data = validLmks.begin() + *riter;
-            validLmks.erase(iter_data);
-            riter++;
-        }
-
-        in->transformation = Eigen::Matrix4f::Identity();
-
         C_ScanPointCloud c_scanPointCloud;
-        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fittingSuite->rawCloudLmkIdx,
-                             validLmks, in->transformation);
+        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, landmarkSelection,
+                             in->transformation, in->fittingSuite->landmark3d);
 
         /* Setup Optimizer */
 
@@ -121,10 +108,10 @@ namespace telef::align {
         double u[3] = {3.14, 0.0, 0.0};
         problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
         problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
-        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0001, 1), NULL, expressionCoeff);
-        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00001, 5, 1.5), NULL, expressionCoeff);
+        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
+        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);
         ceres::Solver::Options options;
-        options.minimizer_progress_to_stdout = true;
+        options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
 
         /* Run Optimization */
@@ -158,6 +145,7 @@ namespace telef::align {
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->cloud = in->rawCloud;
+        result->landmark3d = in->fittingSuite->landmark3d;
         result->fx = in->fx;
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;
@@ -167,4 +155,12 @@ namespace telef::align {
 
         return result;
     }
+
+    const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection {
+        5, 6, 7, 8, 9, 10, 11,      // Chin
+        // Others(frontal part)
+        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+        36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+        55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+    };
 }

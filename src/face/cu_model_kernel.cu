@@ -190,7 +190,7 @@ void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, floa
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
 
     // Calculate residual & jacobian for Landmarks
-    calc_residual_lmk(residual_d, result_pos_d, scanPointCloud);
+    calc_residual_lmk(residual_d, result_pos_d, deformModel, scanPointCloud);
     if (isJacobianRequired) {
         calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
                              params.fuParams_d, align_pos_d, deformModel, scanPointCloud);

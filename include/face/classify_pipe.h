@@ -33,9 +33,9 @@ namespace telef::face {
         }
     };
 
-    class ClassifiedRigidFittingPipe : public telef::io::Pipe<ClassifiedFittingSuiteT, telef::align::PCARigidAlignmentSuite> {
+    class ClassifiedRigidFittingPipe : public telef::io::Pipe<ClassifiedFittingSuiteT, telef::align::PCANonRigidAlignmentSuite> {
     private:
-        boost::shared_ptr<telef::align::PCARigidAlignmentSuite>
+        boost::shared_ptr<telef::align::PCANonRigidAlignmentSuite>
         _processData(boost::shared_ptr<ClassifiedFittingSuiteT> in) override {
 
             telef::align::PCARigidFittingPipe rigidPipe(in->model);
