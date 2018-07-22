@@ -106,8 +106,7 @@ namespace {
             "} \n"
             "";
 
-
-    static const char *color_point_vertex_shader =
+    static const char *point_vertex_shader =
             "#version 460 \n"
             "uniform mat4 mvp; \n"
             "uniform float point_size; \n"
@@ -118,7 +117,7 @@ namespace {
             "} \n "
             "";
 
-    static const char *color_point_fragment_shader =
+    static const char *color_fragment_shader =
             "#version 460 \n"
             "uniform vec3 color; \n"
             "out vec4 color_out; \n"
@@ -231,10 +230,11 @@ namespace telef::vis {
         glGenTextures(1, &meshTexture);
         glGenBuffers(1, &meshUVCoords);
         glGenBuffers(1, &colorPointPosition);
+        glGenBuffers(1, &lineCorrespondence);
 
         pointCloudShader = getShaderProgram(pointcloud_vertex_shader, pointcloud_fragment_shader);
         meshShader = getShaderProgram(mesh_vertex_shader, mesh_fragment_shader);
-        colorPointShader = getShaderProgram(color_point_vertex_shader, color_point_fragment_shader);
+        colorPointShader = getShaderProgram(point_vertex_shader, color_fragment_shader);
 
         Frame frame;
         glEnable(GL_DEPTH_TEST);
@@ -257,6 +257,7 @@ namespace telef::vis {
             drawMesh(frame.mesh, frame.image);
             drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
             drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
+            drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
 
             glfwSwapBuffers(window);
         }
@@ -349,7 +350,36 @@ namespace telef::vis {
                      points.data(),
                      GL_STREAM_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-        glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(points.size()));
+        glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(points.size()/3));
+        glDisableVertexAttribArray(0);
+    }
+
+    void FittingVisualizer::drawCorrespondence(const std::vector<float> &pointSet1, const std::vector<float> &pointSet2,
+                                               float r, float g, float b) {
+        Eigen::Matrix4f mvp = getMvpMatrix();
+
+        glUseProgram(colorPointShader);
+        GLint mvpPosition = glGetUniformLocation(colorPointShader, "mvp");
+        glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
+        glUniform3f(glGetUniformLocation(colorPointShader, "color"), r, g, b);
+
+        std::vector<float> corrLines;
+        corrLines.resize(pointSet1.size()*2);
+        assert(pointSet1.size() == pointSet2.size());
+
+        for(int i=0; i<pointSet1.size()/3; i++) {
+            std::copy_n(pointSet1.data()+(3*i), 3, corrLines.data()+(6*i));
+            std::copy_n(pointSet2.data()+(3*i), 3, corrLines.data()+(6*i+3));
+        }
+
+        glEnableVertexAttribArray(0); //pos
+        glBindBuffer(GL_ARRAY_BUFFER, lineCorrespondence);
+        glBufferData(GL_ARRAY_BUFFER,
+                     corrLines.size()*sizeof(float),
+                     corrLines.data(),
+                     GL_STREAM_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(corrLines.size()/3));
         glDisableVertexAttribArray(0);
     }
 
@@ -425,7 +455,6 @@ namespace telef::vis {
     void FittingVisualizer::mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset) {
         auto zoom = this->zoom;
         this->zoom = static_cast<float>(zoom + 0.01*yoffset);
-
     }
 
     void FittingVisualizer::mouseButtonCallbackGLFW(GLFWwindow *window, int button, int action, int mods) {

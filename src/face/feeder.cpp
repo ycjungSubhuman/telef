@@ -5,7 +5,7 @@ namespace telef::face {
     boost::shared_ptr<PCANonRigidAlignmentSuite>
     MorphableModelFeederPipe::_processData(boost::shared_ptr<telef::feature::FittingSuite> in) {
         auto result = boost::make_shared<PCANonRigidAlignmentSuite>();
-        result-> fittingSuite = in;
+        result->fittingSuite = in;
         result->pca_model = pca_model;
         result->transformation = Eigen::Matrix4f::Identity();
         result->image = in->rawImage;

@@ -108,10 +108,10 @@ namespace telef::align {
         double u[3] = {3.14, 0.0, 0.0};
         problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
         problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
-        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0001, 1), NULL, expressionCoeff);
-        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00001, 5, 1.5), NULL, expressionCoeff);
+        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
+        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);
         ceres::Solver::Options options;
-        options.minimizer_progress_to_stdout = true;
+        options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
 
         /* Run Optimization */

@@ -32,6 +32,8 @@ namespace telef::vis {
         void drawPointCloud(CloudConstPtrT cloud);
         void drawMesh(const ColorMesh &mesh, ImagePtrT image);
         void drawColorPoints(const std::vector<float> &points, float pointSize, float r, float g, float b);
+        void drawCorrespondence(const std::vector<float> &pointSet1, const std::vector<float> &pointSet2,
+                                float r, float g, float b);
 
         volatile bool renderRunning;
         GLFWwindow *window;
@@ -47,6 +49,7 @@ namespace telef::vis {
         GLuint meshTexture;
         GLuint meshUVCoords;
         GLuint colorPointPosition;
+        GLuint lineCorrespondence;
 
         GLuint pointCloudShader;
         GLuint meshShader;

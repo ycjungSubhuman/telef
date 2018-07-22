@@ -96,6 +96,11 @@ TEST(PRNetLandmarkDetector, Image00081) {
 
     Eigen::MatrixXf result = prnet.Run((float*)floatImage.data);
 
+    for(int i=0; i<result.cols(); i++) {
+        float z = result(2, i);
+        result(2, i) = 1.0f - z;
+    }
+
     for(int i; i<image00081.size(); i++) {
         float gx = image00081[i][0];
         float gy = image00081[i][1];
