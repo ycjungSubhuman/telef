@@ -25,6 +25,7 @@ void freeModelCUDA(C_PcaDeformModel deformModel);
 /** Loads PointCloud to GPU Device */
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                           boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
+                          float fx, float fy,
                           std::vector<int> modelLandmarkSelection,
                           Eigen::Matrix4f rigidTransform, CloudConstPtrT landmark3d);
 

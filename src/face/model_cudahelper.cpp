@@ -54,6 +54,7 @@ void freeModelCUDA(C_PcaDeformModel deformModel) {
 
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                           boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
+                          float fx, float fy,
                           std::vector<int> modelLandmarkSelection,
                           Eigen::Matrix4f rigidTransform, CloudConstPtrT landmark3d) {
     float *scanPoints = new float[scan->points.size()*3];
@@ -67,6 +68,13 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
     CUDA_ALLOC_AND_COPY(&scanPointCloud->scanLandmark_d, scanLandmarks, landmark3d->points.size()*3);
     CUDA_ALLOC_AND_COPY(&scanPointCloud->modelLandmarkSelection_d, modelLandmarkSelection.data(),
                         modelLandmarkSelection.size());
+
+    scanPointCloud->width = scan->width;
+    scanPointCloud->height = scan->height;
+    scanPointCloud->fx = fx;
+    scanPointCloud->fy = fy;
+    scanPointCloud->cx = (static_cast<float>(scan->width) - 1.f) / 2.f;
+    scanPointCloud->cy = (static_cast<float>(scan->height) - 1.f) / 2.f;
 
     scanPointCloud->numPoints = static_cast<int>(scan->points.size());
     scanPointCloud->numLmks = static_cast<int>(modelLandmarkSelection.size());

@@ -1,9 +1,12 @@
 #include "face/cu_model_kernel.h"
 
 #include <iostream>
+#include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <climits>
+#include <float.h>
 
 /* Includes, cuda */
 #include <cuda_runtime.h>
@@ -15,6 +18,9 @@
 #include "util/transform.h"
 
 #define BLOCKSIZE 128
+
+#define NO_CORRESPONDENCE_UI UINT_MAX
+#define INF_F FLT_MAX
 
 __global__
 void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
@@ -158,6 +164,88 @@ static void calculateLandmarkIndices(int *mesh_inds, int *scan_inds, C_PcaDeform
     }
 }
 
+/**
+ * Project xyz coord into uv space
+ * @param uv
+ * @param xyz
+ * @param fx
+ * @param fy
+ * @param cx
+ * @param cy
+ */
+__device__
+void convertXyzToUv(int *uv, const float* xyz, float fx, float fy, float cx, float cy) {
+    uv[0] = static_cast<int>(std::round(xyz[0] * fx / xyz[2] + cx));
+    uv[1] = static_cast<int>(std::round(xyz[1] * fy / xyz[2] + cy));
+
+//    printf("uv: %d, %d | Point: %.2f, %.2f, %.2f | f(%.2f,%.2f) | c(%.2f,%.2f)\n", uv[0], uv[1], xyz[0], xyz[1], xyz[2], fx, fy, cx, cy);
+}
+
+
+__global__
+void _find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d,
+                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius) {
+    const int start = blockIdx.x * blockDim.x + threadIdx.x;
+    const int size = num_points;
+    const int step = blockDim.x * gridDim.x;
+
+    for(int i=start; i<size; i+=step) {
+        // Project Point into UV space for mapping finding closest xy on scan
+        int uv[2];
+
+        convertXyzToUv(&uv[0], &position_d[i*3], scan.fx, scan.fy, scan.cx, scan.cy);
+
+        // Calculate 1-D Index of scan point from UV coord
+        int scanIndx = uv[1] * scan.width * 3 + uv[0] * 3 + 0;
+        int scanIndy = uv[1] * scan.width * 3 + uv[0] * 3 + 1;
+        int scanIndz = uv[1] * scan.width * 3 + uv[0] * 3 + 2;
+
+
+        // Check if Model coord outside of UV space, could happen if model is aligned to face near image boarder
+        if (scanIndx < 0 || scanIndz > scan.numPoints*3) {
+            meshToScanCorr_d[i] = -1;
+            distance_d[i] = -1;
+        } else {
+
+            // Check for NaN Points
+            bool isNaN = std::isfinite(scan.scanPoints_d[scanIndx]) == 0 || std::isfinite(scan.scanPoints_d[scanIndy]) == 0
+                         || std::isfinite(scan.scanPoints_d[scanIndz]) == 0;
+
+            // Check z distance for within radius tolerance (Use xyz EuclidDist instead?)
+            float dist = std::fabs(position_d[i*3+2] - scan.scanPoints_d[scanIndx+2]);
+            // Add correspondance if within search radius, if radius is 0, include all points
+            if (!isNaN && (radius <= 0 || dist <= radius)) {
+                meshToScanCorr_d[i] = scanIndx/3;
+                distance_d[i] = dist;
+            } else {
+                meshToScanCorr_d[i] = -1;
+                distance_d[i] = -1;
+            }
+        }
+
+    }
+}
+
+void find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d, const float *position_d, int num_points, C_ScanPointCloud scan, float radius) {
+    int idim = num_points;
+    dim3 dimBlock(BLOCKSIZE);
+    dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
+
+    _find_mesh_to_scan_corr << < dimGrid, dimBlock >> > (meshToScanCorr_d, distance_d, position_d, num_points, scan, radius);
+    CHECK_ERROR_MSG("Kernel Error");
+}
+
+//void find_mesh_to_scan_corr(int *meshToScanCorr, float *distance,
+//                            const float *position_d, int num_points, C_ScanPointCloud scan, float radius) {
+//    int idim = num_points;
+//    dim3 dimBlock(BLOCKSIZE);
+//    dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
+//
+//    _find_mesh_to_scan_corr << <dimGrid,dimBlock> >> (meshToScanCorr, distance, position_d, num_points, scan, radius);
+//    CHECK_ERROR_MSG("Kernel Error");
+//
+//}
+
 void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                    float *position_d, cublasHandle_t cnpHandle,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
@@ -173,6 +261,7 @@ void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, floa
     CUDA_CHECK(cudaMalloc((void **) &residual_d, scanPointCloud.numLmks*3*sizeof(float)));
 
     // Compute Jacobians for each parameter
+    // TODO: Do cuda malloc and memcopy of jacobians only when computing jacobians
     CUDA_CHECK(cudaMalloc((void **) &fa1Jacobian_d, scanPointCloud.numLmks*3*params.numa1*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void **) &fa2Jacobian_d, scanPointCloud.numLmks*3*params.numa2*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void **) &ftJacobian_d, scanPointCloud.numLmks*3*params.numt*sizeof(float)));

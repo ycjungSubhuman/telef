@@ -94,7 +94,7 @@ namespace telef::align {
         }
 
         C_ScanPointCloud c_scanPointCloud;
-        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, landmarkSelection,
+        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fx, in->fy, landmarkSelection,
                              in->transformation, in->fittingSuite->landmark3d);
 
         /* Setup Optimizer */

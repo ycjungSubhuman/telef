@@ -19,6 +19,13 @@ typedef struct C_ScanPointCloud {
     float *scanPoints_d;
     float *scanLandmark_d;
     float *rigidTransform_d;
+    unsigned int width;
+    unsigned int height;
+    float fx;
+    float fy;
+    float cx;
+    float cy;
+
     int *modelLandmarkSelection_d;
     int numPoints;
 
