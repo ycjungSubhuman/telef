@@ -37,6 +37,7 @@ namespace telef::align {
         telef::types::ImagePtrT image;
         telef::types::CloudConstPtrT cloud;
         Eigen::Matrix4f transformation;
+        CloudConstPtrT landmark3d;
         float fx;
         float fy;
     public:

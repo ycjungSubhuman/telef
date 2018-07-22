@@ -106,16 +106,18 @@ namespace {
             "";
 
 
-    static const char *point_vertex_shader =
+    static const char *color_point_vertex_shader =
             "#version 460 \n"
             "uniform mat4 mvp; \n"
+            "uniform float point_size; \n"
             "in vec4 pos; \n"
             "void main() { \n"
             "  gl_Position = mvp * pos; \n"
+            "  gl_PointSize = point_size; \n"
             "} \n "
             "";
 
-    static const char *point_fragment_shader =
+    static const char *color_point_fragment_shader =
             "#version 460 \n"
             "uniform vec3 color; \n"
             "out vec4 color_out; \n"
@@ -124,12 +126,12 @@ namespace {
             "} \n"
             "";
 
-    struct Frame {
+    using Frame = struct Frame {
         ColorMesh mesh;
         CloudConstPtrT cloud;
         ImagePtrT image;
-        pcl::PointCloud<pcl::PointXYZ>::Ptr scanLandmarks;
-        pcl::PointCloud<pcl::PointXYZ>::Ptr meshLandmarks;
+        std::vector<float> scanLandmarks;
+        std::vector<float> meshLandmarks;
     };
 
     Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input) {
@@ -140,8 +142,22 @@ namespace {
         projectColor(image, mesh, input->fx, input->fy);
         auto cloud = input->cloud;
 
-        return Frame {.mesh=mesh, .cloud=cloud, .image=image, .scanLandmarks=nullptr,
-                .meshLandmarks=nullptr};
+        const size_t lmkCount = input->pca_model->getLandmarks().size();
+        std::vector<float> meshLandmarks(lmkCount*3);
+        for(size_t i=0; i<lmkCount; i++) {
+            std::copy_n(mesh.position.data() + 3*(input->pca_model->getLandmarks()[i]), 3, &meshLandmarks[3*i]);
+        }
+
+        std::vector<float> scanLandmarks(lmkCount*3);
+        for(size_t i=0; i<lmkCount; i++) {
+            scanLandmarks[3*i+0] = input->landmark3d->points[i].x;
+            scanLandmarks[3*i+1] = input->landmark3d->points[i].y;
+            scanLandmarks[3*i+2] = input->landmark3d->points[i].z;
+        }
+
+        return Frame {.mesh=mesh, .cloud=cloud, .image=image,
+                .scanLandmarks=scanLandmarks,
+                .meshLandmarks=meshLandmarks};
     }
 
     GLuint compileShader(const char *source, GLenum type) {
@@ -213,12 +229,15 @@ namespace telef::vis {
         glGenBuffers(1, &meshPosition);
         glGenTextures(1, &meshTexture);
         glGenBuffers(1, &meshUVCoords);
+        glGenBuffers(1, &colorPointPosition);
 
-        GLuint pointCloudShader = getShaderProgram(pointcloud_vertex_shader, pointcloud_fragment_shader);
-        GLuint meshShader = getShaderProgram(mesh_vertex_shader, mesh_fragment_shader);
+        pointCloudShader = getShaderProgram(pointcloud_vertex_shader, pointcloud_fragment_shader);
+        meshShader = getShaderProgram(mesh_vertex_shader, mesh_fragment_shader);
+        colorPointShader = getShaderProgram(color_point_vertex_shader, color_point_fragment_shader);
 
         Frame frame;
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_PROGRAM_POINT_SIZE);
 
         while(!glfwWindowShouldClose(window) && renderRunning) {
             glfwPollEvents();
@@ -233,73 +252,104 @@ namespace telef::vis {
             // Start drawing
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            Eigen::Matrix4f mvp = getMvpMatrix();
-
-            // Draw point cloud scan
-            glUseProgram(pointCloudShader);
-            GLint mvpPosition = glGetUniformLocation(pointCloudShader, "mvp");
-            glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
-
-            glEnableVertexAttribArray(0); //pos
-            glEnableVertexAttribArray(1); //_rgb
-            glBindBuffer(GL_ARRAY_BUFFER, pointCloud);
-            glBufferData(GL_ARRAY_BUFFER,
-                         frame.cloud->points.size()*sizeof(pcl::PointXYZRGBA),
-                         frame.cloud->points.data(),
-                         GL_STREAM_DRAW);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                                  sizeof(pcl::PointXYZRGBA), reinterpret_cast<void*>(offsetof(pcl::PointXYZRGBA, x)));
-            glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE,
-                                  sizeof(pcl::PointXYZRGBA), reinterpret_cast<void*>(offsetof(pcl::PointXYZRGBA, rgba)));
-            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(frame.cloud->points.size()));
-            glDisableVertexAttribArray(0);
-            glDisableVertexAttribArray(1);
-
-            // Draw mesh
-            std::vector<unsigned int> triangles(frame.mesh.triangles.size()*3);
-            for(int i=0; i<frame.mesh.triangles.size(); i++) {
-                std::copy_n(frame.mesh.triangles[i].data(), 3, &triangles[3*i]);
-            }
-            glUseProgram(meshShader);
-            mvpPosition = glGetUniformLocation(meshShader, "mvp");
-            glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
-            glEnableVertexAttribArray(0); //pos
-            glEnableVertexAttribArray(1); //_uv
-            glBindBuffer(GL_ARRAY_BUFFER, meshPosition);
-            glBufferData(GL_ARRAY_BUFFER,
-                         frame.mesh.position.size()*sizeof(float),
-                         frame.mesh.position.data(),
-                         GL_STREAM_DRAW);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-            glBindBuffer(GL_ARRAY_BUFFER, meshUVCoords);
-            glBufferData(GL_ARRAY_BUFFER,
-                         frame.mesh.uv.size()*sizeof(float),
-                         frame.mesh.uv.data(),
-                         GL_STREAM_DRAW);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshTriangles);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size()*sizeof(int), triangles.data(), GL_STREAM_DRAW);
-
-            glBindTexture(GL_TEXTURE_2D, meshTexture);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-                         frame.image->getWidth(), frame.image->getHeight(), 0,
-                         GL_RGB, GL_UNSIGNED_BYTE,
-                         frame.image->getData());
-            GLint texPosition = glGetUniformLocation(meshShader, "tex");
-            glUniform1i(texPosition, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()), GL_UNSIGNED_INT, NULL);
-            glDisableVertexAttribArray(0); //pos
-            glDisableVertexAttribArray(1); //_uv
+            drawPointCloud(frame.cloud);
+            drawMesh(frame.mesh, frame.image);
+            drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
+            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
 
             glfwSwapBuffers(window);
         }
 
         glfwTerminate();
+    }
+
+    void FittingVisualizer::drawPointCloud(CloudConstPtrT cloud) {
+        Eigen::Matrix4f mvp = getMvpMatrix();
+
+        // Draw point cloud scan
+        glUseProgram(pointCloudShader);
+        GLint mvpPosition = glGetUniformLocation(pointCloudShader, "mvp");
+        glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
+
+        glEnableVertexAttribArray(0); //pos
+        glEnableVertexAttribArray(1); //_rgb
+        glBindBuffer(GL_ARRAY_BUFFER, pointCloud);
+        glBufferData(GL_ARRAY_BUFFER,
+                     cloud->points.size()*sizeof(pcl::PointXYZRGBA),
+                     cloud->points.data(),
+                     GL_STREAM_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                              sizeof(pcl::PointXYZRGBA), reinterpret_cast<void*>(offsetof(pcl::PointXYZRGBA, x)));
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE,
+                              sizeof(pcl::PointXYZRGBA), reinterpret_cast<void*>(offsetof(pcl::PointXYZRGBA, rgba)));
+        glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(cloud->points.size()));
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+    }
+
+    void FittingVisualizer::drawMesh(const ColorMesh &mesh, ImagePtrT image) {
+        std::vector<unsigned int> triangles(mesh.triangles.size()*3);
+        for(int i=0; i<mesh.triangles.size(); i++) {
+            std::copy_n(mesh.triangles[i].data(), 3, &triangles[3*i]);
+        }
+        Eigen::Matrix4f mvp = getMvpMatrix();
+
+        glUseProgram(meshShader);
+        GLint mvpPosition = glGetUniformLocation(meshShader, "mvp");
+        glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
+        glEnableVertexAttribArray(0); //pos
+        glEnableVertexAttribArray(1); //_uv
+        glBindBuffer(GL_ARRAY_BUFFER, meshPosition);
+        glBufferData(GL_ARRAY_BUFFER,
+                     mesh.position.size()*sizeof(float),
+                     mesh.position.data(),
+                     GL_STREAM_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glBindBuffer(GL_ARRAY_BUFFER, meshUVCoords);
+        glBufferData(GL_ARRAY_BUFFER,
+                     mesh.uv.size()*sizeof(float),
+                     mesh.uv.data(),
+                     GL_STREAM_DRAW);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshTriangles);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size()*sizeof(int), triangles.data(), GL_STREAM_DRAW);
+
+        glBindTexture(GL_TEXTURE_2D, meshTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                     image->getWidth(), image->getHeight(), 0,
+                     GL_RGB, GL_UNSIGNED_BYTE,
+                     image->getData());
+        GLint texPosition = glGetUniformLocation(meshShader, "tex");
+        glUniform1i(texPosition, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()), GL_UNSIGNED_INT, NULL);
+        glDisableVertexAttribArray(0); //pos
+        glDisableVertexAttribArray(1); //_uv
+    }
+
+    void FittingVisualizer::drawColorPoints(const std::vector<float> &points,
+                                            float pointSize, float r, float g, float b) {
+        Eigen::Matrix4f mvp = getMvpMatrix();
+
+        glUseProgram(colorPointShader);
+        GLint mvpPosition = glGetUniformLocation(colorPointShader, "mvp");
+        glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
+        glUniform1f(glGetUniformLocation(colorPointShader, "point_size"), pointSize);
+        glUniform3f(glGetUniformLocation(colorPointShader, "color"), r, g, b);
+
+        glEnableVertexAttribArray(0); //pos
+        glBindBuffer(GL_ARRAY_BUFFER, colorPointPosition);
+        glBufferData(GL_ARRAY_BUFFER,
+                     points.size()*sizeof(float),
+                     points.data(),
+                     GL_STREAM_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(points.size()));
+        glDisableVertexAttribArray(0);
     }
 
     FittingVisualizer::InputPtrT FittingVisualizer::safeGetInput() {
@@ -338,6 +388,7 @@ namespace telef::vis {
 
         return proj * view;
     }
+
 
     void FittingVisualizer::mousePositionCallback(GLFWwindow *window, double xpos, double ypos) {
         auto mode = trackballMode;

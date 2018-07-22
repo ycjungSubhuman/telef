@@ -145,6 +145,7 @@ namespace telef::align {
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->cloud = in->rawCloud;
+        result->landmark3d = in->fittingSuite->landmark3d;
         result->fx = in->fx;
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;

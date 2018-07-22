@@ -29,6 +29,9 @@ namespace telef::vis {
         InputPtrT safeGetInput();
         Eigen::Matrix4f getMvpMatrix();
 
+        void drawPointCloud(CloudConstPtrT cloud);
+        void drawMesh(const ColorMesh &mesh, ImagePtrT image);
+        void drawColorPoints(const std::vector<float> &points, float pointSize, float r, float g, float b);
 
         volatile bool renderRunning;
         GLFWwindow *window;
@@ -43,6 +46,11 @@ namespace telef::vis {
         GLuint meshPosition;
         GLuint meshTexture;
         GLuint meshUVCoords;
+        GLuint colorPointPosition;
+
+        GLuint pointCloudShader;
+        GLuint meshShader;
+        GLuint colorPointShader;
 
         enum TrackballMode {
             None,
