@@ -8,6 +8,14 @@
  * Calculation of residuals and its derivatives
  */
 
+typedef struct PointPair{
+    float *mesh_position_d;
+    float *mesh_positoin_before_transform_d;
+    float *ref_position_d;
+    int *mesh_corr_inds_d;
+    int *ref_corr_inds_d;
+    int point_count;
+} PointPair;
 
 /**
  * Calculate
@@ -17,20 +25,15 @@
  *                       sqrt(N)
  *
  * Where
- *   m is the number of landmark points
- *   m_ik is k-th landmark point's i-th element
- *   x_m is the subset of mesh points that corresponds to landmark points
+ *   m is the number of points
+ *   m_ik is k-th correspondence point's i-th element
+ *   x_m is the subset of mesh points that corresponds to points
  *   x_m_ik is the k-th landmark point's i-th element
- *
- * @param residual_d            calculated residual. ((number of landmarks) * 3)-element array
- * @param position_d            calculated mesh vertex positions
- * @param model
- * @param scan
  */
-void calc_residual_lmk(float *residual_d, const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan);
+void calc_residual_point_pair(float *residual_d, PointPair point_pair);
 
 /**
- * Calculate derivatives of landmark term
+ * Calculate derivatives of least squares
  *
  * Translation parameters:
  *
@@ -67,10 +70,8 @@ void calc_residual_lmk(float *residual_d, const float *position_d, C_PcaDeformMo
  * @param dres_da1_d              de_da1_d[j] = de_da1j. ((number of landmarks)x3x(rank of pca model))-element array
  * @param dres_da2_d              de_da2_d[j] = de_da2j. ((number of landmarks)x3x(rank of pca model))-element array
  * @param u_d                   rotation parameter. 3-element array. Axis-angle notation (see cu_quaternion.h)
- * @param position_before_transform_d    calculated mesh vertex positions before rigid transformation specified by t, u
  * @param model
- * @param scan
+ * @param point_pair
  */
-void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
-                          const float *u_d, const float *position_before_tarnsform_d,
-                          C_PcaDeformModel model, C_ScanPointCloud scan);
+void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
+                                 const float *u_d, C_PcaDeformModel model, PointPair point_pair);

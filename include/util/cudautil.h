@@ -53,3 +53,6 @@ inline void CUDA_FREE(T *p_d) {
     CUDA_CHECK(cudaFree(p_d));
 }
 
+inline constexpr unsigned int GET_DIM_GRID(int required_thread, int num_thread) {
+    return static_cast<unsigned int>((required_thread + num_thread - 1) / num_thread);
+}

@@ -5,32 +5,39 @@
 #include "util/cu_array.h"
 #include "util/cudautil.h"
 
+namespace {
+    const int NUM_THREAD = 512;
+    const int DIM_X_THREAD = 16;
+    const int DIM_Y_THREAD = 16;
+}
+
 /**
  * Calculate error of each element of each point, resulting in 3xN array
  *
  * error = (scan - position)
  */
 __global__
-static void _calc_error_lmk(float *error_d, const float *position_d, C_PcaDeformModel model,
-                     C_ScanPointCloud scan) {
-
+static void _calc_error_lmk(float *error_d, PointPair point_pair) {
     const int start = blockIdx.x * blockDim.x + threadIdx.x;
-    const int size = scan.numLmks * 3;
+    const int size = point_pair.point_count*3;
     const int step = blockDim.x * gridDim.x;
-    for(int i=start; i<size; i+=step) {
-        const int lmk_idx = scan.modelLandmarkSelection_d[i/3];
-        const int elem_idx = i%3;
-        const float m_ik = scan.scanLandmark_d[3*lmk_idx + elem_idx];
-        const float x_m_ik = position_d[model.lmks_d[lmk_idx]*3 + elem_idx];
+    for(int ind=start; ind<size; ind+=step) {
+        const int k = ind / 3;
+        const int ref_ind = point_pair.ref_corr_inds_d[k];
+        const int mesh_ind = point_pair.mesh_corr_inds_d[k];
+        const int i = ind % 3;
+        const float m_ik = point_pair.ref_position_d[3*ref_ind + i];
+        const float x_m_ik = point_pair.mesh_position_d[3*mesh_ind + i];
 
         const float error = m_ik - x_m_ik;
-        error_d[i] = error;
+        error_d[ind] = error;
     }
 }
 
-static void calc_error_lmk(float *error_d, const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan) {
+static void calc_error_lmk(float *error_d, PointPair point_pair) {
     // This is used as cache before sum reduction
-    _calc_error_lmk<<<1, scan.numLmks*3>>>(error_d, position_d, model, scan);
+    const int threadRequired = point_pair.point_count*3;
+    _calc_error_lmk<<<GET_DIM_GRID(threadRequired, NUM_THREAD), NUM_THREAD>>>(error_d, point_pair);
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -57,21 +64,24 @@ static void _calc_dx_m_dt_lmk(float *dx_m_dt, int num_points) {
 }
 
 static void calc_de_dt_lmk(float *de_dt_d, int num_points) {
-    dim3 dimThread = dim3(static_cast<unsigned int>(3 * num_points), 3);
-    _calc_dx_m_dt_lmk<<<1, dimThread>>>(de_dt_d, num_points);
+    const int xRequired = 3*num_points;
+    const int yRequired = 3;
+    dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
+    dim3 dimBlock(DIM_X_THREAD, DIM_Y_THREAD);
+    _calc_dx_m_dt_lmk<<<dimGrid, dimBlock>>>(de_dt_d, num_points);
     CHECK_ERROR_MSG("Kernel Error");
-    scale_array<<<1,num_points*3*3>>>(de_dt_d, num_points*3*3, 1.0f/sqrtf(num_points));
+    scale_array<<<GET_DIM_GRID(num_points*3*3, NUM_THREAD), NUM_THREAD>>>
+                    (de_dt_d, num_points*3*3, 1.0f/sqrtf(num_points));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
 __global__
-static void _calc_dx_m_du_lmk(float *dx_m_du, const float *u_d, const float *position_d, int num_points,
-                              C_PcaDeformModel model, C_ScanPointCloud scan) {
+static void _calc_dx_m_du_lmk(float *dx_m_du, const float *u_d, PointPair point_pair) {
     float dr_du[27];
     calc_dr_du(dr_du, u_d);
 
     const int x_start = blockIdx.x * blockDim.x + threadIdx.x;
-    const int x_size = num_points * 3;
+    const int x_size = point_pair.point_count * 3;
     const int x_step = blockDim.x * gridDim.x;
     const int y_start = blockIdx.y * blockDim.y + threadIdx.y;
     const int y_size = 3;
@@ -80,34 +90,37 @@ static void _calc_dx_m_du_lmk(float *dx_m_du, const float *u_d, const float *pos
         for (int j=y_start; j<y_size; j+=y_step) {
             const int i = ind % 3;
             const int k = ind / 3;
-            const int lmk_idx = scan.modelLandmarkSelection_d[k];
+            const int mesh_idx = point_pair.mesh_corr_inds_d[k];
             float sum = 0.0f;
 
-            sum += dr_du[9*j + 3*0 + i] * position_d[3*model.lmks_d[lmk_idx] + 0];
-            sum += dr_du[9*j + 3*1 + i] * position_d[3*model.lmks_d[lmk_idx] + 1];
-            sum += dr_du[9*j + 3*2 + i] * position_d[3*model.lmks_d[lmk_idx] + 2];
+            sum += dr_du[9*j + 3*0 + i] * point_pair.mesh_positoin_before_transform_d[3*mesh_idx + 0];
+            sum += dr_du[9*j + 3*1 + i] * point_pair.mesh_positoin_before_transform_d[3*mesh_idx + 1];
+            sum += dr_du[9*j + 3*2 + i] * point_pair.mesh_positoin_before_transform_d[3*mesh_idx + 2];
 
             dx_m_du[3*3*k + 3*i + j] = -sum;
         }
     }
 }
 
-static void calc_de_du_lmk(float *de_du_d,
-                           const float *u_d, const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan) {
-    dim3 dimThread = dim3(static_cast<unsigned int>(3 * scan.numLmks), 3);
-    _calc_dx_m_du_lmk<<<1, dimThread>>>(de_du_d, u_d, position_d, scan.numLmks, model, scan);
+static void calc_de_du_lmk(float *de_du_d, const float *u_d, PointPair point_pair) {
+    const int xRequired = 3*point_pair.point_count;
+    const int yRequired = 3;
+    dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
+    dim3 dimBlock(DIM_X_THREAD, DIM_Y_THREAD);
+    _calc_dx_m_du_lmk<<<dimGrid, dimBlock>>>(de_du_d, u_d, point_pair);
     CHECK_ERROR_MSG("Kernel Error");
-    scale_array<<<1,scan.numLmks*3*3>>>(de_du_d, scan.numLmks*3*3, 1.0f/sqrtf(scan.numLmks));
+    scale_array<<<GET_DIM_GRID(3*3*point_pair.point_count, NUM_THREAD),NUM_THREAD>>>
+                   (de_du_d, point_pair.point_count*3*3, 1.0f/sqrtf(point_pair.point_count));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
 __global__
-static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, int rank, C_PcaDeformModel model, C_ScanPointCloud scan) {
+static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int rank, int dim, const float *basis_d, PointPair point_pair) {
     float r[9];
     calc_r_from_u(r, u_d);
 
     const int x_start = blockIdx.x * blockDim.x + threadIdx.x;
-    const int x_size = num_points * 3;
+    const int x_size = point_pair.point_count*3;
     const int x_step = blockDim.x * gridDim.x;
     const int y_start = blockIdx.y * blockDim.y + threadIdx.y;
     const int y_size = rank;
@@ -116,12 +129,12 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, in
         for (int j=y_start; j<y_size; j+=y_step) {
             const int i = ind % 3;
             const int k = ind / 3;
-            const int lmk_idx = scan.modelLandmarkSelection_d[k];
+            const int mesh_ind = point_pair.mesh_corr_inds_d[k];
             float sum = 0.0f;
 
-            sum += r[0*3 + i] * model.shapeDeformBasis_d[model.dim*j + 3*model.lmks_d[lmk_idx] + 0];
-            sum += r[1*3 + i] * model.shapeDeformBasis_d[model.dim*j + 3*model.lmks_d[lmk_idx] + 1];
-            sum += r[2*3 + i] * model.shapeDeformBasis_d[model.dim*j + 3*model.lmks_d[lmk_idx] + 2];
+            sum += r[0*3 + i] * basis_d[dim*j + 3*mesh_ind + 0];
+            sum += r[1*3 + i] * basis_d[dim*j + 3*mesh_ind + 1];
+            sum += r[2*3 + i] * basis_d[dim*j + 3*mesh_ind + 2];
 
             dx_m_da[3*rank*k+rank*i+j] = -sum;
         }
@@ -129,34 +142,31 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int num_points, in
 }
 
 static void calc_de_da_lmk(float *de_da_d,
-                           const float *u_d, int rank, C_PcaDeformModel model, C_ScanPointCloud scan) {
-    const int numThread = 32;
-    const int xRequired = scan.numLmks * 3;
+                           const float *u_d, int rank, int dim, const float *basis_d, PointPair point_pair) {
+    const int xRequired = point_pair.point_count* 3;
     const int yRequired = rank;
-    dim3 dimBlock((xRequired + numThread - 1) / numThread, (yRequired + numThread - 1) / numThread);
-    dim3 dimThread(numThread, numThread);
-    _calc_dx_da_lmk<<<dimBlock, dimThread>>>(de_da_d, u_d, scan.numLmks, rank, model, scan);
+    dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
+    dim3 dimBlock(DIM_X_THREAD, DIM_Y_THREAD);
+    _calc_dx_da_lmk<<<dimGrid, dimBlock>>>(de_da_d, u_d, rank, dim, basis_d, point_pair);
     CHECK_ERROR_MSG("Kernel Error");
 
-    int dimBlock2 = (xRequired*yRequired + 512 - 1) / 512;
-    int dimThread2 = 512;
-    scale_array<<<dimBlock2,dimThread2>>>(de_da_d, scan.numLmks*3*model.shapeRank, 1.0f/sqrtf(scan.numLmks));
-    CHECK_ERROR_MSG("Kernel Error");
-}
-
-void calc_residual_lmk(float *residual_d, const float *position_d, C_PcaDeformModel model, C_ScanPointCloud scan) {
-    calc_error_lmk(residual_d, position_d, model, scan);
-    scale_array<<<1,scan.numLmks*3>>>(residual_d, scan.numLmks*3, 1.0f/sqrtf(scan.numLmks));
+    scale_array<<<GET_DIM_GRID(xRequired*yRequired, NUM_THREAD), NUM_THREAD>>>
+                 (de_da_d, point_pair.point_count*3*rank, 1.0f/sqrtf(point_pair.point_count));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
-
-void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
-                          const float *u_d, const float *position_before_tarnsform_d,
-                          C_PcaDeformModel model, C_ScanPointCloud scan) {
-    calc_de_dt_lmk(dres_dt_d, scan.numLmks);
-    calc_de_du_lmk(dres_du_d, u_d, position_before_tarnsform_d, model, scan);
-    calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model, scan);
-    calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model, scan);
+void calc_residual_point_pair(float *residual_d, PointPair point_pair) {
+    calc_error_lmk(residual_d, point_pair);
+    scale_array<<<GET_DIM_GRID(point_pair.point_count*3, NUM_THREAD), NUM_THREAD>>>
+                      (residual_d, point_pair.point_count*3, 1.0f/sqrtf(point_pair.point_count));
+    CHECK_ERROR_MSG("Kernel Error");
 }
 
+
+void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
+                                 const float *u_d, C_PcaDeformModel model, PointPair point_pair) {
+    calc_de_dt_lmk(dres_dt_d, point_pair.point_count);
+    calc_de_du_lmk(dres_du_d, u_d, point_pair);
+    calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair);
+    calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair);
+}

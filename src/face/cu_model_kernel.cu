@@ -146,6 +146,18 @@ void applyRigidAlignment(float *align_pos_d, cublasHandle_t cnpHandle,
     cudaFree(matC);
 }
 
+__global__
+static void calculateLandmarkIndices(int *mesh_inds, int *scan_inds, C_PcaDeformModel model, C_ScanPointCloud scan) {
+    const int start = blockDim.x * blockIdx.x + threadIdx.x;
+    const int size = scan.numLmks;
+    const int step = blockDim.x * gridDim.x;
+
+    for(int ind=start; ind<size; ind+=step) {
+        mesh_inds[ind] = model.lmks_d[scan.modelLandmarkSelection_d[ind]];
+        scan_inds[ind] = scan.modelLandmarkSelection_d[ind];
+    }
+}
+
 void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                    float *position_d, cublasHandle_t cnpHandle,
                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
@@ -190,10 +202,24 @@ void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, floa
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
 
     // Calculate residual & jacobian for Landmarks
-    calc_residual_lmk(residual_d, result_pos_d, deformModel, scanPointCloud);
+    PointPair point_pair{
+            .mesh_position_d=result_pos_d,
+            .mesh_positoin_before_transform_d=align_pos_d,
+            .ref_position_d=scanPointCloud.scanLandmark_d,
+            .mesh_corr_inds_d=nullptr,
+            .ref_corr_inds_d=nullptr,
+            .point_count=scanPointCloud.numLmks
+        };
+    CUDA_MALLOC(&point_pair.mesh_corr_inds_d, static_cast<size_t>(scanPointCloud.numLmks));
+    CUDA_MALLOC(&point_pair.ref_corr_inds_d, static_cast<size_t>(scanPointCloud.numLmks));
+
+    calculateLandmarkIndices<<<1,scanPointCloud.numLmks>>>
+                 (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
+
+    calc_residual_point_pair(residual_d, point_pair);
     if (isJacobianRequired) {
-        calc_derivatives_lmk(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
-                             params.fuParams_d, align_pos_d, deformModel, scanPointCloud);
+        calc_derivatives_point_pair(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
+                                    params.fuParams_d, deformModel, point_pair);
     }
 
     /*
@@ -213,4 +239,6 @@ void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, floa
     CUDA_CHECK(cudaFree(fuJacobian_d));
     CUDA_CHECK(cudaFree(align_pos_d));
     CUDA_CHECK(cudaFree(result_pos_d));
+    CUDA_FREE(point_pair.mesh_corr_inds_d);
+    CUDA_FREE(point_pair.ref_corr_inds_d);
 }
