@@ -54,6 +54,7 @@ void freeModelCUDA(C_PcaDeformModel deformModel) {
 
 void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                           boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
+                          float fx, float fy,
                           const std::vector<int> scanLmkIdx,
                           const std::vector<int> validLmks,
                           const Eigen::MatrixXf rigidTransform) {
@@ -78,6 +79,13 @@ void loadScanToCUDADevice(C_ScanPointCloud *scanPointCloud,
                scanLmkIdx.data(), scanLmkIdx.size()*sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy((void*)scanPointCloud->rigidTransform_d,
                rigidTransform.data(), rigidTransform.size()*sizeof(float), cudaMemcpyHostToDevice));
+
+    scanPointCloud->width = scan->width;
+    scanPointCloud->height = scan->height;
+    scanPointCloud->fx = fx;
+    scanPointCloud->fy = fy;
+    scanPointCloud->cx = (static_cast<float>(scan->width) - 1.f) / 2.f;
+    scanPointCloud->cy = (static_cast<float>(scan->height) - 1.f) / 2.f;
 
     scanPointCloud->numPoints = static_cast<int>(scan->points.size());
     scanPointCloud->transformCols = (int)rigidTransform.cols();

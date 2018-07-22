@@ -107,7 +107,7 @@ namespace telef::align {
         in->transformation = Eigen::Matrix4f::Identity();
 
         C_ScanPointCloud c_scanPointCloud;
-        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fittingSuite->rawCloudLmkIdx,
+        loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fx, in->fy, in->fittingSuite->rawCloudLmkIdx,
                              validLmks, in->transformation);
 
         /* Setup Optimizer */

@@ -19,6 +19,9 @@
 #include "io/ply/meshio.h"
 #include "io/align/align_frontend.h"
 #include "cloud/cloud_pipe.h"
+#include "face/cu_model_kernel.h"
+#include "face/model_cudahelper.h"
+#include "face/raw_model.h"
 
 #include "mesh/mesh.h"
 #include "mesh/color_projection_pipe.h"
@@ -39,39 +42,6 @@ namespace {
 
     namespace po = boost::program_options;
 }
-
-/**
- *   -name1
- *   path1
- *   path2
- *   ...
- *
- *   -name2
- *   path1
- *   path2
- *   ...
- *
- */
-std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
-    std::ifstream file(p);
-
-    std::vector<std::pair<std::string, fs::path>> result;
-
-    while(!file.eof()) {
-        std::string word;
-        file >> word;
-        if (*word.begin() == '-') // name of group
-        {
-            std::string p;
-            file >> p;
-            result.push_back(std::make_pair(word, p));
-        }
-    }
-
-    file.close();
-    return result;
-}
-
 /** Loads an RGB image and a corresponding pointcloud. Make and write PLY face mesh out of it. */
 int main(int ac, const char* const *av) {
 
@@ -117,7 +87,7 @@ int main(int ac, const char* const *av) {
     std::string outputPath;
     std::string pcdPath("");
     std::string rigidPath("");
-    double radius = 1e-2;
+    double radius = 2e-2;
 
     modelPath = vm["model"].as<std::string>();
     outputPath = vm["output"].as<std::string>();
@@ -153,60 +123,87 @@ int main(int ac, const char* const *av) {
         return -1;
     }
 
-    std::shared_ptr<pcl::search::Search<pcl::PointXYZRGBA>> organizedNeighborSearch =
-            std::make_shared<pcl::search::OrganizedNeighbor<pcl::PointXYZRGBA>>();
-    organizedNeighborSearch->setInputCloud(cloudIn);
-    
-    pcl::PointCloud<PointT>::Ptr closestScanPoints (new pcl::PointCloud<PointT>);
+//    std::shared_ptr<pcl::search::Search<pcl::PointXYZRGBA>> organizedNeighborSearch =
+//            std::make_shared<pcl::search::OrganizedNeighbor<pcl::PointXYZRGBA>>();
+//    organizedNeighborSearch->setInputCloud(cloudIn);
+
+
+    C_ScanPointCloud scan;
+    float fx = 571.401;
+    float fy = 571.401;
+    std::vector<int> scanLmkIdx;
+    std::vector<int> validLmks;
+    Eigen::Matrix4f rigidTransform;
+    int nMeshPoints = mesh.position.rows()/3;
+    int nMeshSize = mesh.position.rows();
+
+    //Host
+    int *meshCorr_h = new int[nMeshSize];
+    float *distance_h = new float[nMeshSize];
+
+    //Device
+    int* meshCorr_d;
+    float* distance_d;
+
+    float* mesh_d;
+
+
+    CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), nMeshSize*sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)(&distance_d), nMeshSize*sizeof(float)));
+
+    CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(mesh_d,mesh.position.data(), nMeshSize*sizeof(float), cudaMemcpyHostToDevice));
+
+    loadScanToCUDADevice(&scan, cloudIn, fx, fy, scanLmkIdx, validLmks, rigidTransform);
 
     auto begin = chrono::high_resolution_clock::now();
-    int K = 16;
-    for (int idx = 0; idx < mesh.position.rows()/3; idx++)
-    {
-        // define a random search point
 
-        // generate point
-        pcl::PointXYZRGBA searchPoint;
-        searchPoint.x = mesh.position(3*idx);
-        searchPoint.y = mesh.position(3*idx+1);
-        searchPoint.z = mesh.position(3*idx+2);
-        searchPoint.r = 0;
-        searchPoint.g = 255;
-        searchPoint.b = 0;
-        searchPoint.a = 0;
-
-        std::vector<int> k_indices;
-        std::vector<float> k_sqr_distances;
-
-        // organized nearest neighbor search
-//        organizedNeighborSearch->nearestKSearch(searchPoint, (int)K, k_indices, k_sqr_distances);
-        organizedNeighborSearch->radiusSearch(searchPoint, radius, k_indices, k_sqr_distances, (int)K);
-
-        if (k_indices.size() == 0) {
-            std::cout << "Failed to find closes point, " << idx << std::endl;
-            continue;
-        }
-        int closest = 0;
-        float dist = k_sqr_distances[closest];
-        for (int i = 1; i < k_sqr_distances.size(); i++){
-            if (k_sqr_distances[i] < dist) {
-                dist = k_sqr_distances[i];
-                closest = i;
-            }
-        }
-
-        closestScanPoints->push_back(cloudIn->at(k_indices[closest]));
-    }
-
-
+    find_mesh_to_scan_corr(meshCorr_d, distance_d, mesh_d, nMeshPoints, scan, radius);
+    cudaDeviceSynchronize();
     auto end = chrono::high_resolution_clock::now();
     auto dur = end - begin;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+
+    CUDA_CHECK(cudaMemcpy(meshCorr_h, meshCorr_d, nMeshSize * sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(distance_h, distance_d, nMeshSize * sizeof(float), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(meshCorr_d));
+    CUDA_CHECK(cudaFree(distance_d));
+    CUDA_CHECK(cudaFree(mesh_d));
+
+    freeScanCUDA(scan);
+
+    pcl::PointCloud<PointT>::Ptr closestScanPoints (new pcl::PointCloud<PointT>);
+    pcl::PointCloud<PointT>::Ptr closestModelPoints (new pcl::PointCloud<PointT>);
+    int nCorrPoints = 0;
+    for (int idx = 0; idx < nMeshPoints; idx++)
+    {
+        if (meshCorr_h[idx] > 0) {
+            closestScanPoints->push_back(cloudIn->at(meshCorr_h[idx]));
+            pcl::PointXYZRGBA searchPoint;
+            searchPoint.x = mesh.position(3*idx);
+            searchPoint.y = mesh.position(3*idx+1);
+            searchPoint.z = mesh.position(3*idx+2);
+            searchPoint.r = 0;
+            searchPoint.g = 255;
+            searchPoint.b = 0;
+            searchPoint.a = 0;
+            closestModelPoints->push_back(searchPoint);
+            nCorrPoints++;
+        }
+    }
+
     cout << "Closest Point Search Time (ms):" << ms << endl;
+
+    std::cout << "Found Correspondances: " << nCorrPoints << std::endl;
+
 
     pcl::PLYWriter plyWriter;
     plyWriter.write(outputPath, *closestScanPoints);
+    plyWriter.write("modelCorr.ply", *closestModelPoints);
     plyWriter.write("cloudin.ply", *cloudIn);
+    delete [] meshCorr_h;
+    delete [] distance_h;
 
     return 0;
 }

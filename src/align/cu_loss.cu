@@ -5,6 +5,7 @@
 #include "util/cu_array.h"
 #include "util/cudautil.h"
 
+
 /**
  * Calculate error of each element of each point, resulting in 3xN array
  *
@@ -148,7 +149,6 @@ void calc_residual_lmk(float *residual_d, const float *position_d, C_ScanPointCl
     scale_array<<<1,scan.numLmks*3>>>(residual_d, scan.numLmks*3, 1.0f/sqrtf(scan.numLmks));
     CHECK_ERROR_MSG("Kernel Error");
 }
-
 
 void calc_derivatives_lmk(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
                           const float *u_d, const float *position_before_tarnsform_d,

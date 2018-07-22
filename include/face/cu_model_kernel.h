@@ -15,6 +15,26 @@ void _homogeneousPositions(float *h_position_d, const float *position_d, int nPo
 __global__
 void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPoints);
 
+//
+//__device__
+//void convertXyzToUv(float *uv, const float* xyz, float fx, float fy, float cx, float cy);
+
+__global__
+void _find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d,
+                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
+
+/**
+ *
+ * @param meshToScanCorr_d, Output Mesh To Scan Correspondance
+ * @param distance_d, Output Corresponding Mesh to Scan Distance
+ * @param position_d, Aligned Mesh
+ * @param num_points
+ * @param scan
+ * @param radius, Tolerance or search window, if radius is 0, include all points
+ */
+void find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d,
+                            const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
+
 /**
  * Applies Transformation matrix on CUDA device model
  * @param align_pos_d

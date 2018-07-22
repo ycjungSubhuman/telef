@@ -21,6 +21,13 @@ typedef struct C_ScanPointCloud {
     int *validModelLmks_d;
     int *scanLmks_d;
 
+    unsigned int width;
+    unsigned int height;
+    float fx;
+    float fy;
+    float cx;
+    float cy;
+
     int numPoints;
     // Transformation Matrix dims
     int transformCols;
