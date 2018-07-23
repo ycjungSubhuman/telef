@@ -6,8 +6,10 @@
 #include "face/model.h"
 #include "util/po_util.h"
 
-namespace po = boost::program_options;
-using namespace telef::util;
+namespace {
+    namespace po = boost::program_options;
+    using namespace telef::util;
+}
 
 int main (int argc, char** argv) {
     po::options_description desc("Constructs a PCA model from multiple meshes in vertex-wise correspondence");
