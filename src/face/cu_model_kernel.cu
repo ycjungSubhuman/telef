@@ -176,7 +176,7 @@ void convertXyzToUv(int *uv, const float* xyz, float fx, float fy, float cx, flo
 
 __global__
 void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
-                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius) {
+                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius, int maxPoints) {
     const int start = blockIdx.x * blockDim.x + threadIdx.x;
     const int size = num_points;
     const int step = blockDim.x * gridDim.x;
@@ -208,21 +208,24 @@ void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d
             // Add correspondance if within search radius, if radius is 0, include all points
             if (!isNaN && (radius <= 0 || dist <= radius)) {
                 int idx = atomicAdd(&numCorr[0], 1);
-                meshCorr_d[idx] = i;
-                scanCorr_d[idx] = scanIndx/3;
-                distance_d[idx] = dist;
+                if (maxPoints <= 0 || idx < maxPoints) {
+                    meshCorr_d[idx] = i;
+                    scanCorr_d[idx] = scanIndx / 3;
+                    distance_d[idx] = dist;
+                }
             }
         }
     }
 }
 
 void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
-                           const float *position_d, int num_points, C_ScanPointCloud scan, float radius) {
+                           const float *position_d, int num_points, C_ScanPointCloud scan, float radius, int maxPoints) {
     int idim = num_points/3;
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
 
-    _find_mesh_to_scan_corr << < dimGrid, dimBlock >> > (meshCorr_d, scanCorr_d, distance_d, numCorr, position_d, num_points, scan, radius);
+    _find_mesh_to_scan_corr << < dimGrid, dimBlock >> > (meshCorr_d, scanCorr_d, distance_d, numCorr,
+            position_d, num_points, scan, radius, maxPoints);
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -266,17 +269,17 @@ void calculatePointPairLoss(float *residual,
     CUDA_CHECK(cudaMalloc((void **) &fuJacobian_d, num_resuduals*3*params.numu*sizeof(float)));
 
     calc_residual_point_pair(residual_d, point_pair);
-//    if (point_pair.point_count < max_num_points) {
-//        fill_residual_no_pairs(residual_d, point_pair, max_num_points);
-//    }
+    if (point_pair.point_count < num_resuduals) {
+        fill_unpaired_residuals(residual_d, point_pair, num_resuduals);
+    }
 
     if (isJacobianRequired) {
         calc_derivatives_point_pair(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
                                     params.fuParams_d, deformModel, point_pair);
-//        if (point_pair.point_count < max_num_points) {
-//            fill_jacobian_no_pairs(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
-//                                   params.fuParams_d, deformModel, point_pair, maxPairCount);
-//        }
+        if (point_pair.point_count < num_resuduals) {
+            fill_derivatives(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
+                             deformModel, point_pair, num_resuduals);
+        }
     }
 
     /*
@@ -338,6 +341,71 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
 
     CUDA_CHECK(cudaFree(align_pos_d));
     CUDA_CHECK(cudaFree(result_pos_d));
+    CUDA_FREE(point_pair.mesh_corr_inds_d);
+    CUDA_FREE(point_pair.ref_corr_inds_d);
+}
+
+void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                           float *position_d, cublasHandle_t cnpHandle,
+                           const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                           const int num_residuals, const bool isJacobianRequired) {
+    float *align_pos_d, *result_pos_d;
+    float align_pos[deformModel.dim];
+
+
+    // Allocate memory for Rigid aligned positions
+    CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &result_pos_d, deformModel.dim * sizeof(float)));
+    // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
+
+    /*
+     * Compute Loss
+     */
+    // Calculate aligned positions
+    calculateAlignedPositions(result_pos_d, align_pos_d, position_d, params, deformModel, scanPointCloud, cnpHandle);
+
+    /*
+     * Compute Point Pairs (Correspondances)
+     */
+    PointPair point_pair{
+            .mesh_position_d=result_pos_d,
+            .mesh_positoin_before_transform_d=align_pos_d,
+            .ref_position_d=scanPointCloud.scanLandmark_d,
+            .mesh_corr_inds_d=nullptr,
+            .ref_corr_inds_d=nullptr,
+            .point_count=0
+    };
+
+    float* distance_d;
+    int* numCorr_d;
+    float radius = 0.001;
+
+    CUDA_MALLOC(&point_pair.mesh_corr_inds_d, static_cast<size_t>(num_residuals));
+    CUDA_MALLOC(&point_pair.ref_corr_inds_d, static_cast<size_t>(num_residuals));
+    CUDA_MALLOC(&distance_d, static_cast<size_t>(num_residuals));
+    CUDA_MALLOC(&numCorr_d, static_cast<size_t>(1));
+
+    find_mesh_to_scan_corr(point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, distance_d, numCorr_d,
+                           result_pos_d, deformModel.dim, scanPointCloud, radius, num_residuals);
+
+    CUDA_CHECK(cudaMemcpy(&point_pair.point_count, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
+    if (point_pair.point_count > num_residuals){
+        point_pair.point_count = num_residuals;
+    }
+
+    /*******************
+     * Calculate residual & jacobian for PointPairs
+     *******************/
+    calculatePointPairLoss(residual, fa1Jacobian, fa2Jacobian, ftJacobian, fuJacobian,
+                           point_pair, num_residuals,
+                           params, deformModel, scanPointCloud, isJacobianRequired);
+
+    CUDA_CHECK(cudaMemcpy(align_pos, align_pos_d, deformModel.dim * sizeof(float), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(align_pos_d));
+    CUDA_CHECK(cudaFree(result_pos_d));
+    CUDA_CHECK(cudaFree(distance_d));
+    CUDA_CHECK(cudaFree(numCorr_d));
     CUDA_FREE(point_pair.mesh_corr_inds_d);
     CUDA_FREE(point_pair.ref_corr_inds_d);
 }

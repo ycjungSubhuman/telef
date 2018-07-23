@@ -28,7 +28,7 @@ void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPo
 
 __global__
 void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
-                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
+                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius=0, int maxPoints=0);
 
 /**
  *
@@ -40,7 +40,7 @@ void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d
  * @param radius, Tolerance or search window, if radius is 0, include all points
  */
 void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
-                           const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
+                           const float *position_d, int num_points, C_ScanPointCloud scan, float radius=0, int maxPoints=0);
 
 /**
  * Applies Transformation matrix on CUDA device model
@@ -102,3 +102,14 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
                            float *position_d, cublasHandle_t cnpHandle,
                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                            const bool isJacobianRequired);
+
+/**
+ * Calculate residual and jacobian of the loss function representing distance btw scan and model
+ *
+ * Loss = (L2 distance btw corresponding Mesh and Scan points)
+ *      + (L2 norm of parameters)
+ */
+void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                            float *position_d, cublasHandle_t cnpHandle,
+                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                            const int num_residuals, const bool isJacobianRequired);

@@ -143,6 +143,28 @@ namespace telef::align{
 
     };
 
+    class PCAGPUGeometricDistanceFunctor : public PCAGPUDistanceFunctor {
+    public:
+        PCAGPUGeometricDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
+                                      cublasHandle_t cublasHandle, int num_residuals) :
+                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, num_residuals)
+        {}
+
+        virtual ~PCAGPUGeometricDistanceFunctor() {}
+
+        virtual bool evaluateLoss(const bool isJacobianRequired) const {
+            calculateGeometricLoss(fresiduals,
+                                   fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
+                                   position_d, cublasHandle,
+                                   c_params, c_deformModel, c_scanPointCloud,
+                                   num_residuals(), isJacobianRequired);
+
+            return true;
+        }
+
+
+    };
+
     class L2RegularizerFunctor : public ceres::CostFunction {
     public:
         L2RegularizerFunctor(int coeffSize, double multiplier) : coeffSize(coeffSize), multiplier(multiplier) {

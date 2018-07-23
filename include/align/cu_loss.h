@@ -33,6 +33,15 @@ typedef struct PointPair{
 void calc_residual_point_pair(float *residual_d, PointPair point_pair);
 
 /**
+ * Some cases may require variable residuals, to address this issue we fill the uncomputed residuals for
+ * any unpaired correspondences with 0.
+ * @param residual_d
+ * @param point_pair
+ * @param num_residuals
+ */
+void fill_unpaired_residuals(float *residual_d, PointPair point_pair, int num_residuals);
+
+/**
  * Calculate derivatives of least squares
  *
  * Translation parameters:
@@ -75,3 +84,13 @@ void calc_residual_point_pair(float *residual_d, PointPair point_pair);
  */
 void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
                                  const float *u_d, C_PcaDeformModel model, PointPair point_pair);
+
+/**
+ * Some cases may require variable residuals, to address this issue we fill the uncomputed residuals for
+ * any unpaired correspondences with 0.
+ * @param residual_d
+ * @param point_pair
+ * @param num_residuals
+ */
+void fill_derivatives(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
+                      C_PcaDeformModel model, PointPair point_pair, const int num_residuals) ;
