@@ -139,11 +139,15 @@ int main(int ac, const char* const *av) {
 
     //Host
     int *meshCorr_h = new int[nMeshSize];
+    int *scanCorr_h = new int[nMeshSize];
     float *distance_h = new float[nMeshSize];
+    int numCorr = 0;
 
     //Device
     int* meshCorr_d;
+    int* scanCorr_d;
     float* distance_d;
+    int* numCorr_d;
 
     float* mesh_d;
 
@@ -151,7 +155,9 @@ int main(int ac, const char* const *av) {
 
 
     CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), nMeshSize*sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), nMeshSize*sizeof(int)));
     CUDA_CHECK(cudaMalloc((void**)(&distance_d), nMeshSize*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&numCorr_d), sizeof(int)));
 
     CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
     CUDA_CHECK(cudaMemcpy(mesh_d,mesh.position.data(), nMeshSize*sizeof(float), cudaMemcpyHostToDevice));
@@ -160,16 +166,20 @@ int main(int ac, const char* const *av) {
 
     auto begin = chrono::high_resolution_clock::now();
 
-    find_mesh_to_scan_corr(meshCorr_d, distance_d, mesh_d, nMeshPoints, scan, radius);
+    find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan, radius);
     cudaDeviceSynchronize();
     auto end = chrono::high_resolution_clock::now();
     auto dur = end - begin;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+    cout << "Closest Point Search Time (ms):" << ms << endl;
 
     CUDA_CHECK(cudaMemcpy(meshCorr_h, meshCorr_d, nMeshSize * sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(scanCorr_h, scanCorr_d, nMeshSize * sizeof(int), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(distance_h, distance_d, nMeshSize * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
 
     CUDA_CHECK(cudaFree(meshCorr_d));
+    CUDA_CHECK(cudaFree(scanCorr_d));
     CUDA_CHECK(cudaFree(distance_d));
     CUDA_CHECK(cudaFree(mesh_d));
 
@@ -178,27 +188,21 @@ int main(int ac, const char* const *av) {
     pcl::PointCloud<PointT>::Ptr closestScanPoints (new pcl::PointCloud<PointT>);
     pcl::PointCloud<PointT>::Ptr closestModelPoints (new pcl::PointCloud<PointT>);
     int nCorrPoints = 0;
-    for (int idx = 0; idx < nMeshPoints; idx++)
+
+    cout << "NumCorr:" << numCorr << endl;
+    for (int idx = 0; idx < numCorr; idx++)
     {
-        if (meshCorr_h[idx] > 0) {
-            closestScanPoints->push_back(cloudIn->at(meshCorr_h[idx]));
+            closestScanPoints->push_back(cloudIn->at(scanCorr_h[idx]));
             pcl::PointXYZRGBA searchPoint;
-            searchPoint.x = mesh.position(3*idx);
-            searchPoint.y = mesh.position(3*idx+1);
-            searchPoint.z = mesh.position(3*idx+2);
+            searchPoint.x = mesh.position(3*meshCorr_h[idx]);
+            searchPoint.y = mesh.position(3*meshCorr_h[idx]+1);
+            searchPoint.z = mesh.position(3*meshCorr_h[idx]+2);
             searchPoint.r = 0;
             searchPoint.g = 255;
             searchPoint.b = 0;
             searchPoint.a = 0;
             closestModelPoints->push_back(searchPoint);
-            nCorrPoints++;
-        }
     }
-
-    cout << "Closest Point Search Time (ms):" << ms << endl;
-
-    std::cout << "Found Correspondances: " << nCorrPoints << std::endl;
-
 
     pcl::PLYWriter plyWriter;
     plyWriter.write(outputPath, *closestScanPoints);

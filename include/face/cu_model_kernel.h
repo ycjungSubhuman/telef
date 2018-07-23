@@ -1,8 +1,14 @@
 #pragma once
 
+#include <climits>
+#include <float.h>
 #include <cuda_runtime_api.h>
 #include <cublas_v2.h>
 #include "face/raw_model.h"
+
+
+const int NO_CORRESPONDENCE_I = INT_MAX;
+const float INF_F = FLT_MAX;
 
 __global__
 void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel);
@@ -20,7 +26,7 @@ void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPo
 //void convertXyzToUv(float *uv, const float* xyz, float fx, float fy, float cx, float cy);
 
 __global__
-void _find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d,
+void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
                              const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
 
 /**
@@ -32,8 +38,8 @@ void _find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d,
  * @param scan
  * @param radius, Tolerance or search window, if radius is 0, include all points
  */
-void find_mesh_to_scan_corr(int *meshToScanCorr_d, float *distance_d,
-                            const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
+void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
+                           const float *position_d, int num_points, C_ScanPointCloud scan, float radius);
 
 /**
  * Applies Transformation matrix on CUDA device model
