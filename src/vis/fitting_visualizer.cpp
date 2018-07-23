@@ -7,6 +7,10 @@
 
 #include "vis/fitting_visualizer.h"
 #include "mesh/colormapping.h"
+#include "util/cudautil.h"
+#include "face/cu_model_kernel.h"
+#include "face/model_cudahelper.h"
+#include "face/raw_model.h"
 
 namespace {
     using namespace telef::vis;
@@ -150,6 +154,8 @@ namespace {
         ImagePtrT image;
         std::vector<float> scanLandmarks;
         std::vector<float> meshLandmarks;
+        std::vector<float> scanGeo;
+        std::vector<float> meshGeo;
     };
 
     Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input) {
@@ -196,9 +202,70 @@ namespace {
             scanLandmarks[3*i+2] = input->landmark3d->points[i].z;
         }
 
+        pcl::PointCloud<PointT>::Ptr emptyLmks (new pcl::PointCloud<PointT>);
+        std::vector<int> scanLmkIdx;
+        std::vector<int> meshGeoIdx;
+        std::vector<int> scanGeoIdx;
+        int numCorr = 0;
+
+        int nMeshPoints = mesh.position.rows()/3;
+        int nMeshSize = mesh.position.rows();
+        int maxCorrs = 2000;
+
+        //Device
+        int* meshCorr_d;
+        int* scanCorr_d;
+        float* distance_d;
+        int* numCorr_d;
+
+        float* mesh_d;
+        CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), maxCorrs*sizeof(int)));
+        CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), maxCorrs*sizeof(int)));
+        CUDA_CHECK(cudaMalloc((void**)(&distance_d), maxCorrs*sizeof(float)));
+        CUDA_CHECK(cudaMalloc((void**)(&numCorr_d), sizeof(int)));
+
+        CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(mesh_d,mesh.position.data(), nMeshSize*sizeof(float), cudaMemcpyHostToDevice));
+
+        C_ScanPointCloud scan;
+        loadScanToCUDADevice(&scan, input->cloud, input->fx, input->fy, scanLmkIdx, input->transformation, emptyLmks);
+
+        find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan, 0.01, maxCorrs);
+
+        CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
+
+        if (numCorr > maxCorrs){
+            numCorr = maxCorrs;
+            cout << "Corrected NumCorr:" << numCorr << endl;
+        }
+        meshGeoIdx.resize(numCorr);
+        scanGeoIdx.resize(numCorr);
+
+        CUDA_CHECK(cudaMemcpy(meshGeoIdx.data(), meshCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(scanGeoIdx.data(), scanCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
+
+        CUDA_CHECK(cudaFree(meshCorr_d));
+        CUDA_CHECK(cudaFree(scanCorr_d));
+        CUDA_CHECK(cudaFree(distance_d));
+        CUDA_CHECK(cudaFree(mesh_d));
+        freeScanCUDA(scan);
+        std::vector<float> meshGeo, scanGeo;
+        for (int idx = 0; idx < numCorr; idx++)
+        {
+            auto scanPnt = input->cloud->at(scanGeoIdx[idx]);
+            scanGeo.push_back(scanPnt.x);
+            scanGeo.push_back(scanPnt.y);
+            scanGeo.push_back(scanPnt.z);
+
+            meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]));
+            meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+1));
+            meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+2));
+        }
+
         return Frame {.mesh=mesh, .vertexNormal=vertexNormal, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
-                .meshLandmarks=meshLandmarks};
+                .meshLandmarks=meshLandmarks,
+                .scanGeo=scanGeo, .meshGeo=meshGeo};
     }
 
     GLuint compileShader(const char *source, GLenum type) {
@@ -302,6 +369,9 @@ namespace telef::vis {
             drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
             drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
             drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
+            drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
+            drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
+            drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
 
             glViewport(0, 540, 960, 540);
             drawMesh(frame.mesh, frame.vertexNormal, frame.image);
@@ -310,6 +380,9 @@ namespace telef::vis {
             drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
             drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
             drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
+            drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
+            drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
+            drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
 
             glViewport(960, 540, 960, 540);
             drawPointCloud(frame.cloud);
