@@ -226,35 +226,9 @@ void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d,
     CHECK_ERROR_MSG("Kernel Error");
 }
 
-void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
-                   float *position_d, cublasHandle_t cnpHandle,
-                   const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                   const bool isJacobianRequired) {
-
-    float *residual_d, *fa1Jacobian_d, *fa2Jacobian_d, *ftJacobian_d, *fuJacobian_d;
-    float *align_pos_d, *result_pos_d;
-    float align_pos[deformModel.dim];
-
-    /*
-     * Allocate and Copy residual amd jacobian to GPU
-     */
-    CUDA_CHECK(cudaMalloc((void **) &residual_d, scanPointCloud.numLmks*3*sizeof(float)));
-
-    // Compute Jacobians for each parameter
-    // TODO: Do cuda malloc and memcopy of jacobians only when computing jacobians
-    CUDA_CHECK(cudaMalloc((void **) &fa1Jacobian_d, scanPointCloud.numLmks*3*params.numa1*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void **) &fa2Jacobian_d, scanPointCloud.numLmks*3*params.numa2*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void **) &ftJacobian_d, scanPointCloud.numLmks*3*params.numt*sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void **) &fuJacobian_d, scanPointCloud.numLmks*3*params.numu*sizeof(float)));
-
-    // Allocate memory for Rigid aligned positions
-    CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void **) &result_pos_d, deformModel.dim * sizeof(float)));
-    // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
-
-    /*
-     * Compute Loss
-     */
+void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *position_d,
+                               const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                               cublasHandle_t cnpHandle){
     // Calculate position_d
     calculateVertexPosition(position_d, params, deformModel);
 
@@ -269,8 +243,78 @@ void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, floa
     create_trans_from_tu(trans, params.ftParams_h, r);
     CUDA_CHECK(cudaMemcpy(trans_d, trans, 16* sizeof(float), cudaMemcpyHostToDevice));
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
+}
 
-    // Calculate residual & jacobian for Landmarks
+void calculatePointPairLoss(float *residual,
+                            float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                            const PointPair point_pair, int num_resuduals,
+                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                            const bool isJacobianRequired){
+
+    float *residual_d, *fa1Jacobian_d, *fa2Jacobian_d, *ftJacobian_d, *fuJacobian_d;
+
+    // TODO: Do cuda malloc once ever (reuse) and memcopy of jacobians only when computing jacobians
+    /*
+    * Allocate residual to GPU
+    */
+    CUDA_CHECK(cudaMalloc((void **) &residual_d, num_resuduals*3*sizeof(float)));
+
+    // Compute Jacobians for each parameter
+    CUDA_CHECK(cudaMalloc((void **) &fa1Jacobian_d, num_resuduals*3*params.numa1*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &fa2Jacobian_d, num_resuduals*3*params.numa2*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &ftJacobian_d, num_resuduals*3*params.numt*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &fuJacobian_d, num_resuduals*3*params.numu*sizeof(float)));
+
+    calc_residual_point_pair(residual_d, point_pair);
+//    if (point_pair.point_count < max_num_points) {
+//        fill_residual_no_pairs(residual_d, point_pair, max_num_points);
+//    }
+
+    if (isJacobianRequired) {
+        calc_derivatives_point_pair(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
+                                    params.fuParams_d, deformModel, point_pair);
+//        if (point_pair.point_count < max_num_points) {
+//            fill_jacobian_no_pairs(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
+//                                   params.fuParams_d, deformModel, point_pair, maxPairCount);
+//        }
+    }
+
+    /*
+     * Copy computed residual and jacobian to Host
+     */
+    CUDA_CHECK(cudaMemcpy(residual, residual_d, num_resuduals*3*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(fa1Jacobian, fa1Jacobian_d, num_resuduals*3*params.numa1 * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(fa2Jacobian, fa2Jacobian_d, num_resuduals*3*params.numa2 * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(ftJacobian, ftJacobian_d, num_resuduals*3*params.numt * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(fuJacobian, fuJacobian_d, num_resuduals*3*params.numu * sizeof(float), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaFree(residual_d));
+    CUDA_CHECK(cudaFree(fa1Jacobian_d));
+    CUDA_CHECK(cudaFree(fa2Jacobian_d));
+    CUDA_CHECK(cudaFree(ftJacobian_d));
+    CUDA_CHECK(cudaFree(fuJacobian_d));
+}
+
+void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                           float *position_d, cublasHandle_t cnpHandle,
+                           const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                           const bool isJacobianRequired) {
+
+    float *align_pos_d, *result_pos_d;
+    float align_pos[deformModel.dim];
+
+
+    // Allocate memory for Rigid aligned positions
+    CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **) &result_pos_d, deformModel.dim * sizeof(float)));
+    // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
+
+    // Calculate aligned positions
+    calculateAlignedPositions(result_pos_d, align_pos_d, position_d, params, deformModel, scanPointCloud, cnpHandle);
+
+    /*
+     * Compute Point Pairs (Correspondances)
+     */
     PointPair point_pair{
             .mesh_position_d=result_pos_d,
             .mesh_positoin_before_transform_d=align_pos_d,
@@ -278,34 +322,20 @@ void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, floa
             .mesh_corr_inds_d=nullptr,
             .ref_corr_inds_d=nullptr,
             .point_count=scanPointCloud.numLmks
-        };
+    };
     CUDA_MALLOC(&point_pair.mesh_corr_inds_d, static_cast<size_t>(scanPointCloud.numLmks));
     CUDA_MALLOC(&point_pair.ref_corr_inds_d, static_cast<size_t>(scanPointCloud.numLmks));
 
     calculateLandmarkIndices<<<1,scanPointCloud.numLmks>>>
-                 (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
+                                 (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
 
-    calc_residual_point_pair(residual_d, point_pair);
-    if (isJacobianRequired) {
-        calc_derivatives_point_pair(ftJacobian_d, fuJacobian_d, fa1Jacobian_d, fa2Jacobian_d,
-                                    params.fuParams_d, deformModel, point_pair);
-    }
+    // Calculate residual & jacobian for Landmarks
+    calculatePointPairLoss(residual, fa1Jacobian, fa2Jacobian, ftJacobian, fuJacobian,
+                           point_pair, point_pair.point_count,
+                           params, deformModel, scanPointCloud, isJacobianRequired);
 
-    /*
-     * Copy computed residual and jacobian to Host
-     */
-    CUDA_CHECK(cudaMemcpy(residual, residual_d, scanPointCloud.numLmks*3*sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(fa1Jacobian, fa1Jacobian_d, scanPointCloud.numLmks*3*params.numa1 * sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(fa2Jacobian, fa2Jacobian_d, scanPointCloud.numLmks*3*params.numa2 * sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(ftJacobian, ftJacobian_d, scanPointCloud.numLmks*3*params.numt * sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(fuJacobian, fuJacobian_d, scanPointCloud.numLmks*3*params.numu * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(align_pos, align_pos_d, deformModel.dim * sizeof(float), cudaMemcpyDeviceToHost));
 
-    CUDA_CHECK(cudaFree(residual_d));
-    CUDA_CHECK(cudaFree(fa1Jacobian_d));
-    CUDA_CHECK(cudaFree(fa2Jacobian_d));
-    CUDA_CHECK(cudaFree(ftJacobian_d));
-    CUDA_CHECK(cudaFree(fuJacobian_d));
     CUDA_CHECK(cudaFree(align_pos_d));
     CUDA_CHECK(cudaFree(result_pos_d));
     CUDA_FREE(point_pair.mesh_corr_inds_d);

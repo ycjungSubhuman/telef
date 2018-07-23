@@ -100,13 +100,13 @@ namespace telef::align {
         /* Setup Optimizer */
 
         //std::cout << "Fitting PCA model to scan..." << std::endl;
-        auto cost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
+        auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
         double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
         double t[3] = {0.0,};
         double u[3] = {3.14, 0.0, 0.0};
-        problem.AddResidualBlock(cost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+        problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
         problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
         problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
         problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);

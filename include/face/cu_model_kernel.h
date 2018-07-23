@@ -4,6 +4,7 @@
 #include <float.h>
 #include <cuda_runtime_api.h>
 #include <cublas_v2.h>
+#include "align/cu_loss.h"
 #include "face/raw_model.h"
 
 
@@ -66,14 +67,38 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                 const float *matB, int bRows, int bCols);
 
 /**
+ * Calculates Positions from deformModel and alignes them to the scan
+ * @param result_pos_d
+ * @param align_pos_d
+ * @param position_d
+ * @param params
+ * @param deformModel
+ * @param scanPointCloud
+ * @param cnpHandle
+ */
+void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *position_d,
+                               const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                               cublasHandle_t cnpHandle);
+
+/**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model
  *
- * Loss = (L2 distance btw corresponding landmarks)
+ * Loss = (L2 distance btw corresponding PointPairs)
  *      + (L2 norm of parameters)
  */
-void calculateLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
-                   float *position_d,
-                   cublasHandle_t cnpHandle,
-                   const C_Params params,
-                   const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                   const bool isJacobianRequired);
+void calculatePointPairLoss(float *residual,
+                            float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                            const PointPair point_pair, int max_num_points,
+                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                            const bool isJacobianRequired);
+
+/**
+ * Calculate residual and jacobian of the loss function representing distance btw scan and model
+ *
+ * Loss = (L2 distance btw corresponding Landmark)
+ *      + (L2 norm of parameters)
+ */
+void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                           float *position_d, cublasHandle_t cnpHandle,
+                           const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                           const bool isJacobianRequired);
