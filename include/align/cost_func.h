@@ -25,10 +25,11 @@ namespace telef::align{
     public:
         //TODO: If you are going to copy or move this object, implement 'the rule of 5'
         PCAGPUDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
-                              cublasHandle_t cublasHandle, int numResiduals) :
+                              cublasHandle_t cublasHandle, const float weight, const int numResiduals) :
                 c_deformModel(c_deformModel),
                 c_scanPointCloud(c_scanPointCloud),
-                cublasHandle(cublasHandle)
+                cublasHandle(cublasHandle),
+                weight(weight)
         {
             allocParamsToCUDADevice(&c_params,
                                     c_deformModel.shapeRank, c_deformModel.expressionRank,
@@ -39,15 +40,15 @@ namespace telef::align{
             mutable_parameter_block_sizes()->push_back(c_deformModel.expressionRank);
             mutable_parameter_block_sizes()->push_back(TRANSLATE_COEFF);
             mutable_parameter_block_sizes()->push_back(ROTATE_COEFF);
-            fresiduals = new float[numResiduals*3];
+            fresiduals = new float[numResiduals];
             fa1Params = new float[c_deformModel.shapeRank];
             fa2Params = new float[c_deformModel.expressionRank];
             ftParams = new float[TRANSLATE_COEFF];
             fuParams = new float[ROTATE_COEFF];
-            fa1Jacobians = new float[numResiduals*3*c_deformModel.shapeRank];
-            fa2Jacobians = new float[numResiduals*3*c_deformModel.expressionRank];
-            ftJacobians = new float[numResiduals*3*TRANSLATE_COEFF];
-            fuJacobians = new float[numResiduals*3*ROTATE_COEFF];
+            fa1Jacobians = new float[numResiduals*c_deformModel.shapeRank];
+            fa2Jacobians = new float[numResiduals*c_deformModel.expressionRank];
+            ftJacobians = new float[numResiduals*TRANSLATE_COEFF];
+            fuJacobians = new float[numResiduals*ROTATE_COEFF];
         }
 
         virtual ~PCAGPUDistanceFunctor() {
@@ -118,6 +119,8 @@ namespace telef::align{
         C_ScanPointCloud c_scanPointCloud;
         C_Params c_params;
         float *position_d;
+
+        float weight;
     };
 
 
@@ -125,7 +128,7 @@ namespace telef::align{
     public:
         PCAGPULandmarkDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
                                       cublasHandle_t cublasHandle) :
-                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, c_scanPointCloud.numLmks*3)
+                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, 1.f, c_scanPointCloud.numLmks*3)
         {}
 
         virtual ~PCAGPULandmarkDistanceFunctor() {}
@@ -135,7 +138,7 @@ namespace telef::align{
                                   fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
                                   position_d, cublasHandle,
                                   c_params, c_deformModel, c_scanPointCloud,
-                                  isJacobianRequired);
+                                  weight, isJacobianRequired);
 
             return true;
         }
@@ -146,8 +149,8 @@ namespace telef::align{
     class PCAGPUGeometricDistanceFunctor : public PCAGPUDistanceFunctor {
     public:
         PCAGPUGeometricDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
-                                      cublasHandle_t cublasHandle, int num_residuals) :
-                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, num_residuals)
+                                      cublasHandle_t cublasHandle, const float weight, int num_residuals) :
+                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, weight, num_residuals)
         {}
 
         virtual ~PCAGPUGeometricDistanceFunctor() {}
@@ -157,12 +160,10 @@ namespace telef::align{
                                    fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
                                    position_d, cublasHandle,
                                    c_params, c_deformModel, c_scanPointCloud,
-                                   num_residuals(), isJacobianRequired);
+                                   weight, num_residuals(), isJacobianRequired);
 
             return true;
         }
-
-
     };
 
     class L2RegularizerFunctor : public ceres::CostFunction {

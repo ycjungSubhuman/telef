@@ -90,7 +90,7 @@ void calculatePointPairLoss(float *residual,
                             float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                             const PointPair point_pair, int max_num_points,
                             const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                            const bool isJacobianRequired);
+                            const float weight, const bool isJacobianRequired);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model
@@ -101,7 +101,7 @@ void calculatePointPairLoss(float *residual,
 void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                            float *position_d, cublasHandle_t cnpHandle,
                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                           const bool isJacobianRequired);
+                           const float weight, const bool isJacobianRequired);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model
@@ -112,4 +112,4 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
 void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                             float *position_d, cublasHandle_t cnpHandle,
                             const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                            const int num_residuals, const bool isJacobianRequired);
+                            const float weight, const int num_residuals, const bool isJacobianRequired);

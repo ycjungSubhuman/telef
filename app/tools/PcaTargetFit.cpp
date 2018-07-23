@@ -87,6 +87,7 @@ int main(int ac, const char* const *av) {
             ("detector,D", po::value<std::string>(), "specify Dlib pretrained Face detection model path")
             ("graph,G", po::value<std::string>(), "specify path to PRNet graph definition")
             ("checkpoint,C", po::value<std::string>(), "specify path to pretrained PRNet checkpoint")
+            ("vis,V", "run visualizer")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -119,7 +120,7 @@ int main(int ac, const char* const *av) {
     auto cloudPipe = IdentityPipe<DeviceCloudConstT>();
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
-    auto frontend = std::make_shared<FittingVisualizer>();
+
 
     auto nonrigid = PCAGPUNonRigidFittingPipe();
     auto fitting2Projection = Fitting2ProjectionPipe();
@@ -135,7 +136,10 @@ int main(int ac, const char* const *av) {
     auto lmkToScanFitting = LmkToScanRigidFittingPipe();
     auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting, modelFeeder, nonrigid);
     merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
-    merger->addFrontEnd(frontend);
+    if(vm.count("vis")>0) {
+        auto frontend = std::make_shared<FittingVisualizer>();
+        merger->addFrontEnd(frontend);
+    }
 
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>> device = NULL;
 

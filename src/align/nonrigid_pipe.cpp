@@ -98,10 +98,9 @@ namespace telef::align {
                              in->transformation, in->fittingSuite->landmark3d);
 
         /* Setup Optimizer */
-
         //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
-        auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle, 300);
+        auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle, sqrtf(100), 2000*3);
         ceres::Problem problem;
         double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};

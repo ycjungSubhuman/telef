@@ -136,6 +136,7 @@ int main(int ac, const char* const *av) {
     Eigen::Matrix4f rigidTransform;
     int nMeshPoints = mesh.position.rows()/3;
     int nMeshSize = mesh.position.rows();
+    int maxCorrs = 300;
 
     //Host
     int *meshCorr_h = new int[nMeshSize];
@@ -154,9 +155,9 @@ int main(int ac, const char* const *av) {
     pcl::PointCloud<PointT>::Ptr emptyLmks (new pcl::PointCloud<PointT>);
 
 
-    CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), nMeshSize*sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), nMeshSize*sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void**)(&distance_d), nMeshSize*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), maxCorrs*sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), maxCorrs*sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)(&distance_d), maxCorrs*sizeof(float)));
     CUDA_CHECK(cudaMalloc((void**)(&numCorr_d), sizeof(int)));
 
     CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
@@ -166,16 +167,16 @@ int main(int ac, const char* const *av) {
 
     auto begin = chrono::high_resolution_clock::now();
 
-    find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan, radius);
+    find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan, radius, 300);
     cudaDeviceSynchronize();
     auto end = chrono::high_resolution_clock::now();
     auto dur = end - begin;
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
     cout << "Closest Point Search Time (ms):" << ms << endl;
 
-    CUDA_CHECK(cudaMemcpy(meshCorr_h, meshCorr_d, nMeshSize * sizeof(int), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(scanCorr_h, scanCorr_d, nMeshSize * sizeof(int), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(distance_h, distance_d, nMeshSize * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(meshCorr_h, meshCorr_d, maxCorrs * sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(scanCorr_h, scanCorr_d, maxCorrs * sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(distance_h, distance_d, maxCorrs * sizeof(float), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
 
     CUDA_CHECK(cudaFree(meshCorr_d));
@@ -190,6 +191,10 @@ int main(int ac, const char* const *av) {
     int nCorrPoints = 0;
 
     cout << "NumCorr:" << numCorr << endl;
+    if (numCorr > maxCorrs){
+        numCorr = maxCorrs;
+        cout << "Corrected NumCorr:" << numCorr << endl;
+    }
     for (int idx = 0; idx < numCorr; idx++)
     {
             closestScanPoints->push_back(cloudIn->at(scanCorr_h[idx]));
