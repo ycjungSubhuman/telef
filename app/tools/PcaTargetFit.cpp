@@ -88,6 +88,10 @@ int main(int ac, const char* const *av) {
             ("graph,G", po::value<std::string>(), "specify path to PRNet graph definition")
             ("checkpoint,C", po::value<std::string>(), "specify path to pretrained PRNet checkpoint")
             ("vis,V", "run visualizer")
+            ("geo,Z", "Adds Geometric Term")
+            ("geo-weight,W", po::value<float>(), "Weight control for Geometric Term")
+            ("geo-radius,R", po::value<float>(), "Search Radius for Mesh to Scan correspondance")
+            ("geo-max-points,P", po::value<int>(), "Max Number of points used in Geometric Term")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -107,6 +111,13 @@ int main(int ac, const char* const *av) {
     std::string detectModelPath = vm["detector"].as<std::string>();
     std::string prnetGraphPath = vm["graph"].as<std::string>();
     std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
+    float geoWeight = vm["geo-weight"].as<float>();
+    float geoSearchRadius = vm["geo-radius"].as<float>();
+    int geoMaxPoints = vm["geo-max-points"].as<int>();
+    bool addGeoTerm = vm.count("geo")>0;
+    if (addGeoTerm) {
+        std::cout << "Adding Geo Term..." << std::endl;
+    }
 
     std::string fakePath("");
     bool useFakeKinect = vm.count("fake") > 0;
@@ -122,7 +133,7 @@ int main(int ac, const char* const *av) {
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
 
 
-    auto nonrigid = PCAGPUNonRigidFittingPipe();
+    auto nonrigid = PCAGPUNonRigidFittingPipe(geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm);
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 
@@ -137,7 +148,7 @@ int main(int ac, const char* const *av) {
     auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting, modelFeeder, nonrigid);
     merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
     if(vm.count("vis")>0) {
-        auto frontend = std::make_shared<FittingVisualizer>();
+        auto frontend = std::make_shared<FittingVisualizer>(geoMaxPoints, geoSearchRadius);
         merger->addFrontEnd(frontend);
     }
 

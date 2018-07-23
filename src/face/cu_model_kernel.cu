@@ -352,7 +352,7 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
 void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                            float *position_d, cublasHandle_t cnpHandle,
                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                           const float weight, const int num_residuals, const bool isJacobianRequired) {
+                           const float searchRadius, const float weight, const int num_residuals, const bool isJacobianRequired) {
     float *align_pos_d, *result_pos_d;
     float align_pos[deformModel.dim];
 
@@ -382,7 +382,7 @@ void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
 
     float* distance_d;
     int* numCorr_d;
-    float radius = 0.003;
+    float radius = searchRadius;
 
     CUDA_MALLOC(&point_pair.mesh_corr_inds_d, static_cast<size_t>(num_residuals));
     CUDA_MALLOC(&point_pair.ref_corr_inds_d, static_cast<size_t>(num_residuals));

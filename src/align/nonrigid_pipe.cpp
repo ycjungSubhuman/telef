@@ -20,7 +20,19 @@ using namespace telef::face;
 
 namespace telef::align {
     PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe()
-            :isModelInitialized(false) {
+            :isModelInitialized(false),
+             geoWeight(0), geoMaxPoints(0), geoSearchRadius(0), addGeoTerm(false)
+    {
+        if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
+            throw std::runtime_error("Cublas could not be initialized");
+        }
+    }
+
+    PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(const float geoWeight, const int geoMaxPoints,
+                                                         const float geoSearchRadius, const bool addGeoTerm)
+            :isModelInitialized(false),
+             geoWeight(geoWeight), geoMaxPoints(geoMaxPoints), geoSearchRadius(geoSearchRadius), addGeoTerm(addGeoTerm)
+    {
         if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("Cublas could not be initialized");
         }
@@ -28,6 +40,10 @@ namespace telef::align {
 
     PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that) {
         this->isModelInitialized = false;
+        this->geoWeight = that.geoWeight;
+        this->geoMaxPoints = that.geoMaxPoints;
+        this->geoSearchRadius = that.geoSearchRadius;
+        this->addGeoTerm = that.addGeoTerm;
         if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("Cublas could not be initialized");
         }
@@ -37,6 +53,10 @@ namespace telef::align {
         this->isModelInitialized = that.isModelInitialized;
         this->c_deformModel = that.c_deformModel;
         this->cublasHandle = that.cublasHandle;
+        this->geoWeight = that.geoWeight;
+        this->geoMaxPoints = that.geoMaxPoints;
+        this->geoSearchRadius = that.geoSearchRadius;
+        this->addGeoTerm = that.addGeoTerm;
     }
 
     PCAGPUNonRigidFittingPipe& PCAGPUNonRigidFittingPipe::operator=(const PCAGPUNonRigidFittingPipe &that) {
@@ -51,6 +71,10 @@ namespace telef::align {
             }
         }
 
+        this->geoWeight = that.geoWeight;
+        this->geoMaxPoints = that.geoMaxPoints;
+        this->geoSearchRadius = that.geoSearchRadius;
+        this->addGeoTerm = that.addGeoTerm;
         return *this;
     }
 
@@ -64,6 +88,10 @@ namespace telef::align {
             this->isModelInitialized = that.isModelInitialized;
             this->c_deformModel = that.c_deformModel;
             this->cublasHandle = that.cublasHandle;
+            this->geoWeight = that.geoWeight;
+            this->geoMaxPoints = that.geoMaxPoints;
+            this->geoSearchRadius = that.geoSearchRadius;
+            this->addGeoTerm = that.addGeoTerm;
         }
 
         return *this;
@@ -100,14 +128,18 @@ namespace telef::align {
         /* Setup Optimizer */
         //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
-        auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle, sqrtf(100), 2000*3);
         ceres::Problem problem;
         double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
         double t[3] = {0.0,};
         double u[3] = {3.14, 0.0, 0.0};
         problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
-        problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+
+        if (addGeoTerm == true) {
+            auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle,
+                    geoMaxPoints*3,sqrtf(geoWeight), geoSearchRadius);
+            problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+        }
         problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
         problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
         problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);

@@ -120,7 +120,7 @@ namespace telef::align{
         C_Params c_params;
         float *position_d;
 
-        float weight;
+        const float weight;
     };
 
 
@@ -149,8 +149,10 @@ namespace telef::align{
     class PCAGPUGeometricDistanceFunctor : public PCAGPUDistanceFunctor {
     public:
         PCAGPUGeometricDistanceFunctor(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
-                                      cublasHandle_t cublasHandle, const float weight, int num_residuals) :
-                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, weight, num_residuals)
+                                       cublasHandle_t cublasHandle, const int num_residuals,
+                                       const float weight, const float searchRadius) :
+                PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle, weight, num_residuals),
+                searchRadius(searchRadius)
         {}
 
         virtual ~PCAGPUGeometricDistanceFunctor() {}
@@ -160,10 +162,13 @@ namespace telef::align{
                                    fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
                                    position_d, cublasHandle,
                                    c_params, c_deformModel, c_scanPointCloud,
-                                   weight, num_residuals(), isJacobianRequired);
+                                   searchRadius, weight, num_residuals(), isJacobianRequired);
 
             return true;
         }
+
+    private:
+        const float searchRadius;
     };
 
     class L2RegularizerFunctor : public ceres::CostFunction {

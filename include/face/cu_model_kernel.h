@@ -112,4 +112,4 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
 void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
                             float *position_d, cublasHandle_t cnpHandle,
                             const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                            const float weight, const int num_residuals, const bool isJacobianRequired);
+                            const float searchRadius, const float weight, const int num_residuals, const bool isJacobianRequired);

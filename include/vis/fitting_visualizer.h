@@ -15,7 +15,7 @@ namespace {
 namespace telef::vis {
     class FittingVisualizer : public telef::io::FrontEnd<PCANonRigidFittingResult> {
     public:
-        FittingVisualizer();
+        FittingVisualizer(const int geoMaxPoints=2000, const float geoSearchRadius=0.005);
         ~FittingVisualizer();
         using InputPtrT = boost::shared_ptr<PCANonRigidFittingResult>;
         void process(InputPtrT input) override;
@@ -83,5 +83,9 @@ namespace telef::vis {
         // 0: Color, 1: No Color, 2: wireframe
         static constexpr int meshModeCount = 3;
         int meshMode;
+
+        // Geometric Term Visualization
+        int geoMaxPoints;
+        float geoSearchRadius;
     };
 }

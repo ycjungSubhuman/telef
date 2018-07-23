@@ -158,7 +158,7 @@ namespace {
         std::vector<float> meshGeo;
     };
 
-    Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input) {
+    Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input, const int geoMaxPoints, const float geoRadius) {
         auto model = input->pca_model;
         auto mesh = model->genMesh(input->shapeCoeff, input->expressionCoeff);
 
@@ -210,7 +210,6 @@ namespace {
 
         int nMeshPoints = mesh.position.rows()/3;
         int nMeshSize = mesh.position.rows();
-        int maxCorrs = 2000;
 
         //Device
         int* meshCorr_d;
@@ -219,9 +218,9 @@ namespace {
         int* numCorr_d;
 
         float* mesh_d;
-        CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), maxCorrs*sizeof(int)));
-        CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), maxCorrs*sizeof(int)));
-        CUDA_CHECK(cudaMalloc((void**)(&distance_d), maxCorrs*sizeof(float)));
+        CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), geoMaxPoints*sizeof(int)));
+        CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), geoMaxPoints*sizeof(int)));
+        CUDA_CHECK(cudaMalloc((void**)(&distance_d), geoMaxPoints*sizeof(float)));
         CUDA_CHECK(cudaMalloc((void**)(&numCorr_d), sizeof(int)));
 
         CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
@@ -230,12 +229,13 @@ namespace {
         C_ScanPointCloud scan;
         loadScanToCUDADevice(&scan, input->cloud, input->fx, input->fy, scanLmkIdx, input->transformation, emptyLmks);
 
-        find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan, 0.01, maxCorrs);
+        find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan,
+                               geoRadius, geoMaxPoints);
 
         CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
 
-        if (numCorr > maxCorrs){
-            numCorr = maxCorrs;
+        if (numCorr > geoMaxPoints){
+            numCorr = geoMaxPoints;
             cout << "Corrected NumCorr:" << numCorr << endl;
         }
         meshGeoIdx.resize(numCorr);
@@ -299,7 +299,7 @@ namespace {
 
 namespace telef::vis {
 
-    FittingVisualizer::FittingVisualizer()
+    FittingVisualizer::FittingVisualizer(const int geoMaxPoints, const float geoSearchRadius)
             : renderRunning{true},
               renderThread(&FittingVisualizer::render, this),
               renderTarget{nullptr},
@@ -309,7 +309,9 @@ namespace telef::vis {
               trackballMode(None),
               translation{0.0f, 0.0f, 0.8f},
               zoom{1.0f},
-              meshMode(0) {}
+              meshMode(0),
+              geoMaxPoints(geoMaxPoints),
+              geoSearchRadius(geoSearchRadius){}
 
     FittingVisualizer::~FittingVisualizer() {
         renderRunning = false;
@@ -356,7 +358,7 @@ namespace telef::vis {
             // Get Render Target
             auto targetCurrFrame = safeGetInput();
             if(targetCurrFrame) {
-                frame = getFrame(targetCurrFrame);
+                frame = getFrame(targetCurrFrame, geoMaxPoints, geoSearchRadius);
             }
             if(!frame.cloud) continue;
 

@@ -47,6 +47,8 @@ namespace telef::align {
     class PCAGPUNonRigidFittingPipe : public telef::io::Pipe<PCANonRigidAlignmentSuite, PCANonRigidFittingResult> {
     public:
         PCAGPUNonRigidFittingPipe();
+        PCAGPUNonRigidFittingPipe(const float geoWeight, const int geoMaxPoints,
+                                  const float geoSearchRadius, const bool addGeoTerm=true);
         PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that);
         PCAGPUNonRigidFittingPipe(PCAGPUNonRigidFittingPipe &&that) noexcept;
         PCAGPUNonRigidFittingPipe& operator=(const PCAGPUNonRigidFittingPipe &that);
@@ -59,5 +61,11 @@ namespace telef::align {
         boost::shared_ptr<PCANonRigidFittingResult> _processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) override;
 
         static const std::vector<int> landmarkSelection;
+
+        // Geometric Term
+        float geoWeight;
+        int geoMaxPoints;
+        float geoSearchRadius;
+        bool addGeoTerm;
     };
 }
