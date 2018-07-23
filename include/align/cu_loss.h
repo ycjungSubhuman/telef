@@ -30,16 +30,7 @@ typedef struct PointPair{
  *   x_m is the subset of mesh points that corresponds to points
  *   x_m_ik is the k-th landmark point's i-th element
  */
-void calc_residual_point_pair(float *residual_d, PointPair point_pair);
-
-/**
- * Some cases may require variable residuals, to address this issue we fill the uncomputed residuals for
- * any unpaired correspondences with 0.
- * @param residual_d
- * @param point_pair
- * @param num_residuals
- */
-void fill_unpaired_residuals(float *residual_d, PointPair point_pair, int num_residuals);
+void calc_residual_point_pair(float *residual_d, PointPair point_pair, const float weight=1.0);
 
 /**
  * Calculate derivatives of least squares
@@ -83,14 +74,4 @@ void fill_unpaired_residuals(float *residual_d, PointPair point_pair, int num_re
  * @param point_pair
  */
 void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
-                                 const float *u_d, C_PcaDeformModel model, PointPair point_pair);
-
-/**
- * Some cases may require variable residuals, to address this issue we fill the uncomputed residuals for
- * any unpaired correspondences with 0.
- * @param residual_d
- * @param point_pair
- * @param num_residuals
- */
-void fill_derivatives(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
-                      C_PcaDeformModel model, PointPair point_pair, const int num_residuals) ;
+                                 const float *u_d, C_PcaDeformModel model, PointPair point_pair, const float weight=1.0);

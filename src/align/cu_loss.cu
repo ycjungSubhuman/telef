@@ -63,7 +63,7 @@ static void _calc_dx_m_dt_lmk(float *dx_m_dt, int num_points) {
     }
 }
 
-static void calc_de_dt_lmk(float *de_dt_d, int num_points) {
+static void calc_de_dt_lmk(float *de_dt_d, int num_points, const float weight) {
     const int xRequired = 3*num_points;
     const int yRequired = 3;
     dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
@@ -71,7 +71,7 @@ static void calc_de_dt_lmk(float *de_dt_d, int num_points) {
     _calc_dx_m_dt_lmk<<<dimGrid, dimBlock>>>(de_dt_d, num_points);
     CHECK_ERROR_MSG("Kernel Error");
     scale_array<<<GET_DIM_GRID(num_points*3*3, NUM_THREAD), NUM_THREAD>>>
-                    (de_dt_d, num_points*3*3, 1.0f/sqrtf(num_points));
+                    (de_dt_d, num_points*3*3, weight*1.0f/sqrtf(num_points));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -102,7 +102,7 @@ static void _calc_dx_m_du_lmk(float *dx_m_du, const float *u_d, PointPair point_
     }
 }
 
-static void calc_de_du_lmk(float *de_du_d, const float *u_d, PointPair point_pair) {
+static void calc_de_du_lmk(float *de_du_d, const float *u_d, PointPair point_pair, const float weight) {
     const int xRequired = 3*point_pair.point_count;
     const int yRequired = 3;
     dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
@@ -110,7 +110,7 @@ static void calc_de_du_lmk(float *de_du_d, const float *u_d, PointPair point_pai
     _calc_dx_m_du_lmk<<<dimGrid, dimBlock>>>(de_du_d, u_d, point_pair);
     CHECK_ERROR_MSG("Kernel Error");
     scale_array<<<GET_DIM_GRID(3*3*point_pair.point_count, NUM_THREAD),NUM_THREAD>>>
-                   (de_du_d, point_pair.point_count*3*3, 1.0f/sqrtf(point_pair.point_count));
+                   (de_du_d, point_pair.point_count*3*3, weight*1.0f/sqrtf(point_pair.point_count));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -142,7 +142,7 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int rank, int dim,
 }
 
 static void calc_de_da_lmk(float *de_da_d,
-                           const float *u_d, int rank, int dim, const float *basis_d, PointPair point_pair) {
+                           const float *u_d, int rank, int dim, const float *basis_d, PointPair point_pair, const float weight) {
     const int xRequired = point_pair.point_count* 3;
     const int yRequired = rank;
     dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
@@ -151,77 +151,22 @@ static void calc_de_da_lmk(float *de_da_d,
     CHECK_ERROR_MSG("Kernel Error");
 
     scale_array<<<GET_DIM_GRID(xRequired*yRequired, NUM_THREAD), NUM_THREAD>>>
-                 (de_da_d, point_pair.point_count*3*rank, 1.0f/sqrtf(point_pair.point_count));
+                 (de_da_d, point_pair.point_count*3*rank, weight*1.0f/sqrtf(point_pair.point_count));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
-void calc_residual_point_pair(float *residual_d, PointPair point_pair) {
+void calc_residual_point_pair(float *residual_d, PointPair point_pair, const float weight) {
     calc_error_lmk(residual_d, point_pair);
     scale_array<<<GET_DIM_GRID(point_pair.point_count*3, NUM_THREAD), NUM_THREAD>>>
-                      (residual_d, point_pair.point_count*3, 1.0f/sqrtf(point_pair.point_count));
+                      (residual_d, point_pair.point_count*3, weight*1.0f/sqrtf(point_pair.point_count));
     CHECK_ERROR_MSG("Kernel Error");
 }
 
 
 void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
-                                 const float *u_d, C_PcaDeformModel model, PointPair point_pair) {
-    calc_de_dt_lmk(dres_dt_d, point_pair.point_count);
-    calc_de_du_lmk(dres_du_d, u_d, point_pair);
-    calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair);
-    calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair);
-}
-
-__global__
-void _fill_unpaired_residuals(float *residual_d, PointPair point_pair, const int num_residuals) {
-    const int start = blockIdx.x * blockDim.x + threadIdx.x;
-    const int size = num_residuals;
-    const int nPoints = point_pair.point_count*3;
-    const int step = blockDim.x * gridDim.x;
-    for(int ind=start; ind<size; ind+=step) {
-        if (ind >= nPoints) {
-            residual_d[ind] = 0;
-        }
-    }
-}
-
-void fill_unpaired_residuals(float *residual_d, PointPair point_pair, const int num_residuals) {
-    const int threadRequired = point_pair.point_count*3;
-    _fill_unpaired_residuals<<<GET_DIM_GRID(threadRequired, NUM_THREAD), NUM_THREAD>>>(residual_d, point_pair, num_residuals);
-    CHECK_ERROR_MSG("Kernel Error");
-}
-
-__global__
-void _fill_unpaired_jacobians(float *jacobian_d, PointPair point_pair, const int nParams, const int num_residuals) {
-    const int x_start = blockIdx.x * blockDim.x + threadIdx.x;
-    const int x_size = point_pair.point_count*3;
-    const int x_step = blockDim.x * gridDim.x;
-    const int y_start = blockIdx.y * blockDim.y + threadIdx.y;
-    const int y_size = nParams;
-    const int y_step = blockDim.y * gridDim.y;
-    for(int ind=x_start; ind<num_residuals; ind+=x_step) {
-        if (ind >= x_size) {
-            for (int j = y_start; j < y_size; j += y_step) {
-                const int i = ind % 3;
-                const int k = ind / 3;
-                jacobian_d[3 * nParams * k + nParams * i + j] = 0;
-            }
-        }
-    }
-}
-
-void fill_unpaired_jacobians(float *jacobian_d, PointPair point_pair, const int nParams, const int num_residuals) {
-    const int xRequired = 3*point_pair.point_count;
-    const int yRequired = nParams;
-    dim3 dimGrid(GET_DIM_GRID(xRequired, DIM_X_THREAD), GET_DIM_GRID(yRequired, DIM_Y_THREAD));
-    dim3 dimBlock(DIM_X_THREAD, DIM_Y_THREAD);
-    _fill_unpaired_jacobians<<<dimGrid, dimBlock>>>(jacobian_d, point_pair, nParams, num_residuals);
-    CHECK_ERROR_MSG("Kernel Error");
-}
-
-void fill_derivatives(float *dres_dt_d, float *dres_du_d, float *dres_da1_d, float *dres_da2_d,
-                      C_PcaDeformModel model, PointPair point_pair, const int num_residuals) {
-    fill_unpaired_jacobians(dres_dt_d, point_pair, 3, num_residuals);
-    fill_unpaired_jacobians(dres_du_d, point_pair, 3, num_residuals);
-    fill_unpaired_jacobians(dres_da1_d, point_pair, model.shapeRank, num_residuals);
-    fill_unpaired_jacobians(dres_da2_d, point_pair, model.expressionRank, num_residuals);
+                                 const float *u_d, C_PcaDeformModel model, PointPair point_pair, const float weight) {
+    calc_de_dt_lmk(dres_dt_d, point_pair.point_count, weight);
+    calc_de_du_lmk(dres_du_d, u_d, point_pair, weight);
+    calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair, weight);
+    calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair, weight);
 }
