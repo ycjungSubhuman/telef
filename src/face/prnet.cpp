@@ -27,7 +27,9 @@ namespace {
 
 namespace telef::face {
     PRNetLandmarkDetector::PRNetLandmarkDetector(fs::path graphPath, fs::path checkpointPath) {
-        session = checkNull(tf::NewSession(tf::SessionOptions()), "TF Session could not be created");
+        tf::SessionOptions sessOptions;
+        sessOptions.config.mutable_gpu_options()->set_per_process_gpu_memory_fraction(0.666);
+        session = checkNull(tf::NewSession(sessOptions), "TF Session could not be created");
 
         tf::MetaGraphDef graphDef;
         checkTFStatus(tf::ReadBinaryProto(tf::Env::Default(), graphPath.string(), &graphDef),

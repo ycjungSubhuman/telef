@@ -87,6 +87,7 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud) {
     CUDA_FREE(scanPointCloud.scanPoints_d);
     CUDA_FREE(scanPointCloud.rigidTransform_d);
     CUDA_FREE(scanPointCloud.scanLandmark_d);
+    CUDA_FREE(scanPointCloud.modelLandmarkSelection_d);
 }
 
 void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt, int numu) {
@@ -108,6 +109,7 @@ void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt, i
 
     updateParams(*params, zeroA1, numa1, zeroA2, numa2, params->ftParams_h, numt, params->fuParams_h, numu);
     delete[] zeroA1;
+    delete[] zeroA2;
 }
 
 void updateParams(const C_Params params,
