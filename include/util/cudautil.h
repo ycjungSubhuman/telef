@@ -50,6 +50,11 @@ inline void CUDA_ALLOC_AND_ZERO(T **dst_d, size_t count) {
 }
 
 template<typename T>
+inline void CUDA_ZERO(T **dst_d, size_t count) {
+    CUDA_CHECK(cudaMemset(*dst_d, 0, count*sizeof(T)));
+}
+
+template<typename T>
 inline void CUDA_RETRIEVE(T *dst_h, const T *src_d, size_t count) {
     CUDA_CHECK(cudaMemcpy(*dst_h, src_d, count*sizeof(T), cudaMemcpyDeviceToHost));
 }

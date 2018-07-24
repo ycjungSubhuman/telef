@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
+#include <map>
 
 /* Includes, cuda */
 #include <cuda_runtime.h>
@@ -210,8 +212,8 @@ void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d
 //                printf("Correspondance %.4f\n", dist);
                 if (radius <= 0 || dist <= radius) {
                     int idx = atomicAdd(&numCorr[0], 1);
-//                    printf("Correspondance %d\n", idx);
                     if (maxPoints <= 0 || idx < maxPoints) {
+//                        printf("Correspondance s:%d -> m:%d, d:%.4f\n", scanIndx / 3, i, dist);
                         meshCorr_d[idx] = i;
                         scanCorr_d[idx] = scanIndx / 3;
                         distance_d[idx] = dist;
@@ -222,14 +224,65 @@ void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d
     }
 }
 
+void reduce_closest_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr_d, int maxPoints) {
+    int numCorr;
+    CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
+
+    if (numCorr > maxPoints){
+        numCorr = maxPoints;
+    }
+
+    int *meshCorr_h = new int[numCorr];
+    int *scanCorr_h = new int[numCorr];
+    float *distance_h = new float[numCorr];
+
+    CUDA_CHECK(cudaMemcpy(meshCorr_h, meshCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(scanCorr_h, scanCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(distance_h, distance_d, numCorr * sizeof(float), cudaMemcpyDeviceToHost));
+
+    std::map<int,int> scantomesh;
+    std::map<int,float> scandist;
+
+    for (int idx = 0; idx < numCorr; idx++){
+        auto meshIdx =  meshCorr_h[idx];
+        auto scanIdx =  scanCorr_h[idx];
+        auto dist =  distance_h[idx];
+
+        if(scantomesh.find(scanIdx) != scantomesh.end()) {
+            if (dist < scandist[scanIdx]){
+                scantomesh[scanIdx] = meshIdx;
+                scandist[scanIdx] = dist;
+            }
+        } else {
+            scantomesh.insert(std::make_pair(scanIdx, meshIdx));
+            scandist.insert(std::make_pair(scanIdx, dist));
+        }
+    }
+
+    std::vector<int> finScan, finMesh;
+    std::vector<float> findist;
+    for(std::map<int,int>::iterator it = scantomesh.begin(); it != scantomesh.end(); ++it) {
+        finScan.push_back(it->first);
+        finMesh.push_back(it->second);
+        findist.push_back(scandist[it->first]);
+    }
+    auto size = finMesh.size();
+    CUDA_CHECK(cudaMemcpy(meshCorr_d, finMesh.data(), size* sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(scanCorr_d, finScan.data(), size* sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(distance_d, findist.data(), size* sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(numCorr_d, &size, sizeof(int), cudaMemcpyHostToDevice));
+}
+
 void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
-                           const float *position_d, int num_points, C_ScanPointCloud scan, float radius, int maxPoints) {
+                            const float *position_d, int num_points, C_ScanPointCloud scan, float radius, int maxPoints) {
     int idim = num_points/3;
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
+    CUDA_ZERO(&numCorr, static_cast<size_t >(1));
 
     _find_mesh_to_scan_corr << < dimGrid, dimBlock >> > (meshCorr_d, scanCorr_d, distance_d, numCorr,
             position_d, num_points, scan, radius, maxPoints);
+    reduce_closest_corr(meshCorr_d, scanCorr_d, distance_d, numCorr, maxPoints);
     CHECK_ERROR_MSG("Kernel Error");
 }
 

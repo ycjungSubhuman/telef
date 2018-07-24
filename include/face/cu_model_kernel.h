@@ -41,7 +41,7 @@ void _find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d
  */
 void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
                            const float *position_d, int num_points, C_ScanPointCloud scan, float radius=0, int maxPoints=0);
-
+void reduce_closest_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr, int maxPoints);
 /**
  * Applies Transformation matrix on CUDA device model
  * @param align_pos_d
