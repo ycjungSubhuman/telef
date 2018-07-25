@@ -146,6 +146,7 @@ namespace telef::align {
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
+        options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
 
         /* Run Optimization */
         auto summary = ceres::Solver::Summary();
