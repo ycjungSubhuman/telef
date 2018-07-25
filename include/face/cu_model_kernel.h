@@ -86,10 +86,9 @@ void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *p
  * Loss = (L2 distance btw corresponding PointPairs)
  *      + (L2 norm of parameters)
  */
-void calculatePointPairLoss(float *residual,
-                            float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
-                            const PointPair point_pair, int max_num_points,
-                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+void calculatePointPairLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
+                            PointPair point_pair, C_Params params, C_PcaDeformModel deformModel,
+                            C_Residuals c_residuals, C_Jacobians c_jacobians,
                             const float weight, const bool isJacobianRequired);
 
 /**
@@ -99,8 +98,8 @@ void calculatePointPairLoss(float *residual,
  *      + (L2 norm of parameters)
  */
 void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
-                           float *position_d, cublasHandle_t cnpHandle,
-                           const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                           float *position_d, cublasHandle_t cnpHandle, C_Params params, C_PcaDeformModel deformModel,
+                           C_ScanPointCloud scanPointCloud, C_Residuals c_residuals, C_Jacobians c_jacobians,
                            const float weight, const bool isJacobianRequired);
 
 /**
@@ -110,6 +109,7 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
  *      + (L2 norm of parameters)
  */
 void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,
-                            float *position_d, cublasHandle_t cnpHandle,
-                            const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
-                            const float searchRadius, const float weight, const int num_residuals, const bool isJacobianRequired);
+                            float *position_d, cublasHandle_t cnpHandle, const C_Params params,
+                            const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                            C_Residuals c_residuals, C_Jacobians c_jacobians, const float searchRadius, const float weight,
+                            const bool isJacobianRequired);

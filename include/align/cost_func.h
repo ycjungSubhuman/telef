@@ -35,6 +35,10 @@ namespace telef::align{
                                     c_deformModel.shapeRank, c_deformModel.expressionRank,
                                     TRANSLATE_COEFF, ROTATE_COEFF);
             allocPositionCUDA(&position_d, c_deformModel.dim);
+            allocResidualsToCUDADevice(&c_residuals, numResiduals);
+            allocJacobiansToCUDADevice(&c_jacobians, numResiduals, c_deformModel.shapeRank, c_deformModel.expressionRank,
+                                       TRANSLATE_COEFF, ROTATE_COEFF);
+            //TODO: allocate PointPair
             set_num_residuals(numResiduals);
             mutable_parameter_block_sizes()->push_back(c_deformModel.shapeRank);
             mutable_parameter_block_sizes()->push_back(c_deformModel.expressionRank);
@@ -54,6 +58,9 @@ namespace telef::align{
         virtual ~PCAGPUDistanceFunctor() {
             freeParamsCUDA(c_params);
             freePositionCUDA(position_d);
+            freeResidualsCUDA(c_residuals);
+            freeJacobiansCUDA(c_jacobians);
+            //TODO: Free PointPair
 
             delete[] fresiduals;
             delete[] fa1Params;
@@ -85,6 +92,9 @@ namespace telef::align{
                          fa2Params, c_deformModel.expressionRank,
                          ftParams, TRANSLATE_COEFF,
                          fuParams, ROTATE_COEFF);
+
+            zeroResidualsCUDA(c_residuals);
+            zeroJacobiansCUDA(c_jacobians);
 
             evaluateLoss(isJacobianRequired);
 
@@ -119,6 +129,9 @@ namespace telef::align{
         C_ScanPointCloud c_scanPointCloud;
         C_Params c_params;
         float *position_d;
+        C_Residuals c_residuals;
+        C_Jacobians c_jacobians;
+        //TODO: PointPair pointPair;
 
         const float weight;
     };
@@ -134,11 +147,9 @@ namespace telef::align{
         virtual ~PCAGPULandmarkDistanceFunctor() {}
 
         virtual bool evaluateLoss(const bool isJacobianRequired) const {
-            calculateLandmarkLoss(fresiduals,
-                                  fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
-                                  position_d, cublasHandle,
-                                  c_params, c_deformModel, c_scanPointCloud,
-                                  weight, isJacobianRequired);
+            calculateLandmarkLoss(fresiduals, fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians, position_d,
+                                  cublasHandle, c_params, c_deformModel,
+                                  c_scanPointCloud, c_residuals, c_jacobians, weight, isJacobianRequired);
 
             return true;
         }
@@ -158,11 +169,9 @@ namespace telef::align{
         virtual ~PCAGPUGeometricDistanceFunctor() {}
 
         virtual bool evaluateLoss(const bool isJacobianRequired) const {
-            calculateGeometricLoss(fresiduals,
-                                   fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
-                                   position_d, cublasHandle,
-                                   c_params, c_deformModel, c_scanPointCloud,
-                                   searchRadius, weight, num_residuals(), isJacobianRequired);
+            calculateGeometricLoss(fresiduals, fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians, position_d,
+                                   cublasHandle, c_params, c_deformModel,
+                                   c_scanPointCloud, c_residuals, c_jacobians, searchRadius, weight, isJacobianRequired);
 
             return true;
         }

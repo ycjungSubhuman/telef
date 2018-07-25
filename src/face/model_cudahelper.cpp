@@ -112,6 +112,27 @@ void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt, i
     delete[] zeroA2;
 }
 
+void allocResidualsToCUDADevice(C_Residuals *residuals, int num_residuals) {
+    CUDA_CHECK(cudaMalloc((void **)(&residuals->residual_d), num_residuals*sizeof(float)));
+    residuals->numResuduals = num_residuals;
+
+    zeroResidualsCUDA(*residuals);
+}
+
+void allocJacobiansToCUDADevice(C_Jacobians *jacobians, int num_residuals, int numa1, int numa2, int numt, int numu) {
+    jacobians->numa1j = num_residuals*numa1;
+    jacobians->numa2j = num_residuals*numa2;
+    jacobians->numtj = num_residuals*numt;
+    jacobians->numuj = num_residuals*numu;
+
+    CUDA_CHECK(cudaMalloc((void **)(&jacobians->fa1Jacobian_d), jacobians->numa1j*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **)(&jacobians->fa2Jacobian_d), jacobians->numa2j*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **)(&jacobians->ftJacobian_d), jacobians->numtj*sizeof(float)));
+    CUDA_CHECK(cudaMalloc((void **)(&jacobians->fuJacobian_d), jacobians->numuj*sizeof(float)));
+
+    zeroJacobiansCUDA(*jacobians);
+}
+
 void updateParams(const C_Params params,
                   const float *const a1In, int numa1,
                   const float *const a2In, int numa2,
@@ -124,6 +145,28 @@ void updateParams(const C_Params params,
 
     memcpy((void*)params.ftParams_h, tIn, numt*sizeof(float));
     memcpy((void*)params.fuParams_h, uIn, numu*sizeof(float));
+}
+
+void zeroResidualsCUDA(C_Residuals residuals) {
+    CUDA_ZERO(&residuals.residual_d, static_cast<size_t >(residuals.numResuduals));
+}
+
+void freeResidualsCUDA(C_Residuals residuals) {
+    CUDA_FREE(residuals.residual_d);
+}
+
+void zeroJacobiansCUDA(C_Jacobians jacobians) {
+    CUDA_ZERO(&jacobians.fa1Jacobian_d, static_cast<size_t >(jacobians.numa1j));
+    CUDA_ZERO(&jacobians.fa2Jacobian_d, static_cast<size_t >(jacobians.numa2j));
+    CUDA_ZERO(&jacobians.ftJacobian_d, static_cast<size_t >(jacobians.numtj));
+    CUDA_ZERO(&jacobians.fuJacobian_d, static_cast<size_t >(jacobians.numuj));
+}
+
+void freeJacobiansCUDA(C_Jacobians jacobians) {
+    CUDA_FREE(jacobians.fa1Jacobian_d);
+    CUDA_FREE(jacobians.fa2Jacobian_d);
+    CUDA_FREE(jacobians.ftJacobian_d);
+    CUDA_FREE(jacobians.fuJacobian_d);
 }
 
 void freeParamsCUDA(C_Params params) {

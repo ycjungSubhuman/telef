@@ -44,6 +44,14 @@ void updateParams(const C_Params params,
                   const float *const uIn, int numu);
 void freeParamsCUDA(C_Params params);
 
+void allocResidualsToCUDADevice(C_Residuals *residuals, int num_residuals);
+void zeroResidualsCUDA(const C_Residuals residuals);
+void freeResidualsCUDA(const C_Residuals residuals);
+
+void allocJacobiansToCUDADevice(C_Jacobians *jacobians, int num_residuals, int numa1, int numa2, int numt, int numu);
+void zeroJacobiansCUDA(const C_Jacobians jacobians);
+void freeJacobiansCUDA(const C_Jacobians jacobians);
+
 void allocPositionCUDA(float **position_d, int dim);
 void freePositionCUDA(float *position_d);
 

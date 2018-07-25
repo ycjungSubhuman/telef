@@ -178,7 +178,7 @@ int main(int ac, const char* const *av) {
     Eigen::Matrix4f rigidTransform;
     int nMeshPoints = mesh.position.rows()/3;
     int nMeshSize = mesh.position.rows();
-    int maxCorrs = 3000;
+    int maxCorrs = 3300;
 
     //Host
     int *meshCorr_h = new int[nMeshSize];
