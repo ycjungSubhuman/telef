@@ -127,15 +127,24 @@ static void _calc_dx_da_lmk(float *dx_m_da, const float *u_d, int rank, int dim,
     const int y_step = blockDim.y * gridDim.y;
     for(int ind=x_start; ind<x_size; ind+=x_step) {
         for (int j=y_start; j<y_size; j+=y_step) {
+            // x,y, or z coordinate?
             const int i = ind % 3;
+            // Index of (x,y,z) points on model
             const int k = ind / 3;
+
+            //Index of point on model corresponding to point cloud/landmarks
             const int mesh_ind = point_pair.mesh_corr_inds_d[k];
             float sum = 0.0f;
 
+            //Rotate each deformation basis for each point corresponding to point cloud/landmark
+            // R * Deform_Basis
             sum += r[0*3 + i] * basis_d[dim*j + 3*mesh_ind + 0];
             sum += r[1*3 + i] * basis_d[dim*j + 3*mesh_ind + 1];
             sum += r[2*3 + i] * basis_d[dim*j + 3*mesh_ind + 2];
 
+            //[rank * 3 * Curr_index] which index (x,y,z) are we on
+            //[rank * curr_coord] which xyz-coord are we on
+            //[curr_parameter] which parameter are we on (all n-coord parameters grouped together by parameter/rank)?
             dx_m_da[3*rank*k+rank*i+j] = -sum;
         }
     }
