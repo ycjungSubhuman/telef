@@ -91,6 +91,21 @@ void calculatePointPairLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                             C_Residuals c_residuals, C_Jacobians c_jacobians,
                             const float weight, const bool isJacobianRequired);
 
+void calculatePointPairLossCuda(PointPair point_pair, C_Params params, C_PcaDeformModel deformModel,
+                                C_Residuals c_residuals, C_Jacobians c_jacobians,
+                                const float weight, const bool isJacobianRequired);
+
+
+/**
+ * Calculate residual and jacobian of the loss function representing distance btw scan and model
+ *
+ * Loss = (L2 distance btw corresponding Landmark)
+ *      + (L2 norm of parameters)
+ */
+void calculateLandmarkLossCuda(float *position_d, cublasHandle_t cnpHandle, C_Params params, C_PcaDeformModel deformModel,
+                               C_ScanPointCloud scanPointCloud, C_Residuals c_residuals, C_Jacobians c_jacobians,
+                               const float weight, const bool isJacobianRequired);
+
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model
  *

@@ -4,6 +4,8 @@
 #include <Eigen/Geometry>
 #include <ceres/ceres.h>
 
+#include "solver/costFunction.h"
+
 #include "face/model.h"
 #include "face/model_cudahelper.h"
 #include "face/cu_model_kernel.h"
@@ -21,6 +23,80 @@ namespace {
 
 
 namespace telef::align{
+    class PCALandmarkCudaFunction : public telef::solver::CostFunction {
+    public:
+        //TODO: If you are going to copy or move this object, implement 'the rule of 5'
+        PCALandmarkCudaFunction(C_PcaDeformModel c_deformModel, C_ScanPointCloud c_scanPointCloud,
+                cublasHandle_t cublasHandle) :
+                              telef::solver::CostFunction(c_scanPointCloud.numLmks*3, {}),
+                              cublasHandle(cublasHandle),
+                              c_deformModel(c_deformModel),
+                              c_scanPointCloud(c_scanPointCloud),
+                              weight(1.f)
+        {
+            allocPositionCUDA(&position_d, c_deformModel.dim);
+            parameterSizes.push_back(c_deformModel.shapeRank);
+            parameterSizes.push_back(c_deformModel.expressionRank);
+            parameterSizes.push_back(TRANSLATE_COEFF);
+            parameterSizes.push_back(ROTATE_COEFF);
+        }
+
+        virtual ~PCALandmarkCudaFunction() {
+            freePositionCUDA(position_d);
+        }
+
+        virtual void evaluate(solver::ResidualBlock::Ptr residualBlock, const bool computeJacobians) const {
+            bool isJacobianRequired = computeJacobians;
+
+            auto fa1Params = residualBlock->getParameterBlocks()[0];
+            auto fa2Params = residualBlock->getParameterBlocks()[1];
+            auto ftParams = residualBlock->getParameterBlocks()[2];
+            auto fuParams = residualBlock->getParameterBlocks()[3];
+
+            C_Residuals c_residuals;
+            c_residuals.residual_d = residualBlock->getResiduals();
+            c_residuals.numResuduals = residualBlock->numResiduals();
+
+            C_Params c_params;
+            c_params.fa1Params_d = fa1Params->getParameters();
+            c_params.numa1 = fa1Params->numParameters();
+
+            c_params.fa2Params_d = fa2Params->getParameters();
+            c_params.numa2 = fa2Params->numParameters();
+
+            c_params.ftParams_d = ftParams->getParameters();
+            c_params.numt = ftParams->numParameters();
+
+            c_params.fuParams_d = fuParams->getParameters();
+            c_params.numu = fuParams->numParameters();
+
+            C_Jacobians c_jacobians;
+            c_jacobians.fa1Jacobian_d = fa1Params->getJacobians();
+            c_jacobians.numa1j = residualBlock->numResiduals() * fa1Params->numParameters();
+
+            c_jacobians.fa2Jacobian_d = fa2Params->getJacobians();
+            c_jacobians.numa2j = residualBlock->numResiduals() * fa2Params->numParameters();
+
+            c_jacobians.ftJacobian_d = ftParams->getJacobians();
+            c_jacobians.numtj = residualBlock->numResiduals() * ftParams->numParameters();
+
+            c_jacobians.fuJacobian_d = fuParams->getJacobians();
+            c_jacobians.numuj = residualBlock->numResiduals() * fuParams->numParameters();
+
+
+            calculateLandmarkLossCuda(position_d, cublasHandle, c_params, c_deformModel,
+                                  c_scanPointCloud, c_residuals, c_jacobians, weight, isJacobianRequired);
+        }
+
+    protected:
+        cublasHandle_t cublasHandle;
+        C_PcaDeformModel c_deformModel;
+        C_ScanPointCloud c_scanPointCloud;
+        float *position_d;
+
+        const float weight;
+    };
+
     class PCAGPUDistanceFunctor : public ceres::CostFunction {
     public:
         //TODO: If you are going to copy or move this object, implement 'the rule of 5'

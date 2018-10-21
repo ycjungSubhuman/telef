@@ -5,9 +5,10 @@
 #include <Eigen/Core>
 #include <cmath>
 
-#include "solver/solver.h"
-#include "solver/problem.h"
+#include "solver/gpu/gpuSolver.h"
+#include "solver/gpu/gpuProblem.h"
 #include "solver/costFunction.h"
+#include "solver/util/cudautil.h"
 
 #include "align/nonrigid_pipe.h"
 #include "align/cost_func.h"
@@ -131,26 +132,48 @@ namespace telef::align {
 
         /* Setup Optimizer */
         //std::cout << "Fitting PCA model to scan..." << std::endl;
-        auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
-        ceres::Problem problem;
-        double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
-        double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
-        double t[3] = {0.0,};
-        double u[3] = {3.14, 0.0, 0.0};
-        problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
 
-        if (addGeoTerm == true) {
-            auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle,
-                    geoMaxPoints*3,sqrtf(geoWeight), geoSearchRadius);
-            problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
-        }
-        problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
-        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
-        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);
-        ceres::Solver::Options options;
-        options.minimizer_progress_to_stdout = false;
-        options.max_num_iterations = 1000;
-        options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
+        auto solver = std::make_shared<solver::GPUSolver>();
+        auto problem = std::make_shared<solver::GPUProblem>();
+
+        std::vector<int> nParams = {2};
+        int nRes = 4;
+        auto cost = std::make_shared<PCALandmarkCudaFunction>(this->c_deformModel, c_scanPointCloud, cublasHandle);
+
+        float *shapeCoeff = new float[c_deformModel.shapeRank]{0,};
+        float *expressionCoeff = new float[c_deformModel.expressionRank]{0,};
+        float ft[3] = {0.0,};
+        float fu[3] = {3.14, 0.0, 0.0};
+        std::vector<float*> initParams = {shapeCoeff, expressionCoeff, ft, fu};
+
+        auto resFunc = problem->addResidualFunction(cost, initParams);
+        solver->options.max_iterations = 400;
+        solver->options.verbose = true;
+
+        solver->solve(problem);
+
+
+//        auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
+
+//        ceres::Problem problem;
+//        double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
+//        double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
+//        double t[3] = {0.0,};
+//        double u[3] = {3.14, 0.0, 0.0};
+//        problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+
+//        if (addGeoTerm == true) {
+//            auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle,
+//                    geoMaxPoints*3,sqrtf(geoWeight), geoSearchRadius);
+//            problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+//        }
+//        problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
+//        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
+//        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);
+//        ceres::Solver::Options options;
+//        options.minimizer_progress_to_stdout = false;
+//        options.max_num_iterations = 1000;
+//        options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
 //        options.minimizer_type = ceres::MinimizerType::LINE_SEARCH;
 //        options.line_search_direction_type = ceres::LineSearchDirectionType::NONLINEAR_CONJUGATE_GRADIENT;
 //        options.line_search = ceres::LineSearchDirectionType::NONLINEAR_CONJUGATE_GRADIENT;
@@ -158,16 +181,16 @@ namespace telef::align {
 //        options.line_search_type = ceres::LineSearchType::WOLFE;
 
         /* Run Optimization */
-        auto summary = ceres::Solver::Summary();
-        ceres::Solve(options, &problem, &summary);
-        std::cout << summary.FullReport() << std::endl;
+//        auto summary = ceres::Solver::Summary();
+//        ceres::Solve(options, &problem, &summary);
+//        std::cout << summary.FullReport() << std::endl;
 
-        float fu[3];
-        float ft[3];
+//        float fu[3];
+//        float ft[3];
         float r[9];
         float trans[16];
-        convertArray(t, ft, 3);
-        convertArray(u, fu, 3);
+//        convertArray(t, ft, 3);
+//        convertArray(u, fu, 3);
         calc_r_from_u(r, fu);
         create_trans_from_tu(trans, ft, r);
         Eigen::Map<Eigen::Matrix4f> eigenTrans(trans);
@@ -177,9 +200,9 @@ namespace telef::align {
 
         auto result = boost::make_shared<PCANonRigidFittingResult>();
         result->shapeCoeff =
-                Eigen::Map<Eigen::VectorXd>(shapeCoeff, c_deformModel.shapeRank).cast<float>();
+                Eigen::Map<Eigen::VectorXf>(shapeCoeff, c_deformModel.shapeRank)/*.cast<float>()*/;
         result->expressionCoeff =
-                Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
+                Eigen::Map<Eigen::VectorXf>(expressionCoeff, c_deformModel.expressionRank)/*.cast<float>()*/;
 
         std::cout << "Fitted(Shape): " << std::endl;
         std::cout << result->shapeCoeff << std::endl;

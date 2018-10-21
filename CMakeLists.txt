@@ -139,6 +139,7 @@ target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         TensorflowCC::Shared
 		stdc++fs
+		telef-solver
 		cutelef
 		${CERES_LIBRARIES}
         -lglog
@@ -158,7 +159,6 @@ target_link_libraries(telef
         -lGLEW
         -lGL
         glfw
-		telef-solver
 		)
 
 add_library(cutelef STATIC
