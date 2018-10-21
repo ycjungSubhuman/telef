@@ -5,6 +5,10 @@
 #include <Eigen/Core>
 #include <cmath>
 
+#include "solver/solver.h"
+#include "solver/problem.h"
+#include "solver/costFunction.h"
+
 #include "align/nonrigid_pipe.h"
 #include "align/cost_func.h"
 #include "face/model_cudahelper.h"
@@ -147,6 +151,11 @@ namespace telef::align {
         options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
         options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
+//        options.minimizer_type = ceres::MinimizerType::LINE_SEARCH;
+//        options.line_search_direction_type = ceres::LineSearchDirectionType::NONLINEAR_CONJUGATE_GRADIENT;
+//        options.line_search = ceres::LineSearchDirectionType::NONLINEAR_CONJUGATE_GRADIENT;
+//        options.nonlinear_conjugate_gradient_type = ceres::NonlinearConjugateGradientType::FLETCHER_REEVES;
+//        options.line_search_type = ceres::LineSearchType::WOLFE;
 
         /* Run Optimization */
         auto summary = ceres::Solver::Summary();

@@ -33,6 +33,7 @@ find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(dlib REQUIRED)
 find_package(TensorflowCC REQUIRED COMPONENTS Shared)
+#TODO? find_package(telef-solver REQUIRED)
 
 get_property(core_options TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS)
 string(REPLACE "-fPIC" "" new_core_options ${core_options})
@@ -157,6 +158,7 @@ target_link_libraries(telef
         -lGLEW
         -lGL
         glfw
+		telef-solver
 		)
 
 add_library(cutelef STATIC

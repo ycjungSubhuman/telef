@@ -89,8 +89,9 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                 const float *matA, int aRows, int aCols,
                 const float *matB, int bRows, int bCols) {
 
-    // Don't know what this is (scalar?) but examples use this
     cublasStatus_t status;
+
+    // Matrix Mult C = α op ( A ) op ( B ) + β C
     const float alf = 1;
     const float bet = 0;
     const float *alpha = &alf;
@@ -110,7 +111,7 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                         matA, aRows/*leading dim, ROWS?*/, //(4x4) or (mxk)
                         matB, bRows/*leading dim*/, //(4xN) or (kxn)
                         beta,
-                        matC, bRows/*leading dim*/); //(4xN) or (mxk)
+                        matC, aRows/*leading dim*/); //(4xN) or (mxk)
 
     if (status != CUBLAS_STATUS_SUCCESS) {
         throw std::runtime_error("MatMul Failed\n");
