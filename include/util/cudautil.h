@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <cuda_runtime_api.h>
+
 #ifdef DEBUG
 #define CUDA_CHECK(errarg)   __checkErrorFunc(errarg, __FILE__, __LINE__)
 #define CHECK_ERROR_MSG(errstr) __checkErrMsgFunc(errstr, __FILE__, __LINE__)

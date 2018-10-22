@@ -22,6 +22,9 @@ void _homogeneousPositions(float *h_position_d, const float *position_d, int nPo
 __global__
 void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPoints);
 
+__global__
+void _computeTransFromQ(float *trans, const float *u, const float *t);
+
 //
 //__device__
 //void convertXyzToUv(float *uv, const float* xyz, float fx, float fy, float cx, float cy);
@@ -79,6 +82,10 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
 void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *position_d,
                                const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                                cublasHandle_t cnpHandle);
+
+void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, float *position_d,
+                                   const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                                   cublasHandle_t cnpHandle);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model

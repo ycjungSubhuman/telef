@@ -85,6 +85,32 @@ void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPo
     }
 }
 
+__device__ __host__
+void createTransFrom_tu(float *trans, const float *t, const float *u) {
+    memcpy(&trans[0], &u[0], 3*sizeof(float));
+    memcpy(&trans[4], &u[3], 3*sizeof(float));
+    memcpy(&trans[8], &u[6], 3*sizeof(float));
+    memcpy(&trans[12], t, 3*sizeof(float));
+    trans[15] = 1;
+    trans[3] = 0;
+    trans[7] = 0;
+    trans[11] = 0;
+}
+
+__global__
+void _computeTransFromQ(float *trans, const float *u, const float *t) {
+
+    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
+
+    // grid-striding loop
+    for (int index = start_index; index < 1; index += stride) {
+        float r[9];
+        calc_r_from_u(r, u);
+        createTransFrom_tu(trans, t, r);
+    }
+}
+
 void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                 const float *matA, int aRows, int aCols,
                 const float *matB, int bRows, int bCols) {
@@ -289,6 +315,27 @@ void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d,
 
 }
 
+void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, float *position_d,
+                               const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
+                               cublasHandle_t cnpHandle){
+    // Calculate position_d
+    calculateVertexPosition(position_d, params, deformModel);
+
+    // Rigid alignment
+    applyRigidAlignment(align_pos_d, cnpHandle, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);
+
+    float *trans_d;
+    CUDA_CHECK(cudaMalloc((void **) &trans_d, 16*sizeof(float)));
+
+    dim3 dimBlock(1);
+    dim3 dimGrid(1);
+    _computeTransFromQ << < dimGrid, dimBlock >> > (trans_d, params.fuParams_d, params.ftParams_d);
+    cudaDeviceSynchronize();
+
+    applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
+    cudaFree(trans_d);
+}
+
 void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *position_d,
                                const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                                cublasHandle_t cnpHandle){
@@ -363,7 +410,7 @@ void calculateLandmarkLossCuda(float *position_d, cublasHandle_t cnpHandle, C_Pa
     // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
 
     // Calculate aligned positions
-    calculateAlignedPositions(result_pos_d, align_pos_d, position_d, params, deformModel, scanPointCloud, cnpHandle);
+    calculateAlignedPositionsCuda(result_pos_d, align_pos_d, position_d, params, deformModel, scanPointCloud, cnpHandle);
 
     /*
      * Compute Point Pairs (Correspondances)

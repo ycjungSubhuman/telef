@@ -147,7 +147,7 @@ namespace telef::align {
         std::vector<float*> initParams = {shapeCoeff, expressionCoeff, ft, fu};
 
         auto resFunc = problem->addResidualFunction(cost, initParams);
-        solver->options.max_iterations = 400;
+        solver->options.max_iterations = 1;
         solver->options.verbose = true;
 
         solver->solve(problem);

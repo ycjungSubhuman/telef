@@ -33,6 +33,8 @@ find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(dlib REQUIRED)
 find_package(TensorflowCC REQUIRED COMPONENTS Shared)
+#SET(CUDA_SEPARABLE_COMPILATION ON)
+#find_package(CUDA QUIET REQUIRED)
 #TODO? find_package(telef-solver REQUIRED)
 
 get_property(core_options TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS)
@@ -139,7 +141,6 @@ target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         TensorflowCC::Shared
 		stdc++fs
-		telef-solver
 		cutelef
 		${CERES_LIBRARIES}
         -lglog
@@ -159,6 +160,11 @@ target_link_libraries(telef
         -lGLEW
         -lGL
         glfw
+		-lcudadevrt
+		-lcudart
+		-lcusolver
+		cutelef-solver
+		telef-solver
 		)
 
 add_library(cutelef STATIC

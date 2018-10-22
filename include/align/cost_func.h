@@ -5,6 +5,7 @@
 #include <ceres/ceres.h>
 
 #include "solver/costFunction.h"
+#include "solver/gpu/cuda/cu_solver.h"
 
 #include "face/model.h"
 #include "face/model_cudahelper.h"
@@ -83,9 +84,13 @@ namespace telef::align{
             c_jacobians.fuJacobian_d = fuParams->getJacobians();
             c_jacobians.numuj = residualBlock->numResiduals() * fuParams->numParameters();
 
+            zeroResidualsCUDA(c_residuals);
+            zeroJacobiansCUDA(c_jacobians);
 
             calculateLandmarkLossCuda(position_d, cublasHandle, c_params, c_deformModel,
                                   c_scanPointCloud, c_residuals, c_jacobians, weight, isJacobianRequired);
+
+            print_array("PCALandmarkCudaFunction::residuals", residualBlock->getResiduals(), residualBlock->numResiduals());
         }
 
     protected:
