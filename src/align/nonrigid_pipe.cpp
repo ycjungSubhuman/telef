@@ -129,20 +129,24 @@ namespace telef::align {
         //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
-        double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
-        double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
-        double t[3] = {0.0,};
-        double u[3] = {3.14, 0.0, 0.0};
-        problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+        if(shapeCoeff.size() == 0) shapeCoeff.assign(c_deformModel.shapeRank,0);
+        if(expressionCoeff.size() == 0) expressionCoeff.assign(c_deformModel.expressionRank,0);
+        if(t.size() == 0) t.assign(3, 0.0);
+        if(u.size() == 0) u = {3.14, 0.0, 0.0};
+//        double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
+//        double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
+//        double t[3] = {0.0,};
+//        double u[3] = {3.14, 0.0, 0.0};
+        problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff.data(), expressionCoeff.data(), t.data(), u.data());
 
         if (addGeoTerm == true) {
             auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle,
                     geoMaxPoints*3,sqrtf(geoWeight), geoSearchRadius);
-            problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+            problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5), shapeCoeff.data(), expressionCoeff.data(), t.data(), u.data());
         }
-        problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
-        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
-        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);
+        problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff.data());
+        problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff.data());
+        problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff.data());
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
@@ -157,8 +161,8 @@ namespace telef::align {
         float ft[3];
         float r[9];
         float trans[16];
-        convertArray(t, ft, 3);
-        convertArray(u, fu, 3);
+        convertArray(t.data(), ft, 3);
+        convertArray(u.data(), fu, 3);
         calc_r_from_u(r, fu);
         create_trans_from_tu(trans, ft, r);
         Eigen::Map<Eigen::Matrix4f> eigenTrans(trans);
@@ -168,9 +172,9 @@ namespace telef::align {
 
         auto result = boost::make_shared<PCANonRigidFittingResult>();
         result->shapeCoeff =
-                Eigen::Map<Eigen::VectorXd>(shapeCoeff, c_deformModel.shapeRank).cast<float>();
+                Eigen::Map<Eigen::VectorXd>(shapeCoeff.data(), c_deformModel.shapeRank).cast<float>();
         result->expressionCoeff =
-                Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
+                Eigen::Map<Eigen::VectorXd>(expressionCoeff.data(), c_deformModel.expressionRank).cast<float>();
 
         std::cout << "Fitted(Shape): " << std::endl;
         std::cout << result->shapeCoeff << std::endl;
@@ -184,8 +188,8 @@ namespace telef::align {
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;
 
-        delete[] shapeCoeff;
-        delete[] expressionCoeff;
+//        delete[] shapeCoeff;
+//        delete[] expressionCoeff;
 
         return result;
     }
