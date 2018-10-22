@@ -138,7 +138,10 @@ namespace telef::align {
 
         std::vector<int> nParams = {2};
         int nRes = 4;
-        auto cost = std::make_shared<PCALandmarkCudaFunction>(this->c_deformModel, c_scanPointCloud, cublasHandle);
+        auto lmkcost = std::make_shared<PCALandmarkCudaFunction>(this->c_deformModel, c_scanPointCloud, cublasHandle);
+        auto l2lmkReg = std::make_shared<L2RegularizerFunctorCUDA>(c_deformModel.shapeRank, 0.0002);
+        auto lBarrierExpReg = std::make_shared<LinearBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.002, 10);
+        auto lUBarrierExpReg = std::make_shared<LinearUpperBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.0002, 2, 1.0);
 
         float *shapeCoeff = new float[c_deformModel.shapeRank]{0,};
         float *expressionCoeff = new float[c_deformModel.expressionRank]{0,};
@@ -146,12 +149,18 @@ namespace telef::align {
         float fu[3] = {3.14, 0.0, 0.0};
         std::vector<float*> initParams = {shapeCoeff, expressionCoeff, ft, fu};
 
-        auto resFunc = problem->addResidualFunction(cost, initParams);
-        solver->options.max_iterations = 1;
+        solver::ResidualFunction::Ptr lmkFunc = problem->addResidualFunction(lmkcost, initParams);
+        solver::ResidualFunction::Ptr l2LmkRegFunc = problem->addResidualFunction(l2lmkReg, {shapeCoeff});
+        solver::ResidualFunction::Ptr lBarrierExpRegFunc = problem->addResidualFunction(lBarrierExpReg, {expressionCoeff});
+        solver::ResidualFunction::Ptr lUBarrierExpRegFunc = problem->addResidualFunction(lUBarrierExpReg, {expressionCoeff});
+        l2LmkRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[0]);
+        lBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
+        lUBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
+
+        solver->options.max_iterations = 200;
         solver->options.verbose = true;
 
         solver->solve(problem);
-
 
 //        auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
 

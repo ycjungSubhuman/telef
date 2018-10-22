@@ -90,7 +90,7 @@ namespace telef::align{
             calculateLandmarkLossCuda(position_d, cublasHandle, c_params, c_deformModel,
                                   c_scanPointCloud, c_residuals, c_jacobians, weight, isJacobianRequired);
 
-            print_array("PCALandmarkCudaFunction::residuals", residualBlock->getResiduals(), residualBlock->numResiduals());
+//            print_array("PCALandmarkCudaFunction::residuals", residualBlock->getResiduals(), residualBlock->numResiduals());
         }
 
     protected:
@@ -100,6 +100,189 @@ namespace telef::align{
         float *position_d;
 
         const float weight;
+    };
+
+    class L2RegularizerFunctorCUDA : public telef::solver::CostFunction {
+    public:
+        L2RegularizerFunctorCUDA(int coeffSize, double multiplier)
+        : telef::solver::CostFunction(coeffSize, {coeffSize}),
+        coeffSize(coeffSize),
+        multiplier(multiplier)
+        {}
+
+        virtual ~L2RegularizerFunctorCUDA(){}
+
+        virtual void evaluate(solver::ResidualBlock::Ptr residualBlock, const bool computeJacobians) const {
+            float* params_d = residualBlock->getParameterBlocks()[0]->getParameters();
+            float* jacobi_d = residualBlock->getParameterBlocks()[0]->getJacobians();
+
+            // TODO: Reimplement in cuda
+            float* parameters = new float[coeffSize];
+            float* residuals = new float[coeffSize]{0.0,};
+            float* jacobians = new float[coeffSize*coeffSize]{0.0,};
+
+            cudaMemcpy(parameters, params_d, coeffSize * sizeof(float), cudaMemcpyDeviceToHost);
+            double sqrt_lambda = sqrt(multiplier);
+            for (int i=0; i<coeffSize; i++) {
+                residuals[i] = sqrt_lambda*parameters[i];
+            }
+
+            if(computeJacobians) {
+                for(int i=0; i<coeffSize; i++) {
+                    for (int j=0; j<coeffSize; j++) {
+                        jacobians[coeffSize*i + j] = 0;
+                    }
+                    jacobians[coeffSize*i + i] = sqrt_lambda;
+                }
+            }
+
+            // TODO: Reimplement in cuda
+            cudaMemcpy(residualBlock->getResiduals(), residuals, coeffSize * sizeof(float), cudaMemcpyHostToDevice);
+            if(computeJacobians) {
+                cudaMemcpy(jacobi_d, jacobians, coeffSize * coeffSize* sizeof(float), cudaMemcpyHostToDevice);
+            }
+
+            delete[] parameters;
+            delete[] residuals;
+            delete[] jacobians;
+
+            parameters = NULL;
+            residuals = NULL;
+            jacobians = NULL;
+        }
+    private:
+        int coeffSize;
+        double multiplier;
+    };
+
+    class LinearBarrierFunctorCUDA : public telef::solver::CostFunction {
+    public:
+        LinearBarrierFunctorCUDA(int coeffSize, double multiplier, double barrierSlope)
+                : telef::solver::CostFunction(coeffSize, {coeffSize}),
+                  coeffSize(coeffSize),
+                  multiplier(multiplier),
+                  barrierSlope(barrierSlope) {}
+
+        virtual ~LinearBarrierFunctorCUDA(){}
+
+        virtual void evaluate(solver::ResidualBlock::Ptr residualBlock, const bool computeJacobians) const {
+            float* params_d = residualBlock->getParameterBlocks()[0]->getParameters();
+            float* jacobi_d = residualBlock->getParameterBlocks()[0]->getJacobians();
+
+            // TODO: Reimplement in cuda
+            float* parameters = new float[coeffSize];
+            float* residuals = new float[coeffSize]{0.0,};
+            float* jacobians = new float[coeffSize*coeffSize]{0.0,};
+
+            cudaMemcpy(parameters, params_d, coeffSize * sizeof(float), cudaMemcpyDeviceToHost);
+
+            for (int i = 0; i < coeffSize; i++) {
+                const double x = parameters[i];
+                if(x < 0) {
+                    residuals[i] = sqrt(multiplier * (-barrierSlope * x));
+
+                    if(computeJacobians) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[coeffSize*i + j] = 0.0;
+                        }
+                        jacobians[coeffSize*i + i] = 0.5 * (1.0/residuals[i]) * (-multiplier*barrierSlope);
+                    }
+                }
+                else {
+                    residuals[i] = 0;
+
+                    if(computeJacobians) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[coeffSize*i + j] = 0.0;
+                        }
+                    }
+                }
+            }
+
+            cudaMemcpy(residualBlock->getResiduals(), residuals, coeffSize * sizeof(float), cudaMemcpyHostToDevice);
+            if(computeJacobians) {
+                cudaMemcpy(jacobi_d, jacobians, coeffSize * coeffSize* sizeof(float), cudaMemcpyHostToDevice);
+            }
+
+            delete[] parameters;
+            delete[] residuals;
+            delete[] jacobians;
+
+            parameters = NULL;
+            residuals = NULL;
+            jacobians = NULL;
+        }
+
+    private:
+        int coeffSize;
+        double multiplier;
+        double barrierSlope;
+    };
+
+    class LinearUpperBarrierFunctorCUDA : public telef::solver::CostFunction {
+    public:
+        LinearUpperBarrierFunctorCUDA(int coeffSize, double multiplier, double barrierSlope, double barrier)
+                : telef::solver::CostFunction(coeffSize, {coeffSize}),
+                  coeffSize(coeffSize),
+                  multiplier(multiplier),
+                  barrierSlope(barrierSlope),
+                  barrier(barrier) {}
+
+        virtual ~LinearUpperBarrierFunctorCUDA(){}
+
+        virtual void evaluate(solver::ResidualBlock::Ptr residualBlock, const bool computeJacobians) const {
+            float* params_d = residualBlock->getParameterBlocks()[0]->getParameters();
+            float* jacobi_d = residualBlock->getParameterBlocks()[0]->getJacobians();
+
+            // TODO: Reimplement in cuda
+            float* parameters = new float[coeffSize];
+            float* residuals = new float[coeffSize]{0.0,};
+            float* jacobians = new float[coeffSize*coeffSize]{0.0,};
+
+            cudaMemcpy(parameters, params_d, coeffSize * sizeof(float), cudaMemcpyDeviceToHost);
+
+            for (int i = 0; i < coeffSize; i++) {
+                const double x = parameters[i];
+                if(x > 0) {
+                    residuals[i] = sqrt(multiplier * (barrierSlope * x));
+
+                    if(computeJacobians) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[coeffSize*i + j] = 0.0;
+                        }
+                        jacobians[coeffSize*i + i] = 0.5 * (1.0/residuals[i]) * (multiplier*barrierSlope);
+                    }
+                }
+                else {
+                    residuals[i] = 0;
+
+                    if(computeJacobians) {
+                        for(int j=0; j<coeffSize; j++) {
+                            jacobians[coeffSize*i + j] = 0.0;
+                        }
+                    }
+                }
+            }
+
+            cudaMemcpy(residualBlock->getResiduals(), residuals, coeffSize * sizeof(float), cudaMemcpyHostToDevice);
+            if(computeJacobians) {
+                cudaMemcpy(jacobi_d, jacobians, coeffSize * coeffSize* sizeof(float), cudaMemcpyHostToDevice);
+            }
+
+            delete[] parameters;
+            delete[] residuals;
+            delete[] jacobians;
+
+            parameters = NULL;
+            residuals = NULL;
+            jacobians = NULL;
+        }
+
+    private:
+        int coeffSize;
+        double multiplier;
+        double barrierSlope;
+        double barrier;
     };
 
     class PCAGPUDistanceFunctor : public ceres::CostFunction {
