@@ -76,9 +76,7 @@ std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
 int main(int ac, const char* const *av) {
 
     google::InitGoogleLogging(av[0]);
-
-    float *d;
-    CUDA_CHECK(cudaMalloc((void**)(&d), sizeof(float)));
+    cudaDeviceReset();
 
     po::options_description desc("Captures RGB-D from camera. Generate and write face mesh as ply and obj");
     desc.add_options()
@@ -155,7 +153,7 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::ONE_FRAME_PER_ENTER);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(std::move(grabber), false);
