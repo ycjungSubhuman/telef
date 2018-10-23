@@ -67,9 +67,11 @@ namespace telef::align{
 
             c_params.ftParams_d = ftParams->getParameters();
             c_params.numt = ftParams->numParameters();
+            cudaMemcpy(c_params.ftParams_h, ftParams->getParameters(), c_params.numt * sizeof(float), cudaMemcpyDeviceToHost);
 
             c_params.fuParams_d = fuParams->getParameters();
             c_params.numu = fuParams->numParameters();
+            cudaMemcpy(c_params.fuParams_h, fuParams->getParameters(), c_params.numu * sizeof(float), cudaMemcpyDeviceToHost);
 
             C_Jacobians c_jacobians;
             c_jacobians.fa1Jacobian_d = fa1Params->getJacobians();
@@ -85,7 +87,9 @@ namespace telef::align{
             c_jacobians.numuj = residualBlock->numResiduals() * fuParams->numParameters();
 
             zeroResidualsCUDA(c_residuals);
-            zeroJacobiansCUDA(c_jacobians);
+            if (isJacobianRequired) {
+                zeroJacobiansCUDA(c_jacobians);
+            }
 
             calculateLandmarkLossCuda(position_d, cublasHandle, c_params, c_deformModel,
                                   c_scanPointCloud, c_residuals, c_jacobians, weight, isJacobianRequired);

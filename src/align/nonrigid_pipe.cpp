@@ -140,8 +140,8 @@ namespace telef::align {
         int nRes = 4;
         auto lmkcost = std::make_shared<PCALandmarkCudaFunction>(this->c_deformModel, c_scanPointCloud, cublasHandle);
         auto l2lmkReg = std::make_shared<L2RegularizerFunctorCUDA>(c_deformModel.shapeRank, 0.0002);
-        auto lBarrierExpReg = std::make_shared<LinearBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.002, 10);
-        auto lUBarrierExpReg = std::make_shared<LinearUpperBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.0002, 2, 1.0);
+        auto lBarrierExpReg = std::make_shared<LinearBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.02, 10);
+        auto lUBarrierExpReg = std::make_shared<LinearUpperBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.002, 2, 1.0);
 
         float *shapeCoeff = new float[c_deformModel.shapeRank]{0,};
         float *expressionCoeff = new float[c_deformModel.expressionRank]{0,};
@@ -159,6 +159,8 @@ namespace telef::align {
 
         solver->options.max_iterations = 200;
         solver->options.verbose = true;
+        solver->options.target_error_change = 1e-8;
+        solver->options.lambda_initial = 1e-1;
 
         solver->solve(problem);
 
@@ -217,6 +219,14 @@ namespace telef::align {
         std::cout << result->shapeCoeff << std::endl;
         std::cout << "Fitted(Expression): " << std::endl;
         std::cout << result->expressionCoeff << std::endl;
+        for (int i = 0; i < 3; i++){
+            printf("u[%d]:%.5f\n", i, fu[i]);
+        }
+
+        for (int i = 0; i < 3; i++){
+            printf("t[%d]:%.5f\n", i, ft[i]);
+        }
+
         result->image = in->image;
         result->pca_model = in->pca_model;
         result->cloud = in->rawCloud;

@@ -12,6 +12,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+
 #include "util/cudautil.h"
 #include "util/cu_quaternion.h"
 #include "align/cu_loss.h"
@@ -20,7 +21,8 @@
 #define BLOCKSIZE 128
 
 __global__
-void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
+void _calculateVertexPosition(float *position_d, const float *fa1Params_d, const float *fa2Params_d,
+                              const C_PcaDeformModel deformModel) {
     int start_index = threadIdx.x + blockIdx.x * blockDim.x;
     int stride = blockDim.x * gridDim.x; // total number of threads in the grid
 
@@ -31,11 +33,11 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
 
         position_d[i] = 0;
         for (int j = 0; j < deformModel.shapeRank; j++) {
-            position_d[i] += params.fa1Params_d[j] * deformModel.shapeDeformBasis_d[i + colDim * j];
+            position_d[i] += fa1Params_d[j] * deformModel.shapeDeformBasis_d[i + colDim * j];
         }
 
         for (int j = 0; j < deformModel.expressionRank; j++) {
-            position_d[i] += params.fa2Params_d[j] * deformModel.expressionDeformBasis_d[i + colDim * j];
+            position_d[i] += fa2Params_d[j] * deformModel.expressionDeformBasis_d[i + colDim * j];
         }
 
         position_d[i] +=
@@ -45,12 +47,22 @@ void _calculateVertexPosition(float *position_d, const C_Params params, const C_
     }
 }
 
+
 void calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel) {
     int idim = deformModel.dim;
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
 
-    _calculateVertexPosition << < dimGrid, dimBlock >> > (position_d, params, deformModel);
+    _calculateVertexPosition << < dimGrid, dimBlock >> > (position_d, params.fa1Params_d, params.fa2Params_d, deformModel);
+    CHECK_ERROR_MSG("Kernel Error");
+}
+
+void calculateVertexPosition(float *position_d, const float *fa1Params_d, const float *fa2Params_d, const C_PcaDeformModel deformModel) {
+    int idim = deformModel.dim;
+    dim3 dimBlock(BLOCKSIZE);
+    dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
+
+    _calculateVertexPosition << < dimGrid, dimBlock >> > (position_d, fa1Params_d, fa2Params_d, deformModel);
     CHECK_ERROR_MSG("Kernel Error");
 }
 
@@ -86,10 +98,10 @@ void _hnormalizedPositions(float *position_d, const float *h_position_d, int nPo
 }
 
 __device__ __host__
-void createTransFrom_tu(float *trans, const float *t, const float *u) {
-    memcpy(&trans[0], &u[0], 3*sizeof(float));
-    memcpy(&trans[4], &u[3], 3*sizeof(float));
-    memcpy(&trans[8], &u[6], 3*sizeof(float));
+void createTransFrom_tr(float *trans, const float *t, const float *r) {
+    memcpy(&trans[0], &r[0], 3*sizeof(float));
+    memcpy(&trans[4], &r[3], 3*sizeof(float));
+    memcpy(&trans[8], &r[6], 3*sizeof(float));
     memcpy(&trans[12], t, 3*sizeof(float));
     trans[15] = 1;
     trans[3] = 0;
@@ -99,16 +111,9 @@ void createTransFrom_tu(float *trans, const float *t, const float *u) {
 
 __global__
 void _computeTransFromQ(float *trans, const float *u, const float *t) {
-
-    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
-    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
-
-    // grid-striding loop
-    for (int index = start_index; index < 1; index += stride) {
-        float r[9];
-        calc_r_from_u(r, u);
-        createTransFrom_tu(trans, t, r);
-    }
+    float r[9];
+    calc_r_from_u(r, u);
+    createTransFrom_tr(trans, t, r);
 }
 
 void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
@@ -315,14 +320,42 @@ void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d,
 
 }
 
+__global__
+void _print_array(const float *arr_d, const int n) {
+    int start_index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x; // total number of threads in the grid
+
+
+    // grid-striding loop
+    for (int i = start_index; i < n; i += stride) {
+
+        printf("Element[%d]: %.5f\n", i, arr_d[i]);
+//        arr_d[i] += 1;
+    }
+}
+
+void print_array_msg(const char* msg, const float *arr_d, const int n) {
+    dim3 dimBlock(BLOCKSIZE);
+    dim3 dimGrid((n + BLOCKSIZE - 1) / BLOCKSIZE);
+
+    printf("%s:\n", msg);
+    _print_array << < dimGrid, dimBlock >> > (arr_d, n);
+    cudaDeviceSynchronize();
+    printf("\n");
+}
+
 void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, float *position_d,
                                const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                                cublasHandle_t cnpHandle){
     // Calculate position_d
-    calculateVertexPosition(position_d, params, deformModel);
+    calculateVertexPosition(position_d, params.fa1Params_d, params.fa2Params_d, deformModel);
+
+    print_array_msg("a1", params.fa1Params_d, params.numa1);
 
     // Rigid alignment
     applyRigidAlignment(align_pos_d, cnpHandle, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);
+
+    print_array_msg("RigidTrans", scanPointCloud.rigidTransform_d, 16);
 
     float *trans_d;
     CUDA_CHECK(cudaMalloc((void **) &trans_d, 16*sizeof(float)));
@@ -331,8 +364,12 @@ void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, floa
     dim3 dimGrid(1);
     _computeTransFromQ << < dimGrid, dimBlock >> > (trans_d, params.fuParams_d, params.ftParams_d);
     cudaDeviceSynchronize();
+    print_array_msg("u", params.fuParams_d, params.numu);
+    print_array_msg("t", params.ftParams_d, params.numt);
+    print_array_msg("Transformation", trans_d, 16);
 
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
+    cudaDeviceSynchronize();
     cudaFree(trans_d);
 }
 
@@ -361,7 +398,6 @@ void calculatePointPairLossCuda(PointPair point_pair, C_Params params, C_PcaDefo
 
     if (point_pair.point_count > 0) {
         calc_residual_point_pair(c_residuals.residual_d, point_pair, weight);
-
     }
 
     if (isJacobianRequired) {
@@ -379,7 +415,9 @@ void calculatePointPairLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                             C_Residuals c_residuals, C_Jacobians c_jacobians,
                             const float weight, const bool isJacobianRequired) {
 
-    calculatePointPairLossCuda(point_pair, params, deformModel, c_residuals, c_jacobians, weight, isJacobianRequired);
+    if (point_pair.point_count > 0) {
+        calc_residual_point_pair(c_residuals.residual_d, point_pair, weight);
+    }
 
     /*
      * Copy computed residual to Host
@@ -387,6 +425,12 @@ void calculatePointPairLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
     CUDA_CHECK(cudaMemcpy(residual, c_residuals.residual_d, c_residuals.numResuduals*sizeof(float), cudaMemcpyDeviceToHost));
 
     if (isJacobianRequired) {
+        // Compute Jacobians for each parameter
+        if (point_pair.point_count > 0) {
+            calc_derivatives_point_pair(c_jacobians.ftJacobian_d, c_jacobians.fuJacobian_d,
+                                        c_jacobians.fa1Jacobian_d, c_jacobians.fa2Jacobian_d,
+                                        params.fuParams_d, deformModel, point_pair, weight);
+        }
         /*
          * Copy computed jacobian to Host
          */

@@ -4,6 +4,7 @@
 #include <float.h>
 #include <cuda_runtime_api.h>
 #include <cublas_v2.h>
+
 #include "align/cu_loss.h"
 #include "face/raw_model.h"
 
@@ -12,9 +13,12 @@ const int NO_CORRESPONDENCE_I = INT_MAX;
 const float INF_F = FLT_MAX;
 
 __global__
-void _calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel);
+void _calculateVertexPosition(float *position_d, const float *fa1Params_d, const float *fa2Params_d,
+                              const C_PcaDeformModel deformModel);
 
 void calculateVertexPosition(float *position_d, const C_Params params, const C_PcaDeformModel deformModel);
+void calculateVertexPosition(float *position_d, const float *fa1Params_d, const float *fa2Params_d, const C_PcaDeformModel deformModel);
+
 
 __global__
 void _homogeneousPositions(float *h_position_d, const float *position_d, int nPoints);
