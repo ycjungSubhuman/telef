@@ -76,7 +76,7 @@ std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
 int main(int ac, const char* const *av) {
 
     google::InitGoogleLogging(av[0]);
-    cudaDeviceReset();
+//    cudaDeviceReset();
 
     po::options_description desc("Captures RGB-D from camera. Generate and write face mesh as ply and obj");
     desc.add_options()
@@ -138,7 +138,7 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<MorphableFaceModel> model;
     model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
 
-    auto modelFeeder = MorphableModelFeederPipe(model);
+    auto modelFeeder = MorphableModelFeederPipe(model); //PCARigidFittingPipe(model);
     std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult >> merger;
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
     auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
