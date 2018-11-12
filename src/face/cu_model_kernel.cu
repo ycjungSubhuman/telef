@@ -393,21 +393,21 @@ void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *p
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
 }
 
-void calculatePointPairLossCuda(PointPair point_pair, C_Params params, C_PcaDeformModel deformModel,
-                            C_Residuals c_residuals, C_Jacobians c_jacobians,
-                            const float weight, const bool isJacobianRequired) {
+void calculatePointPairs(PointPair &point_pair, float *position_d, cublasHandle_t cnpHandle, C_Params params,
+                         C_PcaDeformModel deformModel,
+                         C_ScanPointCloud scanPointCloud) {
+    // Calculate aligned positions
+    calculateAlignedPositionsCuda(point_pair.mesh_position_d, point_pair.mesh_positoin_before_transform_d, position_d,
+                                  params, deformModel, scanPointCloud, cnpHandle);
 
+    // Calculate Correspondances
+    calculateLandmarkIndices<<<1,scanPointCloud.numLmks>>>
+                                 (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
+}
+
+void calculatePointPairLossCuda(C_Residuals c_residuals, PointPair point_pair, const float weight) {
     if (point_pair.point_count > 0) {
         calc_residual_point_pair(c_residuals.residual_d, point_pair, weight);
-    }
-
-    if (isJacobianRequired) {
-        // Compute Jacobians for each parameter
-        if (point_pair.point_count > 0) {
-            calc_derivatives_point_pair(c_jacobians.ftJacobian_d, c_jacobians.fuJacobian_d,
-                                        c_jacobians.fa1Jacobian_d, c_jacobians.fa2Jacobian_d,
-                                        params.fuParams_d, deformModel, point_pair, weight);
-        }
     }
 }
 
@@ -442,45 +442,15 @@ void calculatePointPairLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
     }
 }
 
-void calculateLandmarkLossCuda(float *position_d, cublasHandle_t cnpHandle, C_Params params, C_PcaDeformModel deformModel,
-                               C_ScanPointCloud scanPointCloud, C_Residuals c_residuals, C_Jacobians c_jacobians,
-                               const float weight, const bool isJacobianRequired) {
+void calculatePointPairDerivatives(C_Jacobians c_jacobians, PointPair point_pair, C_Params params, C_PcaDeformModel deformModel,
+        const float weight) {
 
-    float *align_pos_d, *result_pos_d;
-
-
-    // Allocate memory for Rigid aligned positions
-    CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
-    CUDA_CHECK(cudaMalloc((void **) &result_pos_d, deformModel.dim * sizeof(float)));
-    // CuUDA Kernels run synchronously by default, to run asynchronously must explicitly specify streams
-
-    // Calculate aligned positions
-    calculateAlignedPositionsCuda(result_pos_d, align_pos_d, position_d, params, deformModel, scanPointCloud, cnpHandle);
-
-    /*
-     * Compute Point Pairs (Correspondances)
-     */
-    PointPair point_pair{
-            .mesh_position_d=result_pos_d,
-            .mesh_positoin_before_transform_d=align_pos_d,
-            .ref_position_d=scanPointCloud.scanLandmark_d,
-            .mesh_corr_inds_d=nullptr,
-            .ref_corr_inds_d=nullptr,
-            .point_count=scanPointCloud.numLmks
-    };
-    CUDA_MALLOC(&point_pair.mesh_corr_inds_d, static_cast<size_t>(scanPointCloud.numLmks));
-    CUDA_MALLOC(&point_pair.ref_corr_inds_d, static_cast<size_t>(scanPointCloud.numLmks));
-
-    calculateLandmarkIndices<<<1,scanPointCloud.numLmks>>>
-                                 (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
-
-    // Calculate residual & jacobian for Landmarks
-    calculatePointPairLossCuda(point_pair, params, deformModel, c_residuals, c_jacobians, weight, isJacobianRequired);
-
-    CUDA_CHECK(cudaFree(align_pos_d));
-    CUDA_CHECK(cudaFree(result_pos_d));
-    CUDA_FREE(point_pair.mesh_corr_inds_d);
-    CUDA_FREE(point_pair.ref_corr_inds_d);
+    // Compute Jacobians for each parameter
+    if (point_pair.point_count > 0) {
+        calc_derivatives_point_pair(c_jacobians.ftJacobian_d, c_jacobians.fuJacobian_d,
+                                    c_jacobians.fa1Jacobian_d, c_jacobians.fa2Jacobian_d,
+                                    params.fuParams_d, deformModel, point_pair, weight);
+    }
 }
 
 void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobian, float *ftJacobian, float *fuJacobian,

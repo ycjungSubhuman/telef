@@ -179,6 +179,7 @@ void freeParamsCUDA(C_Params params) {
     delete[] params.fuParams_h;
 }
 
+
 void allocPositionCUDA(float **position_d, int dim) {
     CUDA_CHECK(cudaMalloc((void**)(position_d), dim*sizeof(float)));
 }

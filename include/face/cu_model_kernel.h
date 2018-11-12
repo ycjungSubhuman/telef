@@ -91,6 +91,10 @@ void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, floa
                                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                                    cublasHandle_t cnpHandle);
 
+void calculatePointPairs(PointPair &point_pair, float *position_d, cublasHandle_t cnpHandle, C_Params params,
+                         C_PcaDeformModel deformModel,
+                         C_ScanPointCloud scanPointCloud);
+
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model
  *
@@ -102,10 +106,9 @@ void calculatePointPairLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                             C_Residuals c_residuals, C_Jacobians c_jacobians,
                             const float weight, const bool isJacobianRequired);
 
-void calculatePointPairLossCuda(PointPair point_pair, C_Params params, C_PcaDeformModel deformModel,
-                                C_Residuals c_residuals, C_Jacobians c_jacobians,
-                                const float weight, const bool isJacobianRequired);
-
+void calculatePointPairLossCuda(C_Residuals c_residuals, PointPair point_pair, const float weight);
+void calculatePointPairDerivatives(C_Jacobians c_jacobians, PointPair point_pair, C_Params params, C_PcaDeformModel deformModel,
+                                   const float weight);
 
 /**
  * Calculate residual and jacobian of the loss function representing distance btw scan and model

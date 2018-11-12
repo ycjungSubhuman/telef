@@ -159,10 +159,10 @@ namespace telef::align {
 
         solver->options.max_iterations = 200;
         solver->options.verbose = true;
-        solver->options.target_error_change = 1e-8;
-        solver->options.lambda_initial = 1e-1;
-        solver->options.step_down = 10;
-        solver->options.step_up = 2;
+//        solver->options.target_error_change = 1e-8;
+//        solver->options.lambda_initial = 1e-1;
+//        solver->options.step_down = 10;
+//        solver->options.step_up = 2;
 
         solver->solve(problem);
 
