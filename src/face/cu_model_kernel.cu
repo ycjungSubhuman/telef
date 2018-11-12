@@ -351,6 +351,7 @@ void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, floa
     calculateVertexPosition(position_d, params.fa1Params_d, params.fa2Params_d, deformModel);
 
     print_array_msg("a1", params.fa1Params_d, params.numa1);
+    print_array_msg("a2", params.fa2Params_d, params.numa2);
 
     // Rigid alignment
     applyRigidAlignment(align_pos_d, cnpHandle, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);

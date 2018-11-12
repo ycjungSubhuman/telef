@@ -139,7 +139,7 @@ namespace telef::align {
         std::vector<int> nParams = {2};
         int nRes = 4;
         auto lmkcost = std::make_shared<PCALandmarkCudaFunction>(this->c_deformModel, c_scanPointCloud, cublasHandle);
-        auto l2lmkReg = std::make_shared<L2RegularizerFunctorCUDA>(c_deformModel.shapeRank, 0.0002);
+        auto l2lmkReg = std::make_shared<L2RegularizerFunctorCUDA>(c_deformModel.shapeRank, 0.002);
         auto lBarrierExpReg = std::make_shared<LinearBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.02, 10);
         auto lUBarrierExpReg = std::make_shared<LinearUpperBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.002, 2, 1.0);
 
@@ -161,6 +161,8 @@ namespace telef::align {
         solver->options.verbose = true;
         solver->options.target_error_change = 1e-8;
         solver->options.lambda_initial = 1e-1;
+        solver->options.step_down = 10;
+        solver->options.step_up = 2;
 
         solver->solve(problem);
 
