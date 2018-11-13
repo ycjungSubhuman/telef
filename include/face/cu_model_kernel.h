@@ -91,7 +91,7 @@ void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, floa
                                    const C_Params params, const C_PcaDeformModel deformModel, const C_ScanPointCloud scanPointCloud,
                                    cublasHandle_t cnpHandle);
 
-void calculatePointPairs(PointPair &point_pair, float *position_d, cublasHandle_t cnpHandle, C_Params params,
+void calculatePointPairs(PointPair point_pair, float *position_d, cublasHandle_t cnpHandle, C_Params params,
                          C_PcaDeformModel deformModel,
                          C_ScanPointCloud scanPointCloud);
 

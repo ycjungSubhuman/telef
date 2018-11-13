@@ -52,7 +52,6 @@ void calculateVertexPosition(float *position_d, const C_Params params, const C_P
     int idim = deformModel.dim;
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
-
     _calculateVertexPosition << < dimGrid, dimBlock >> > (position_d, params.fa1Params_d, params.fa2Params_d, deformModel);
     CHECK_ERROR_MSG("Kernel Error");
 }
@@ -340,6 +339,7 @@ void print_array_msg(const char* msg, const float *arr_d, const int n) {
 
     printf("%s:\n", msg);
     _print_array << < dimGrid, dimBlock >> > (arr_d, n);
+    CHECK_ERROR_MSG("Kernel Error");
     cudaDeviceSynchronize();
     printf("\n");
 }
@@ -350,11 +350,13 @@ void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, floa
     // Calculate position_d
     calculateVertexPosition(position_d, params.fa1Params_d, params.fa2Params_d, deformModel);
 
+    /*
     print_array_msg("a1", params.fa1Params_d, params.numa1);
     print_array_msg("a2", params.fa2Params_d, params.numa2);
-
+    */
     // Rigid alignment
     applyRigidAlignment(align_pos_d, cnpHandle, position_d, scanPointCloud.rigidTransform_d, deformModel.dim / 3);
+
 
     print_array_msg("RigidTrans", scanPointCloud.rigidTransform_d, 16);
 
@@ -364,11 +366,21 @@ void calculateAlignedPositionsCuda(float *result_pos_d, float *align_pos_d, floa
     dim3 dimBlock(1);
     dim3 dimGrid(1);
     _computeTransFromQ << < dimGrid, dimBlock >> > (trans_d, params.fuParams_d, params.ftParams_d);
+    CHECK_ERROR_MSG("Kernel Error");
     cudaDeviceSynchronize();
     print_array_msg("u", params.fuParams_d, params.numu);
     print_array_msg("t", params.ftParams_d, params.numt);
     print_array_msg("Transformation", trans_d, 16);
+    /*
+    float r[9];
+    float trans[16];
+    float *trans_d;
+    CUDA_CHECK(cudaMalloc((void **) &trans_d, 16*sizeof(float)));
 
+    calc_r_from_u(r, params.fuParams_h);
+    create_trans_from_tu(trans, params.ftParams_h, r);
+    CUDA_CHECK(cudaMemcpy(trans_d, trans, 16* sizeof(float), cudaMemcpyHostToDevice));
+    */
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
     cudaDeviceSynchronize();
     cudaFree(trans_d);
@@ -393,16 +405,20 @@ void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *p
     applyRigidAlignment(result_pos_d, cnpHandle, align_pos_d, trans_d, deformModel.dim / 3);
 }
 
-void calculatePointPairs(PointPair &point_pair, float *position_d, cublasHandle_t cnpHandle, C_Params params,
+void calculatePointPairs(PointPair point_pair, float *position_d, cublasHandle_t cnpHandle, C_Params params,
                          C_PcaDeformModel deformModel,
                          C_ScanPointCloud scanPointCloud) {
     // Calculate aligned positions
-    calculateAlignedPositionsCuda(point_pair.mesh_position_d, point_pair.mesh_positoin_before_transform_d, position_d,
-                                  params, deformModel, scanPointCloud, cnpHandle);
+    // CHECK_ERROR_MSG("Kernel Error");
+    calculateAlignedPositions(point_pair.mesh_position_d, point_pair.mesh_positoin_before_transform_d, position_d,
+            params, deformModel, scanPointCloud, cnpHandle);
 
     // Calculate Correspondances
     calculateLandmarkIndices<<<1,scanPointCloud.numLmks>>>
                                  (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
+    CHECK_ERROR_MSG("Kernel Error");
+    cudaDeviceSynchronize();
+
 }
 
 void calculatePointPairLossCuda(C_Residuals c_residuals, PointPair point_pair, const float weight) {

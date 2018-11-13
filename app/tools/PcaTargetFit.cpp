@@ -138,7 +138,8 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<MorphableFaceModel> model;
     model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
 
-    auto modelFeeder = MorphableModelFeederPipe(model); //PCARigidFittingPipe(model);
+    auto modelFeeder = MorphableModelFeederPipe(model);
+    //auto modelFeeder = PCARigidFittingPipe(model);
     std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult >> merger;
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
     auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
