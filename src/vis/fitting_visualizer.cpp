@@ -211,55 +211,58 @@ namespace {
         int nMeshPoints = mesh.position.rows()/3;
         int nMeshSize = mesh.position.rows();
 
-        //Device
-        int* meshCorr_d;
-        int* scanCorr_d;
-        float* distance_d;
-        int* numCorr_d;
-
-        float* mesh_d;
-        CUDA_CHECK(cudaMalloc((void**)(&meshCorr_d), geoMaxPoints*sizeof(int)));
-        CUDA_CHECK(cudaMalloc((void**)(&scanCorr_d), geoMaxPoints*sizeof(int)));
-        CUDA_CHECK(cudaMalloc((void**)(&distance_d), geoMaxPoints*sizeof(float)));
-        CUDA_CHECK(cudaMalloc((void**)(&numCorr_d), sizeof(int)));
-
-        CUDA_CHECK(cudaMalloc((void**)(&mesh_d), nMeshSize*sizeof(float)));
-        CUDA_CHECK(cudaMemcpy(mesh_d,mesh.position.data(), nMeshSize*sizeof(float), cudaMemcpyHostToDevice));
-
-        C_ScanPointCloud scan;
-        loadScanToCUDADevice(&scan, input->cloud, input->fx, input->fy, scanLmkIdx, input->transformation, emptyLmks);
-
-        find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan,
-                               geoRadius, geoMaxPoints);
-
-        CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
-
-        if (numCorr > geoMaxPoints){
-            numCorr = geoMaxPoints;
-            cout << "Corrected NumCorr:" << numCorr << endl;
-        }
-        meshGeoIdx.resize(numCorr);
-        scanGeoIdx.resize(numCorr);
-
-        CUDA_CHECK(cudaMemcpy(meshGeoIdx.data(), meshCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
-        CUDA_CHECK(cudaMemcpy(scanGeoIdx.data(), scanCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
-
-        CUDA_CHECK(cudaFree(meshCorr_d));
-        CUDA_CHECK(cudaFree(scanCorr_d));
-        CUDA_CHECK(cudaFree(distance_d));
-        CUDA_CHECK(cudaFree(mesh_d));
-        freeScanCUDA(scan);
         std::vector<float> meshGeo, scanGeo;
-        for (int idx = 0; idx < numCorr; idx++)
-        {
-            auto scanPnt = input->cloud->at(scanGeoIdx[idx]);
-            scanGeo.push_back(scanPnt.x);
-            scanGeo.push_back(scanPnt.y);
-            scanGeo.push_back(scanPnt.z);
+        if (geoMaxPoints > 0) {
+            //Device
+            int *meshCorr_d;
+            int *scanCorr_d;
+            float *distance_d;
+            int *numCorr_d;
 
-            meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]));
-            meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+1));
-            meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+2));
+            float *mesh_d;
+            CUDA_CHECK(cudaMalloc((void **) (&meshCorr_d), geoMaxPoints * sizeof(int)));
+            CUDA_CHECK(cudaMalloc((void **) (&scanCorr_d), geoMaxPoints * sizeof(int)));
+            CUDA_CHECK(cudaMalloc((void **) (&distance_d), geoMaxPoints * sizeof(float)));
+            CUDA_CHECK(cudaMalloc((void **) (&numCorr_d), sizeof(int)));
+
+            CUDA_CHECK(cudaMalloc((void **) (&mesh_d), nMeshSize * sizeof(float)));
+            CUDA_CHECK(cudaMemcpy(mesh_d, mesh.position.data(), nMeshSize * sizeof(float), cudaMemcpyHostToDevice));
+
+            C_ScanPointCloud scan;
+            loadScanToCUDADevice(&scan, input->cloud, input->fx, input->fy, scanLmkIdx, input->transformation,
+                                 emptyLmks);
+
+            find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d, mesh_d, nMeshSize, scan,
+                                   geoRadius, geoMaxPoints);
+
+            CUDA_CHECK(cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
+
+            if (numCorr > geoMaxPoints) {
+                numCorr = geoMaxPoints;
+                cout << "Corrected NumCorr:" << numCorr << endl;
+            }
+            meshGeoIdx.resize(numCorr);
+            scanGeoIdx.resize(numCorr);
+
+            CUDA_CHECK(cudaMemcpy(meshGeoIdx.data(), meshCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
+            CUDA_CHECK(cudaMemcpy(scanGeoIdx.data(), scanCorr_d, numCorr * sizeof(int), cudaMemcpyDeviceToHost));
+
+            CUDA_CHECK(cudaFree(meshCorr_d));
+            CUDA_CHECK(cudaFree(scanCorr_d));
+            CUDA_CHECK(cudaFree(distance_d));
+            CUDA_CHECK(cudaFree(mesh_d));
+            freeScanCUDA(scan);
+
+            for (int idx = 0; idx < numCorr; idx++) {
+                auto scanPnt = input->cloud->at(scanGeoIdx[idx]);
+                scanGeo.push_back(scanPnt.x);
+                scanGeo.push_back(scanPnt.y);
+                scanGeo.push_back(scanPnt.z);
+
+                meshGeo.push_back(mesh.position(3 * meshGeoIdx[idx]));
+                meshGeo.push_back(mesh.position(3 * meshGeoIdx[idx] + 1));
+                meshGeo.push_back(mesh.position(3 * meshGeoIdx[idx] + 2));
+            }
         }
 
         return Frame {.mesh=mesh, .vertexNormal=vertexNormal, .cloud=cloud, .image=image,
