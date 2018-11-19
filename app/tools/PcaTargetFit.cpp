@@ -109,11 +109,16 @@ int main(int ac, const char* const *av) {
     std::string detectModelPath = vm["detector"].as<std::string>();
     std::string prnetGraphPath = vm["graph"].as<std::string>();
     std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
-    float geoWeight = vm["geo-weight"].as<float>();
-    float geoSearchRadius = vm["geo-radius"].as<float>();
-    int geoMaxPoints = vm["geo-max-points"].as<int>();
+
+    float geoWeight = 0.f;
+    float geoSearchRadius = 0.f;
+    int geoMaxPoints = 0;
     bool addGeoTerm = vm.count("geo")>0;
+
     if (addGeoTerm) {
+        float geoWeight = vm["geo-weight"].as<float>();
+        float geoSearchRadius = vm["geo-radius"].as<float>();
+        int geoMaxPoints = vm["geo-max-points"].as<int>();
         std::cout << "Adding Geo Term..." << std::endl;
     }
 
