@@ -147,6 +147,25 @@ namespace telef::align {
         float *expressionCoeff = new float[c_deformModel.expressionRank]{0,};
         float ft[3] = {0.0,};
         float fu[3] = {3.14, 0.0, 0.0};
+        /* Correct:
+         * u[0]:3.21114
+            u[1]:-0.05908
+            u[2]:-0.02889
+            t[0]:-0.05475
+            t[1]:-0.06618
+            t[2]:0.91666
+
+         * VS
+         * cuda-solver
+         * u[0]:3.72552
+            u[1]:0.93487
+            u[2]:0.36055
+            t[0]:0.02074
+            t[1]:0.02381
+            t[2]:0.03416
+        */
+        //float ft[3] = {-0.05475, -0.06618, 0.91666};
+        //float fu[3] = {3.21114, -0.05908, -0.02889};
         std::vector<float*> initParams = {shapeCoeff, expressionCoeff, ft, fu};
 
         solver::ResidualFunction::Ptr lmkFunc = problem->addResidualFunction(lmkcost, initParams);
@@ -159,10 +178,9 @@ namespace telef::align {
 
         solver->options.max_iterations = 200;
         solver->options.verbose = true;
+        solver->options.gradient_tolerance = 10-12;
 //        solver->options.target_error_change = 1e-8;
 //        solver->options.lambda_initial = 1e-1;
-//        solver->options.step_down = 10;
-//        solver->options.step_up = 2;
 
         solver->solve(problem);
 
