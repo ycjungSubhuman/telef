@@ -79,6 +79,9 @@ namespace telef::vis {
         float theta;
         float translation[3];
         float zoom;
+        float fx;
+        float fy;
+
 
         // 0: Color, 1: No Color, 2: wireframe
         static constexpr int meshModeCount = 3;

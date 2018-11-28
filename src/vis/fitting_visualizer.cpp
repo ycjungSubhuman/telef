@@ -13,6 +13,9 @@
 #include "face/raw_model.h"
 #include "io/ply/meshio.h"
 
+#include <cv.h>
+#include <highgui.h>
+
 namespace {
     using namespace telef::vis;
     using namespace telef::mesh;
@@ -49,7 +52,8 @@ namespace {
     }
 
     GLFWwindow *getWindow (FittingVisualizer *visualizer) {
-        auto window = glfwCreateWindow(1920, 1080, "Fitting Visualizer", NULL, NULL);
+//        auto window = glfwCreateWindow(1920, 1080, "Fitting Visualizer", NULL, NULL);
+        auto window = glfwCreateWindow(640, 480, "Fitting Visualizer", NULL, NULL);
         if(!window) {
             killGlfw("Error on GLFW window creation");
         }
@@ -169,11 +173,14 @@ namespace {
         std::vector<float> meshLandmarks;
         std::vector<float> scanGeo;
         std::vector<float> meshGeo;
+        float fx;
+        float fy;
     };
 
     Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input, const int geoMaxPoints, const float geoRadius) {
         auto model = input->pca_model;
         auto mesh = model->genMesh(input->shapeCoeff, input->expressionCoeff);
+
 
         mesh.vertexNormals = std::vector<float>(static_cast<unsigned long>(mesh.position.size()), 0.0f);
         for(int i=0; i<mesh.triangles.size(); i++) {
@@ -281,7 +288,8 @@ namespace {
         return Frame {.mesh=mesh, .vertexNormal=mesh.vertexNormals, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
                 .meshLandmarks=meshLandmarks,
-                .scanGeo=scanGeo, .meshGeo=meshGeo};
+                .scanGeo=scanGeo, .meshGeo=meshGeo,
+                .fx=input->fx, .fy = input->fy};
     }
 
     GLuint compileShader(const char *source, GLenum type) {
@@ -376,38 +384,69 @@ namespace telef::vis {
             auto targetCurrFrame = safeGetInput();
             if(targetCurrFrame) {
                 frame = getFrame(targetCurrFrame, geoMaxPoints, geoSearchRadius);
+
             }
             if(!frame.cloud) continue;
 
+            fx = frame.fx;
+            fy = frame.fy;
+
             // Start drawing
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            auto width = frame.image->getWidth();
+            auto height = frame.image->getHeight();
 
-            glViewport(0, 0, 960, 540);
-            drawPointCloud(frame.cloud);
+
+            //glViewport(0, 0, 960, 540);
+//            glViewport(0, 0, width, height);
+//            drawPointCloud(frame.cloud);
+//            drawMesh(frame.mesh, frame.vertexNormal, frame.image);
+//            drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
+//            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
+//            drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
+//            drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
+//            drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
+//            drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
+
+
+            //glViewport(0, 540, 960, 540);
+            glViewport(0, 0, width, height);
             drawMesh(frame.mesh, frame.vertexNormal, frame.image);
-            drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
-            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
-            drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
-            drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
-            drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
-            drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
 
-            glViewport(0, 540, 960, 540);
-            drawMesh(frame.mesh, frame.vertexNormal, frame.image);
+            //glViewport(960, 0, 960, 540);
+//            glViewport(width, 0, width, height);
+//            drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
+//            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
+//            drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
+//            drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
+//            drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
+//            drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
 
-            glViewport(960, 0, 960, 540);
-            drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
-            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
-            drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
-            drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
-            drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
-            drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
+            //glViewport(960, 540, 960, 540);
+//            glViewport(width, height, width, height);
+//            drawPointCloud(frame.cloud);
+//            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
 
-            glViewport(960, 540, 960, 540);
-            drawPointCloud(frame.cloud);
-            drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
 
             glfwSwapBuffers(window);
+            /*
+            std::vector< unsigned char > pixels( width, height*3 );
+            glReadPixels(0, 0, width, height,
+                         GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+            static int nframe = 0;
+
+            auto img = cv::Mat(width, height, CV_8UC3);
+            memcpy(img.data, pixels.data(), pixels.size()*sizeof(uchar));
+
+            cvtColor(img, img, CV_RGB2BGR);
+            cv::Mat flipped;
+            cv::flip(img, flipped , 0);
+            cv::imwrite("normals_frame" + std::to_string(nframe) + ".bmp", flipped);
+//            telef::io::saveBMPFile("normals_frame" + std::to_string(nframe) + ".bmp",
+//                    pixels.data(), frame.image->getWidth(), frame.image->getHeight());
+            nframe++;
+             */
         }
 
         glfwTerminate();
@@ -576,10 +615,23 @@ namespace telef::vis {
         Eigen::Matrix4f proj;
         auto yscale = 1.0f/tanf((M_PI*zoom*0.5) / 2);
         auto xscale = yscale/(16.0f/9.0f);
-        proj << xscale, 0, 0, 0,
-                0, yscale, 0, 0,
-                0, 0, -zFar/(zFar-zNear), -1,
-                0, 0, -zNear*zFar/(zFar-zNear), 0;
+//        proj << xscale, 0, 0, 0,
+//                0, yscale, 0, 0,
+//                0, 0, -zFar/(zFar-zNear), -1,
+//                0, 0, -zNear*zFar/(zFar-zNear), 0;
+
+        float cx = 640/2;
+        float cy = 480/2;
+
+//        proj << 2*fx/cx, 0, 0, 0,
+//                0, 2*fy/cy, 0, 0,
+//                0, 0, -(zFar+zNear)/(zFar-zNear), -1,
+//                0, 0, -2*zFar*zNear/(zFar-zNear), 0;
+
+        proj << fx/cx, 0, 0, 0,
+                0, fy/cy, 0, 0,
+                0, 0, -1, -1,
+                0, 0, -1, 0;
 
         return proj * view;
     }
