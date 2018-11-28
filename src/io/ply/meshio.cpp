@@ -116,7 +116,7 @@ namespace telef::io::ply {
         mtl << "Tr 1.000000\n";
         mtl << "illum 1\n";
         mtl << "Ns 0.000000\n";
-        mtl << "map_Kd " << f.stem().string() << ".jpg\n";
+        mtl << "map_Kd " << f.stem().string() << ".bmp\n";
         mtl.close();
 
         if(mesh.image != nullptr) {

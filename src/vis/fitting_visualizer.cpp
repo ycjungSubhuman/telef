@@ -128,6 +128,18 @@ namespace {
             "} \n"
             "";
 
+    const char *normal_fragment_shader =
+            "#version 460 \n"
+            "uniform sampler2D tex; \n"
+            "uniform int mesh_mode; \n"
+            "in vec2 uv; \n"
+            "in vec3 normal; \n"
+            "out vec4 out_color; \n"
+            "void main() { \n"
+            "  out_color = vec4(normal, 1.0);\n"
+            "} \n"
+            "";
+
     const char *point_vertex_shader =
             "#version 460 \n"
             "uniform mat4 mvp; \n"
@@ -212,7 +224,7 @@ namespace {
         int nMeshPoints = mesh.position.rows()/3;
         int nMeshSize = mesh.position.rows();
 
-        telef::io::ply::writeObjMesh("jake_face.obj", mesh);
+        //telef::io::ply::writeObjMesh("jake_face.obj", mesh);
 
         //Device
         int* meshCorr_d;
@@ -349,7 +361,8 @@ namespace telef::vis {
         glGenBuffers(1, &meshNormal);
 
         pointCloudShader = getShaderProgram(pointcloud_vertex_shader, pointcloud_fragment_shader);
-        meshShader = getShaderProgram(mesh_vertex_shader, mesh_fragment_shader);
+//        meshShader = getShaderProgram(mesh_vertex_shader, mesh_fragment_shader);
+        meshShader = getShaderProgram(mesh_vertex_shader, normal_fragment_shader);
         colorPointShader = getShaderProgram(point_vertex_shader, color_fragment_shader);
 
         Frame frame;
