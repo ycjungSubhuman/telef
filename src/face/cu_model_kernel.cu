@@ -282,8 +282,8 @@ void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d,
 
     _find_mesh_to_scan_corr << < dimGrid, dimBlock >> > (meshCorr_d, scanCorr_d, distance_d, numCorr,
             position_d, num_points, scan, radius, maxPoints);
-    reduce_closest_corr(meshCorr_d, scanCorr_d, distance_d, numCorr, maxPoints);
     CHECK_ERROR_MSG("Kernel Error");
+    reduce_closest_corr(meshCorr_d, scanCorr_d, distance_d, numCorr, maxPoints);
 
 
 }

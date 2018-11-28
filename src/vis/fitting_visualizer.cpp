@@ -11,6 +11,7 @@
 #include "face/cu_model_kernel.h"
 #include "face/model_cudahelper.h"
 #include "face/raw_model.h"
+#include "io/ply/meshio.h"
 
 namespace {
     using namespace telef::vis;
@@ -162,7 +163,7 @@ namespace {
         auto model = input->pca_model;
         auto mesh = model->genMesh(input->shapeCoeff, input->expressionCoeff);
 
-        std::vector<float> vertexNormal(static_cast<unsigned long>(mesh.position.size()), 0.0f);
+        mesh.vertexNormals = std::vector<float>(static_cast<unsigned long>(mesh.position.size()), 0.0f);
         for(int i=0; i<mesh.triangles.size(); i++) {
             const auto v1Ind = mesh.triangles[i][0];
             const auto v2Ind = mesh.triangles[i][1];
@@ -171,17 +172,17 @@ namespace {
             Eigen::Vector3f v2 = mesh.position.segment(3*v2Ind, 3);
             Eigen::Vector3f v3 = mesh.position.segment(3*v3Ind, 3);
             Eigen::Vector3f unnormalizedNormal = (v2 - v1).cross(v3 - v1).normalized();
-            vertexNormal[3*v1Ind + 0] += unnormalizedNormal[0];
-            vertexNormal[3*v1Ind + 1] += unnormalizedNormal[1];
-            vertexNormal[3*v1Ind + 2] += unnormalizedNormal[2];
+            mesh.vertexNormals[3*v1Ind + 0] += unnormalizedNormal[0];
+            mesh.vertexNormals[3*v1Ind + 1] += unnormalizedNormal[1];
+            mesh.vertexNormals[3*v1Ind + 2] += unnormalizedNormal[2];
 
-            vertexNormal[3*v2Ind + 0] += unnormalizedNormal[0];
-            vertexNormal[3*v2Ind + 1] += unnormalizedNormal[1];
-            vertexNormal[3*v2Ind + 2] += unnormalizedNormal[2];
+            mesh.vertexNormals[3*v2Ind + 0] += unnormalizedNormal[0];
+            mesh.vertexNormals[3*v2Ind + 1] += unnormalizedNormal[1];
+            mesh.vertexNormals[3*v2Ind + 2] += unnormalizedNormal[2];
 
-            vertexNormal[3*v3Ind + 0] += unnormalizedNormal[0];
-            vertexNormal[3*v3Ind + 1] += unnormalizedNormal[1];
-            vertexNormal[3*v3Ind + 2] += unnormalizedNormal[2];
+            mesh.vertexNormals[3*v3Ind + 0] += unnormalizedNormal[0];
+            mesh.vertexNormals[3*v3Ind + 1] += unnormalizedNormal[1];
+            mesh.vertexNormals[3*v3Ind + 2] += unnormalizedNormal[2];
         }
 
         auto image = input->image;
@@ -210,6 +211,8 @@ namespace {
 
         int nMeshPoints = mesh.position.rows()/3;
         int nMeshSize = mesh.position.rows();
+
+        telef::io::ply::writeObjMesh("jake_face.obj", mesh);
 
         //Device
         int* meshCorr_d;
@@ -249,6 +252,7 @@ namespace {
         CUDA_CHECK(cudaFree(distance_d));
         CUDA_CHECK(cudaFree(mesh_d));
         freeScanCUDA(scan);
+
         std::vector<float> meshGeo, scanGeo;
         for (int idx = 0; idx < numCorr; idx++)
         {
@@ -262,7 +266,7 @@ namespace {
             meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+2));
         }
 
-        return Frame {.mesh=mesh, .vertexNormal=vertexNormal, .cloud=cloud, .image=image,
+        return Frame {.mesh=mesh, .vertexNormal=mesh.vertexNormals, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
                 .meshLandmarks=meshLandmarks,
                 .scanGeo=scanGeo, .meshGeo=meshGeo};

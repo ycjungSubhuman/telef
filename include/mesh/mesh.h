@@ -11,6 +11,7 @@ namespace telef::mesh {
         telef::types::ImagePtrT image;
         std::vector<uint8_t> color;
         std::vector<std::vector<int>> triangles;
+        std::vector<float> vertexNormals;
 
         void applyTransform(Eigen::MatrixXf transform);
     };

@@ -94,11 +94,17 @@ namespace telef::io::ply {
             of << "vt " << mesh.uv[2 * i] << " " << mesh.uv[2 * i + 1] << "\n";
         }
 
+        for (int i = 0; i < mesh.vertexNormals.size() / 3; i++) {
+            of << "vn " << mesh.vertexNormals.at(3 * i) << " "
+               << mesh.vertexNormals.at(3 * i + 1) << " "
+               << mesh.vertexNormals.at(3 * i + 2) << "\n";
+        }
+
         for (int i = 0; i < mesh.triangles.size(); i++) {
             auto tri = mesh.triangles[i];
-            of << "f " << (tri[0] + 1) << "/" << (tri[0] + 1) << " "
-               << (tri[1] + 1) << "/" << (tri[1] + 1) << " "
-               << (tri[2] + 1) << "/" << (tri[2] + 1) << "\n";
+            of << "f " << (tri[0] + 1) << "/" << (tri[0] + 1) << "/" << (tri[0] + 1) << " "
+               << (tri[1] + 1) << "/" << (tri[1] + 1) << "/" << (tri[1] + 1) << " "
+               << (tri[2] + 1) << "/" << (tri[2] + 1) << "/" << (tri[2] + 1) << "\n";
         }
         of.close();
 
@@ -114,7 +120,7 @@ namespace telef::io::ply {
         mtl.close();
 
         if(mesh.image != nullptr) {
-            saveBMPFile(stripped.string() + ".jpg", *mesh.image);
+            saveBMPFile(stripped.string() + ".bmp", *mesh.image);
         }
     }
 }
