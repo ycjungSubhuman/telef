@@ -284,11 +284,7 @@ namespace {
             meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+2));
         }
 
-
-        // To align with RGB image, we must scale our model by 2, since Depth was used to fit the data and has half the resolution.
-        //Eigen::Affine3f scale(Eigen::Scaling(2.f, 2.f, 2.f));
-        //mesh.applyTransform(scale.matrix());
-        //telef::io::ply::writeObjMesh("jake_face.obj", mesh);
+        //telef::io::ply::writeObjMesh("test.obj", mesh);
 
         return Frame {.mesh=mesh, .vertexNormal=mesh.vertexNormals, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
@@ -447,7 +443,7 @@ namespace telef::vis {
             cvtColor(img, img, CV_RGB2BGR);
             cv::Mat flipped;
             cv::flip(img, flipped , 0);
-            cv::imwrite("normals_frame" + std::to_string(nframe) + ".bmp", flipped);
+            cv::imwrite("test_normals" + std::to_string(nframe) + ".bmp", flipped);
 //            telef::io::saveBMPFile("normals_frame" + std::to_string(nframe) + ".bmp",
 //                    pixels.data(), frame.image->getWidth(), frame.image->getHeight());
             nframe++;
@@ -613,11 +609,11 @@ namespace telef::vis {
 
         Eigen::Matrix4f view =
                 (Eigen::AngleAxis<float>(phi, rotationAxis)
-                        * Eigen::Translation3f(4.f, 4.f, 0.f)).matrix();
+                        * Eigen::Translation3f(0.f, 0.f, 0.f)).matrix();
                  // * Eigen::Translation3f(translation[0], translation[1], translation[2])).matrix();
 
         const float zFar = 10.0f;
-        const float zNear = 1.0f;
+        const float zNear = 1.1f;
         Eigen::Matrix4f proj;
         auto yscale = 1.0f/tanf((M_PI*zoom*0.5) / 2);
         auto xscale = yscale/(16.0f/9.0f);

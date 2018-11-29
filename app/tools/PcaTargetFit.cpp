@@ -155,7 +155,7 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::ONE_FRAME_PER_ENTER);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(std::move(grabber), false);
