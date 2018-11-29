@@ -231,7 +231,6 @@ namespace {
         int nMeshPoints = mesh.position.rows()/3;
         int nMeshSize = mesh.position.rows();
 
-        //telef::io::ply::writeObjMesh("jake_face.obj", mesh);
 
         //Device
         int* meshCorr_d;
@@ -285,6 +284,12 @@ namespace {
             meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+2));
         }
 
+
+        // To align with RGB image, we must scale our model by 2, since Depth was used to fit the data and has half the resolution.
+        //Eigen::Affine3f scale(Eigen::Scaling(2.f, 2.f, 2.f));
+        //mesh.applyTransform(scale.matrix());
+        //telef::io::ply::writeObjMesh("jake_face.obj", mesh);
+
         return Frame {.mesh=mesh, .vertexNormal=mesh.vertexNormals, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
                 .meshLandmarks=meshLandmarks,
@@ -331,7 +336,7 @@ namespace telef::vis {
               phi{M_PI},
               theta{0.0f},
               trackballMode(None),
-              translation{0.0f, 0.0f, 0.8f},
+              translation{0.0f, 0.0f, 0.0f},
               zoom{1.0f},
               meshMode(0),
               geoMaxPoints(geoMaxPoints),
@@ -429,14 +434,14 @@ namespace telef::vis {
 
 
             glfwSwapBuffers(window);
-            /*
-            std::vector< unsigned char > pixels( width, height*3 );
+
+            std::vector< unsigned char > pixels( width * height * 3 );
             glReadPixels(0, 0, width, height,
                          GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
 
             static int nframe = 0;
 
-            auto img = cv::Mat(width, height, CV_8UC3);
+            auto img = cv::Mat(height, width, CV_8UC3);
             memcpy(img.data, pixels.data(), pixels.size()*sizeof(uchar));
 
             cvtColor(img, img, CV_RGB2BGR);
@@ -446,7 +451,7 @@ namespace telef::vis {
 //            telef::io::saveBMPFile("normals_frame" + std::to_string(nframe) + ".bmp",
 //                    pixels.data(), frame.image->getWidth(), frame.image->getHeight());
             nframe++;
-             */
+
         }
 
         glfwTerminate();
@@ -481,7 +486,7 @@ namespace telef::vis {
         for(int i=0; i<mesh.triangles.size(); i++) {
             std::copy_n(mesh.triangles[i].data(), 3, &triangles[3*i]);
         }
-        Eigen::Matrix4f mvp = getMvpMatrix();
+        Eigen::Matrix4f mvp = getMvpMatrix(); // * Eigen::Affine3f(Eigen::Scaling(2.f, 2.f, 2.f)).matrix();
 
         glUseProgram(meshShader);
         GLint mvpPosition = glGetUniformLocation(meshShader, "mvp");
@@ -608,9 +613,10 @@ namespace telef::vis {
 
         Eigen::Matrix4f view =
                 (Eigen::AngleAxis<float>(phi, rotationAxis)
-                 * Eigen::Translation3f(translation[0], translation[1], translation[2])).matrix();
+                        * Eigen::Translation3f(4.f, 4.f, 0.f)).matrix();
+                 // * Eigen::Translation3f(translation[0], translation[1], translation[2])).matrix();
 
-        const float zFar = 1024.0f;
+        const float zFar = 10.0f;
         const float zNear = 1.0f;
         Eigen::Matrix4f proj;
         auto yscale = 1.0f/tanf((M_PI*zoom*0.5) / 2);
@@ -620,18 +626,16 @@ namespace telef::vis {
 //                0, 0, -zFar/(zFar-zNear), -1,
 //                0, 0, -zNear*zFar/(zFar-zNear), 0;
 
-        float cx = 640/2;
-        float cy = 480/2;
 
-//        proj << 2*fx/cx, 0, 0, 0,
-//                0, 2*fy/cy, 0, 0,
-//                0, 0, -(zFar+zNear)/(zFar-zNear), -1,
-//                0, 0, -2*zFar*zNear/(zFar-zNear), 0;
+        float cx = (static_cast<float>(640 - 1.f)) / 2.f;
+        float cy = (static_cast<float>(480 - 1.f)) / 2.f;
+//        float cx = 640/2;
+//        float cy = 480/2;
 
-        proj << fx/cx, 0, 0, 0,
-                0, fy/cy, 0, 0,
-                0, 0, -1, -1,
-                0, 0, -1, 0;
+        proj << 2*fx/640,       0,              0,                          0,
+                0,              2*fy/480,       0,                          0,
+                (640-2*cx)/640, (2*cy-480)/480, -zFar/(zFar-zNear), -1,
+                0,              0,              -zNear*zFar/(zFar-zNear), 0;
 
         return proj * view;
     }
