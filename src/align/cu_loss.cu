@@ -176,6 +176,6 @@ void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres
                                  const float *u_d, C_PcaDeformModel model, PointPair point_pair, const float weight) {
     calc_de_dt_lmk(dres_dt_d, point_pair.point_count, weight);
     calc_de_du_lmk(dres_du_d, u_d, point_pair, weight);
-    calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair, weight);
-    calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair, weight);
+    //calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair, weight);
+    //calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair, weight);
 }

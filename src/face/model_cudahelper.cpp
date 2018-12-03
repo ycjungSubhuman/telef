@@ -156,8 +156,8 @@ void freeResidualsCUDA(C_Residuals residuals) {
 }
 
 void zeroJacobiansCUDA(C_Jacobians jacobians) {
-    CUDA_ZERO(&jacobians.fa1Jacobian_d, static_cast<size_t >(jacobians.numa1j));
-    CUDA_ZERO(&jacobians.fa2Jacobian_d, static_cast<size_t >(jacobians.numa2j));
+    //CUDA_ZERO(&jacobians.fa1Jacobian_d, static_cast<size_t >(jacobians.numa1j));
+    //CUDA_ZERO(&jacobians.fa2Jacobian_d, static_cast<size_t >(jacobians.numa2j));
     CUDA_ZERO(&jacobians.ftJacobian_d, static_cast<size_t >(jacobians.numtj));
     CUDA_ZERO(&jacobians.fuJacobian_d, static_cast<size_t >(jacobians.numuj));
 }

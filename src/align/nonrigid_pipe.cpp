@@ -136,12 +136,10 @@ namespace telef::align {
         auto solver = std::make_shared<solver::GPUSolver>();
         auto problem = std::make_shared<solver::GPUProblem>();
 
-        std::vector<int> nParams = {2};
-        int nRes = 4;
         auto lmkcost = std::make_shared<PCALandmarkCudaFunction>(this->c_deformModel, c_scanPointCloud, cublasHandle);
-        auto l2lmkReg = std::make_shared<L2RegularizerFunctorCUDA>(c_deformModel.shapeRank, 0.0002);
-        auto lBarrierExpReg = std::make_shared<LinearBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.0002, 10);
-        auto lUBarrierExpReg = std::make_shared<LinearUpperBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.00002, 2, 1.0);
+//        auto l2lmkReg = std::make_shared<L2RegularizerFunctorCUDA>(c_deformModel.shapeRank, 0.0002);
+//        auto lBarrierExpReg = std::make_shared<LinearBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.0002, 10);
+//        auto lUBarrierExpReg = std::make_shared<LinearUpperBarrierFunctorCUDA>(c_deformModel.expressionRank, 0.00002, 2, 1.0);
 
         float *shapeCoeff = new float[c_deformModel.shapeRank]{0,};
         float *expressionCoeff = new float[c_deformModel.expressionRank]{0,};
@@ -166,21 +164,22 @@ namespace telef::align {
         */
         //float ft[3] = {-0.05475, -0.06618, 0.91666};
         //float fu[3] = {3.21114, -0.05908, -0.02889};
-        std::vector<float*> initParams = {shapeCoeff, expressionCoeff, ft, fu};
+//        std::vector<float*> initParams = {shapeCoeff, expressionCoeff, ft, fu};
+        std::vector<float*> initParams = {ft, fu};
 
         solver::ResidualFunction::Ptr lmkFunc = problem->addResidualFunction(lmkcost, initParams);
-        solver::ResidualFunction::Ptr l2LmkRegFunc = problem->addResidualFunction(l2lmkReg, {shapeCoeff});
-        solver::ResidualFunction::Ptr lBarrierExpRegFunc = problem->addResidualFunction(lBarrierExpReg, {expressionCoeff});
-        solver::ResidualFunction::Ptr lUBarrierExpRegFunc = problem->addResidualFunction(lUBarrierExpReg, {expressionCoeff});
-        l2LmkRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[0]);
-        lBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
-        lUBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
+//        solver::ResidualFunction::Ptr l2LmkRegFunc = problem->addResidualFunction(l2lmkReg, {shapeCoeff});
+//        solver::ResidualFunction::Ptr lBarrierExpRegFunc = problem->addResidualFunction(lBarrierExpReg, {expressionCoeff});
+//        solver::ResidualFunction::Ptr lUBarrierExpRegFunc = problem->addResidualFunction(lUBarrierExpReg, {expressionCoeff});
+//        l2LmkRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[0]);
+//        lBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
+//        lUBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
 
         solver->options.max_iterations = 200;
         solver->options.verbose = true;
-        solver->options.gradient_tolerance = 10-12;
-//        solver->options.target_error_change = 1e-8;
-//        solver->options.lambda_initial = 1e-1;
+//        solver->options.gradient_tolerance = 1e-18;
+//        solver->options.step_tolerance = 1e-18;
+//        solver->options.initial_dampening_factor = 1e-6;
 
         solver->solve(problem);
 

@@ -37,8 +37,8 @@ namespace telef::align{
                               weight(1.f)
         {
             allocPositionCUDA(&position_d, c_deformModel.dim);
-            parameterSizes.push_back(c_deformModel.shapeRank);
-            parameterSizes.push_back(c_deformModel.expressionRank);
+//            parameterSizes.push_back(c_deformModel.shapeRank);
+//            parameterSizes.push_back(c_deformModel.expressionRank);
             parameterSizes.push_back(TRANSLATE_COEFF);
             parameterSizes.push_back(ROTATE_COEFF);
 
@@ -68,21 +68,28 @@ namespace telef::align{
         }
 
         virtual void evaluate(solver::ResidualBlock::Ptr residualBlock) {
-            auto fa1Params = residualBlock->getParameterBlocks()[0];
-            auto fa2Params = residualBlock->getParameterBlocks()[1];
-            auto ftParams = residualBlock->getParameterBlocks()[2];
-            auto fuParams = residualBlock->getParameterBlocks()[3];
+//            auto fa1Params = residualBlock->getParameterBlocks()[0];
+//            auto fa2Params = residualBlock->getParameterBlocks()[1];
+//            auto ftParams = residualBlock->getParameterBlocks()[2];
+//            auto fuParams = residualBlock->getParameterBlocks()[3];
+            auto ftParams = residualBlock->getParameterBlocks()[0];
+            auto fuParams = residualBlock->getParameterBlocks()[1];
+
+            float* fa1Params;
+            CUDA_ALLOC_AND_ZERO(&fa1Params, static_cast<size_t >(c_deformModel.shapeRank));
+            float* fa2Params;
+            CUDA_ALLOC_AND_ZERO(&fa2Params, static_cast<size_t >(c_deformModel.expressionRank));
 
             C_Residuals c_residuals;
             c_residuals.residual_d = residualBlock->getResiduals();
             c_residuals.numResuduals = residualBlock->numResiduals();
 
             C_Params c_params;
-            c_params.fa1Params_d = fa1Params->getParameters();
-            c_params.numa1 = fa1Params->numParameters();
+            c_params.fa1Params_d = fa1Params;
+            c_params.numa1 = c_deformModel.shapeRank;
 
-            c_params.fa2Params_d = fa2Params->getParameters();
-            c_params.numa2 = fa2Params->numParameters();
+            c_params.fa2Params_d = fa2Params;
+            c_params.numa2 = c_deformModel.expressionRank;
 
             c_params.ftParams_d = ftParams->getParameters();
             c_params.numt = ftParams->numParameters();
@@ -93,7 +100,7 @@ namespace telef::align{
             c_params.numu = fuParams->numParameters();
             c_params.fuParams_h = new float[c_params.numu];
             CUDA_CHECK(cudaMemcpy(c_params.fuParams_h, fuParams->getParameters(), c_params.numu * sizeof(float), cudaMemcpyDeviceToHost));
-
+            printf("fuParams_h[%d]: %.5f\n", 0, c_params.fuParams_h[0]);
             zeroResidualsCUDA(c_residuals);
 
             calculatePointPairs(point_pair, position_d, cublasHandle,
@@ -104,25 +111,33 @@ namespace telef::align{
             delete[] c_params.ftParams_h;
             delete[] c_params.fuParams_h;
 
-//            print_array("PCALandmarkCudaFunction::residuals", residualBlock->getResiduals(), residualBlock->numResiduals());
+            CUDA_FREE(fa1Params);
+            CUDA_FREE(fa2Params);
         }
 
         virtual void computeJacobians(solver::ResidualBlock::Ptr residualBlock) {
-            auto fa1Params = residualBlock->getParameterBlocks()[0];
-            auto fa2Params = residualBlock->getParameterBlocks()[1];
-            auto ftParams = residualBlock->getParameterBlocks()[2];
-            auto fuParams = residualBlock->getParameterBlocks()[3];
+//            auto fa1Params = residualBlock->getParameterBlocks()[0];
+//            auto fa2Params = residualBlock->getParameterBlocks()[1];
+//            auto ftParams = residualBlock->getParameterBlocks()[2];
+//            auto fuParams = residualBlock->getParameterBlocks()[3];
+            auto ftParams = residualBlock->getParameterBlocks()[0];
+            auto fuParams = residualBlock->getParameterBlocks()[1];
+
+            float* fa1Params;
+            CUDA_ALLOC_AND_ZERO(&fa1Params, static_cast<size_t >(c_deformModel.shapeRank));
+            float* fa2Params;
+            CUDA_ALLOC_AND_ZERO(&fa2Params, static_cast<size_t >(c_deformModel.expressionRank));
 //
 //            C_Residuals c_residuals;
 //            c_residuals.residual_d = residualBlock->getResiduals();
 //            c_residuals.numResuduals = residualBlock->numResiduals();
 
             C_Params c_params;
-            c_params.fa1Params_d = fa1Params->getParameters();
-            c_params.numa1 = fa1Params->numParameters();
+            c_params.fa1Params_d = fa1Params;
+            c_params.numa1 = c_deformModel.shapeRank;
 
-            c_params.fa2Params_d = fa2Params->getParameters();
-            c_params.numa2 = fa2Params->numParameters();
+            c_params.fa2Params_d = fa2Params;
+            c_params.numa2 = c_deformModel.expressionRank;;
 
             c_params.ftParams_d = ftParams->getParameters();
             c_params.numt = ftParams->numParameters();
@@ -137,11 +152,11 @@ namespace telef::align{
             CUDA_CHECK(cudaMemcpy(c_params.fuParams_h, fuParams->getParameters(), c_params.numu * sizeof(float), cudaMemcpyDeviceToHost));
 
             C_Jacobians c_jacobians;
-            c_jacobians.fa1Jacobian_d = fa1Params->getJacobians();
-            c_jacobians.numa1j = residualBlock->numResiduals() * fa1Params->numParameters();
-
-            c_jacobians.fa2Jacobian_d = fa2Params->getJacobians();
-            c_jacobians.numa2j = residualBlock->numResiduals() * fa2Params->numParameters();
+//            c_jacobians.fa1Jacobian_d = fa1Params->getJacobians();
+//            c_jacobians.numa1j = residualBlock->numResiduals() * fa1Params->numParameters();
+//
+//            c_jacobians.fa2Jacobian_d = fa2Params->getJacobians();
+//            c_jacobians.numa2j = residualBlock->numResiduals() * fa2Params->numParameters();
 
             c_jacobians.ftJacobian_d = ftParams->getJacobians();
             c_jacobians.numtj = residualBlock->numResiduals() * ftParams->numParameters();
@@ -154,7 +169,10 @@ namespace telef::align{
 
             delete[] c_params.ftParams_h;
             delete[] c_params.fuParams_h;
-//            print_array("PCALandmarkCudaFunction::residuals", residualBlock->getResiduals(), residualBlock->numResiduals());
+
+
+            CUDA_FREE(fa1Params);
+            CUDA_FREE(fa2Params);
         }
 
     protected:
