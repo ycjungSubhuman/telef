@@ -172,9 +172,6 @@ namespace telef::align {
         solver::ResidualFunction::Ptr l2LmkRegFunc = problem->addResidualFunction(l2lmkReg, {shapeCoeff});
         solver::ResidualFunction::Ptr lBarrierExpRegFunc = problem->addResidualFunction(lBarrierExpReg, {expressionCoeff});
         solver::ResidualFunction::Ptr lUBarrierExpRegFunc = problem->addResidualFunction(lUBarrierExpReg, {expressionCoeff});
-        l2LmkRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[0]);
-        lBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
-        lUBarrierExpRegFunc->getResidualBlock()->getParameterBlocks()[0]->share(lmkFunc->getResidualBlock()->getParameterBlocks()[1]);
 
         solver->options.max_iterations = 200;
         solver->options.verbose = true;
