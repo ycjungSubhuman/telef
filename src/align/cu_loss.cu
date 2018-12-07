@@ -1,5 +1,6 @@
 #include <device_launch_parameters.h>
 #include <math.h>
+#include <vector>
 #include "align/cu_loss.h"
 #include "util/cu_quaternion.h"
 #include "util/cu_array.h"
@@ -10,6 +11,62 @@ namespace {
     const int DIM_X_THREAD = 16;
     const int DIM_Y_THREAD = 16;
 }
+
+
+__global__
+void _print_by_index(const float *arr_d, int * index, const int n, const int stride) {
+    const int start = blockIdx.x * blockDim.x + threadIdx.x;
+    const int size = n*stride;
+    const int step = blockDim.x * gridDim.x;
+    for(int ind=start; ind<size; ind+=step) {
+        const int k = ind / stride;
+        const int ref_ind = index[k];
+        const int i = ind % stride;
+        const int a_ind = stride*ref_ind + i;
+        const float a_ik = arr_d[a_ind];
+//        if (i == 0){
+//            printf("\n")
+//        }
+        printf("Element[%d]: %.11f\n,",a_ind, a_ik);
+    }
+}
+
+void print_by_index(const char* msg, const float *arr_d, int * index, const int n, const int stride) {
+    const int threadRequired = n*stride;
+
+    printf("%s:\n", msg);
+    _print_by_index<<<GET_DIM_GRID(threadRequired, NUM_THREAD), NUM_THREAD>>> (arr_d, index, n, stride);
+    CHECK_ERROR_MSG("Kernel Error");
+    cudaDeviceSynchronize();
+    printf("\n");
+}
+
+
+void print_by_index_h(const char* msg, const float *arr_d, int * index, const int n, const int nIdx, const int stride) {
+    printf("\n%s:\n", msg);
+    std::vector<float> arr_h(n);
+    std::vector<int> index_h(nIdx);
+
+    CUDA_CHECK(cudaMemcpy(arr_h.data(), arr_d, n*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(index_h.data(), index, nIdx*sizeof(int), cudaMemcpyDeviceToHost));
+
+    int numElements = nIdx*stride;
+
+    for(int ind=0; ind<nIdx*stride; ind++) {
+        const int k = ind / stride;
+        const int ref_ind = index_h[k];
+        const int i = ind % stride;
+        const int a_ind = stride*ref_ind + i;
+        const float a_ik = arr_h[a_ind];
+        if (i == 0){
+//            printf("\nElement[%d]: ",ref_ind);
+            printf("\n",ref_ind);
+        }
+        printf("%.11f, ", a_ik);
+    }
+    printf("\n");
+}
+
 
 /**
  * Calculate error of each element of each point, resulting in 3xN array
@@ -176,6 +233,6 @@ void calc_derivatives_point_pair(float *dres_dt_d, float *dres_du_d, float *dres
                                  const float *u_d, C_PcaDeformModel model, PointPair point_pair, const float weight) {
     calc_de_dt_lmk(dres_dt_d, point_pair.point_count, weight);
     calc_de_du_lmk(dres_du_d, u_d, point_pair, weight);
-    calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair, weight);
-    calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair, weight);
+    //calc_de_da_lmk(dres_da1_d, u_d, model.shapeRank, model.dim, model.shapeDeformBasis_d, point_pair, weight);
+    //calc_de_da_lmk(dres_da2_d, u_d, model.expressionRank, model.dim, model.expressionDeformBasis_d, point_pair, weight);
 }

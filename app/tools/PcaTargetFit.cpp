@@ -111,11 +111,13 @@ int main(int ac, const char* const *av) {
     std::string detectModelPath = vm["detector"].as<std::string>();
     std::string prnetGraphPath = vm["graph"].as<std::string>();
     std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
-    float geoWeight = vm["geo-weight"].as<float>();
-    float geoSearchRadius = vm["geo-radius"].as<float>();
-    int geoMaxPoints = vm["geo-max-points"].as<int>();
+    float geoWeight, geoSearchRadius;
+    int geoMaxPoints;
     bool addGeoTerm = vm.count("geo")>0;
     if (addGeoTerm) {
+        float geoWeight = vm["geo-weight"].as<float>();
+        float geoSearchRadius = vm["geo-radius"].as<float>();
+        int geoMaxPoints = vm["geo-max-points"].as<int>();
         std::cout << "Adding Geo Term..." << std::endl;
     }
 
@@ -155,7 +157,7 @@ int main(int ac, const char* const *av) {
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FIRST_FRAME_ONLY);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(std::move(grabber), false);

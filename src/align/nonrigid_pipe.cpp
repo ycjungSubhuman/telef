@@ -125,6 +125,7 @@ namespace telef::align {
         loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fx, in->fy, landmarkSelection,
                              in->transformation, in->fittingSuite->landmark3d);
 
+
         /* Setup Optimizer */
         //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
@@ -133,8 +134,9 @@ namespace telef::align {
         double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
         double t[3] = {0.0,};
         double u[3] = {3.14, 0.0, 0.0};
-        problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff, t, u);
+        problem.AddResidualBlock(lmkCost, NULL/*new ceres::CauchyLoss(0.5), shapeCoeff, expressionCoeff*/, t, u);
 
+        /*
         if (addGeoTerm == true) {
             auto geoCost = new PCAGPUGeometricDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle,
                     geoMaxPoints*3,sqrtf(geoWeight), geoSearchRadius);
@@ -143,6 +145,7 @@ namespace telef::align {
         problem.AddResidualBlock(new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL, shapeCoeff);
         problem.AddResidualBlock(new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL, expressionCoeff);
         problem.AddResidualBlock(new LinearUpperBarrierFunctor(c_deformModel.expressionRank, 0.00002, 2, 1.0), NULL, expressionCoeff);
+        */
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = false;
         options.max_num_iterations = 1000;
@@ -171,6 +174,14 @@ namespace telef::align {
                 Eigen::Map<Eigen::VectorXd>(shapeCoeff, c_deformModel.shapeRank).cast<float>();
         result->expressionCoeff =
                 Eigen::Map<Eigen::VectorXd>(expressionCoeff, c_deformModel.expressionRank).cast<float>();
+
+        for (int i = 0; i < 3; i++){
+            printf("u[%d]:%.5f\n", i, fu[i]);
+        }
+
+        for (int i = 0; i < 3; i++){
+            printf("t[%d]:%.5f\n", i, ft[i]);
+        }
 
         std::cout << "Fitted(Shape): " << std::endl;
         std::cout << result->shapeCoeff << std::endl;

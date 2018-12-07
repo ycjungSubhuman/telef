@@ -40,8 +40,8 @@ namespace telef::align{
                                        TRANSLATE_COEFF, ROTATE_COEFF);
             //TODO: allocate PointPair
             set_num_residuals(numResiduals);
-            mutable_parameter_block_sizes()->push_back(c_deformModel.shapeRank);
-            mutable_parameter_block_sizes()->push_back(c_deformModel.expressionRank);
+            //mutable_parameter_block_sizes()->push_back(c_deformModel.shapeRank);
+            //mutable_parameter_block_sizes()->push_back(c_deformModel.expressionRank);
             mutable_parameter_block_sizes()->push_back(TRANSLATE_COEFF);
             mutable_parameter_block_sizes()->push_back(ROTATE_COEFF);
             fresiduals = new float[numResiduals];
@@ -82,10 +82,17 @@ namespace telef::align{
             // FIXME: Change to indicate which one to calcualte
             bool isJacobianRequired = jacobians != nullptr;
             // Copy to float array
-            convertArray(parameters[0], fa1Params, c_deformModel.shapeRank);
-            convertArray(parameters[1], fa2Params, c_deformModel.expressionRank);
-            convertArray(parameters[2], ftParams, TRANSLATE_COEFF);
-            convertArray(parameters[3], fuParams, ROTATE_COEFF);
+//            convertArray(parameters[0], fa1Params, c_deformModel.shapeRank);
+//            convertArray(parameters[1], fa2Params, c_deformModel.expressionRank);
+//            convertArray(parameters[2], ftParams, TRANSLATE_COEFF);
+//            convertArray(parameters[3], fuParams, ROTATE_COEFF);
+
+            std::vector<double> shapeCoeff(c_deformModel.shapeRank, 0);
+            std::vector<double> expressionCoeff(c_deformModel.expressionRank, 0);
+            convertArray(shapeCoeff.data(), fa1Params, c_deformModel.shapeRank);
+            convertArray(expressionCoeff.data(), fa2Params, c_deformModel.expressionRank);
+            convertArray(parameters[0], ftParams, TRANSLATE_COEFF);
+            convertArray(parameters[1], fuParams, ROTATE_COEFF);
 
             updateParams(c_params,
                          fa1Params, c_deformModel.shapeRank,
@@ -102,10 +109,12 @@ namespace telef::align{
             convertArray(fresiduals, residuals, num_residuals());
 
             if (isJacobianRequired) {
-                convertArray(fa1Jacobians, jacobians[0], num_residuals()*c_deformModel.shapeRank);
-                convertArray(fa2Jacobians, jacobians[1], num_residuals()*c_deformModel.expressionRank);
-                convertArray(ftJacobians, jacobians[2], num_residuals()*TRANSLATE_COEFF);
-                convertArray(fuJacobians, jacobians[3], num_residuals()*ROTATE_COEFF);
+                //convertArray(fa1Jacobians, jacobians[0], num_residuals()*c_deformModel.shapeRank);
+                //convertArray(fa2Jacobians, jacobians[1], num_residuals()*c_deformModel.expressionRank);
+                //convertArray(ftJacobians, jacobians[2], num_residuals()*TRANSLATE_COEFF);
+                //convertArray(fuJacobians, jacobians[3], num_residuals()*ROTATE_COEFF);
+                convertArray(ftJacobians, jacobians[0], num_residuals()*TRANSLATE_COEFF);
+                convertArray(fuJacobians, jacobians[1], num_residuals()*ROTATE_COEFF);
             }
 
             return true;

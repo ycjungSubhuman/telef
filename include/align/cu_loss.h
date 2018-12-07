@@ -17,6 +17,8 @@ typedef struct PointPair{
     int point_count;
 } PointPair;
 
+void print_by_index(const char* msg, const float *arr_d, int * index, const int n, const int stride);
+void print_by_index_h(const char* msg, const float *arr_d, int * index, const int n, const int nIdx, const int stride);
 /**
  * Calculate
  *
