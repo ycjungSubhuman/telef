@@ -101,7 +101,7 @@ namespace telef::align{
             c_params.fuParams_h = new float[c_params.numu];
             CUDA_CHECK(cudaMemcpy(c_params.fuParams_h, fuParams->getParameters(), c_params.numu * sizeof(float), cudaMemcpyDeviceToHost));
             printf("fuParams_h[%d]: %.5f\n", 0, c_params.fuParams_h[0]);
-            zeroResidualsCUDA(c_residuals);
+            CUDA_CHECK(cudaMemset(c_residuals.residual_d, 0, c_residuals.numResuduals*sizeof(float)));
 
             calculatePointPairs(point_pair, position_d, cublasHandle,
                                 c_params, c_deformModel, c_scanPointCloud);
@@ -164,7 +164,10 @@ namespace telef::align{
             c_jacobians.fuJacobian_d = fuParams->getJacobians();
             c_jacobians.numuj = residualBlock->numResiduals() * fuParams->numParameters();
 
-            zeroJacobiansCUDA(c_jacobians);
+            CUDA_CHECK(cudaMemset(c_jacobians.ftJacobian_d, 0, c_jacobians.numtj*sizeof(float)));
+            CUDA_CHECK(cudaMemset(c_jacobians.fuJacobian_d, 0, c_jacobians.numuj*sizeof(float)));
+
+            //zeroJacobiansCUDA(c_jacobians);
             calculatePointPairDerivatives(c_jacobians, point_pair, c_params, c_deformModel, weight );
 
             delete[] c_params.ftParams_h;
