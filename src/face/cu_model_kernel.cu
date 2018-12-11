@@ -374,12 +374,12 @@ void calculateLandmarkLoss(float *residual, float *fa1Jacobian, float *fa2Jacobi
     calculateLandmarkIndices<<<1,scanPointCloud.numLmks>>>
                                  (point_pair.mesh_corr_inds_d, point_pair.ref_corr_inds_d, deformModel, scanPointCloud);
 
-    print_by_index_h("ScanLmk", point_pair.ref_position_d, point_pair.ref_corr_inds_d,
-                     68*3, scanPointCloud.numLmks, 3);
-    print_by_index_h("MeshLmk", point_pair.mesh_positoin_before_transform_d, point_pair.mesh_corr_inds_d,
-            deformModel.dim, scanPointCloud.numLmks, 3);
-    print_by_index_h("AlignedMeshLmk", point_pair.mesh_position_d, point_pair.mesh_corr_inds_d,
-            deformModel.dim, scanPointCloud.numLmks, 3);
+//    print_by_index_h("ScanLmk", point_pair.ref_position_d, point_pair.ref_corr_inds_d,
+//                     68*3, scanPointCloud.numLmks, 3);
+//    print_by_index_h("MeshLmk", point_pair.mesh_positoin_before_transform_d, point_pair.mesh_corr_inds_d,
+//            deformModel.dim, scanPointCloud.numLmks, 3);
+//    print_by_index_h("AlignedMeshLmk", point_pair.mesh_position_d, point_pair.mesh_corr_inds_d,
+//            deformModel.dim, scanPointCloud.numLmks, 3);
 
     // Calculate residual & jacobian for Landmarks
     calculatePointPairLoss(residual, fa1Jacobian, fa2Jacobian, ftJacobian, fuJacobian, point_pair,
