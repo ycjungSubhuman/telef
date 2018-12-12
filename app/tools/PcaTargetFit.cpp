@@ -92,7 +92,10 @@ int main(int ac, const char* const *av) {
             ("geo-weight,W", po::value<float>(), "Weight control for Geometric Term")
             ("geo-radius,R", po::value<float>(), "Search Radius for Mesh to Scan correspondance")
             ("geo-max-points,P", po::value<int>(), "Max Number of points used in Geometric Term")
-            ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
+            ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames")
+            ("bilaterFilter,B", "Use BilaterFilter on depth scan");
+            ("bi-sigmaS,S", "BilaterFilter spatial width");
+            ("bi-sigmaR,Q", "BilaterFilter range sigma");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
     po::notify(vm);
@@ -111,13 +114,30 @@ int main(int ac, const char* const *av) {
     std::string detectModelPath = vm["detector"].as<std::string>();
     std::string prnetGraphPath = vm["graph"].as<std::string>();
     std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
-    float geoWeight = vm["geo-weight"].as<float>();
-    float geoSearchRadius = vm["geo-radius"].as<float>();
-    int geoMaxPoints = vm["geo-max-points"].as<int>();
+    float geoWeight, geoSearchRadius;
+    int geoMaxPoints;
     bool addGeoTerm = vm.count("geo")>0;
     if (addGeoTerm) {
+        geoWeight = vm["geo-weight"].as<float>();
+        geoSearchRadius = vm["geo-radius"].as<float>();
+        geoMaxPoints = vm["geo-max-points"].as<int>();
         std::cout << "Adding Geo Term..." << std::endl;
     }
+
+
+    float biSigmaS = 5;
+    float biSigmaR = 5e-3;
+    bool useBilaterlFilter = vm.count("bilaterFilter")>0;
+    if (useBilaterlFilter) {
+        if (vm.count("bi-sigmaS")>0) {
+            biSigmaS = vm["bi-sigmaS"].as<float>();
+        }
+        if (vm.count("bi-sigmaR")>0) {
+            biSigmaR = vm["bi-sigmaR"].as<float>();
+        }
+        std::cout << "Adding Geo Term..." << std::endl;
+    }
+
 
     std::string fakePath("");
     bool useFakeKinect = vm.count("fake") > 0;
@@ -128,9 +148,15 @@ int main(int ac, const char* const *av) {
     pcl::io::OpenNI2Grabber::Mode depth_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     pcl::io::OpenNI2Grabber::Mode image_mode = pcl::io::OpenNI2Grabber::OpenNI_Default_Mode;
     auto imagePipe = IdentityPipe<ImageT>();
-    auto cloudPipe = IdentityPipe<DeviceCloudConstT>();
+
+    Pipe<DeviceCloudConstT, DeviceCloudConstT>* cloudPipe;
+    if (useBilaterlFilter) {
+        cloudPipe = new FastBilateralFilterPipe(biSigmaS, biSigmaR);
+    } else {
+        cloudPipe = new IdentityPipe<DeviceCloudConstT>();
+    }
     auto imageChannel = std::make_shared<DummyImageChannel<ImageT>>([&imagePipe](auto in)->decltype(auto){return imagePipe(in);});
-    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([&cloudPipe](auto in)-> decltype(auto){return cloudPipe(in);});
+    auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([cloudPipe](auto in)-> decltype(auto){return (*cloudPipe)(in);});
 
 
     auto nonrigid = PCAGPUNonRigidFittingPipe(geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm);
@@ -165,6 +191,9 @@ int main(int ac, const char* const *av) {
     device->setImageChannel(imageChannel);
     device->addMerger(merger);
     device->run();
+
+    free(cloudPipe);
+    cloudPipe = NULL;
 
     return 0;
 }
