@@ -67,5 +67,10 @@ namespace telef::align {
         int geoMaxPoints;
         float geoSearchRadius;
         bool addGeoTerm;
+
+        std::vector<double> t;
+        std::vector<double> u;
+        std::vector<double> shapeCoeff;
+        std::vector<double> expressionCoeff;
     };
 }
