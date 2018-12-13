@@ -29,9 +29,11 @@ namespace telef::align {
     }
 
     PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(const float geoWeight, const int geoMaxPoints,
-                                                         const float geoSearchRadius, const bool addGeoTerm)
+                                                         const float geoSearchRadius, const bool addGeoTerm,
+                                                         const bool usePrevFrame)
             :isModelInitialized(false),
-             geoWeight(geoWeight), geoMaxPoints(geoMaxPoints), geoSearchRadius(geoSearchRadius), addGeoTerm(addGeoTerm)
+             geoWeight(geoWeight), geoMaxPoints(geoMaxPoints), geoSearchRadius(geoSearchRadius), addGeoTerm(addGeoTerm),
+             usePrevFrame(usePrevFrame)
     {
         if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("Cublas could not be initialized");
@@ -44,6 +46,7 @@ namespace telef::align {
         this->geoMaxPoints = that.geoMaxPoints;
         this->geoSearchRadius = that.geoSearchRadius;
         this->addGeoTerm = that.addGeoTerm;
+        this->usePrevFrame = that.usePrevFrame;
         if(cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
             throw std::runtime_error("Cublas could not be initialized");
         }
@@ -57,6 +60,7 @@ namespace telef::align {
         this->geoMaxPoints = that.geoMaxPoints;
         this->geoSearchRadius = that.geoSearchRadius;
         this->addGeoTerm = that.addGeoTerm;
+        this->usePrevFrame = that.usePrevFrame;
     }
 
     PCAGPUNonRigidFittingPipe& PCAGPUNonRigidFittingPipe::operator=(const PCAGPUNonRigidFittingPipe &that) {
@@ -75,6 +79,7 @@ namespace telef::align {
         this->geoMaxPoints = that.geoMaxPoints;
         this->geoSearchRadius = that.geoSearchRadius;
         this->addGeoTerm = that.addGeoTerm;
+        this->usePrevFrame = that.usePrevFrame;
         return *this;
     }
 
@@ -92,6 +97,7 @@ namespace telef::align {
             this->geoMaxPoints = that.geoMaxPoints;
             this->geoSearchRadius = that.geoSearchRadius;
             this->addGeoTerm = that.addGeoTerm;
+            this->usePrevFrame = that.usePrevFrame;
         }
 
         return *this;
@@ -129,14 +135,12 @@ namespace telef::align {
         //std::cout << "Fitting PCA model to scan..." << std::endl;
         auto lmkCost = new PCAGPULandmarkDistanceFunctor(this->c_deformModel, c_scanPointCloud, cublasHandle);
         ceres::Problem problem;
-        if(shapeCoeff.size() == 0) shapeCoeff.assign(c_deformModel.shapeRank,0);
-        if(expressionCoeff.size() == 0) expressionCoeff.assign(c_deformModel.expressionRank,0);
-        if(t.size() == 0) t.assign(3, 0.0);
-        if(u.size() == 0) u = {3.14, 0.0, 0.0};
-//        double *shapeCoeff = new double[c_deformModel.shapeRank]{0,};
-//        double *expressionCoeff = new double[c_deformModel.expressionRank]{0,};
-//        double t[3] = {0.0,};
-//        double u[3] = {3.14, 0.0, 0.0};
+
+        // Reset input parameters if we are first frame or not using prev frames
+        if(!usePrevFrame || shapeCoeff.size() == 0) shapeCoeff.assign(c_deformModel.shapeRank,0);
+        if(!usePrevFrame || expressionCoeff.size() == 0) expressionCoeff.assign(c_deformModel.expressionRank,0);
+        if(!usePrevFrame || t.size() == 0) t.assign(3, 0.0);
+        if(!usePrevFrame || u.size() == 0) u = {3.14, 0.0, 0.0};
         problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5), shapeCoeff.data(), expressionCoeff.data(), t.data(), u.data());
 
         if (addGeoTerm == true) {
@@ -188,8 +192,6 @@ namespace telef::align {
         result->fy = in->fy;
         result->transformation = eigenTrans * in->transformation;
 
-//        delete[] shapeCoeff;
-//        delete[] expressionCoeff;
 
         return result;
     }

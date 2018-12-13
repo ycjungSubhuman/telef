@@ -93,9 +93,10 @@ int main(int ac, const char* const *av) {
             ("geo-radius,R", po::value<float>(), "Search Radius for Mesh to Scan correspondance")
             ("geo-max-points,P", po::value<int>(), "Max Number of points used in Geometric Term")
             ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames")
-            ("bilaterFilter,B", "Use BilaterFilter on depth scan");
-            ("bi-sigmaS,S", "BilaterFilter spatial width");
-            ("bi-sigmaR,Q", "BilaterFilter range sigma");
+            ("bilaterFilter,B", "Use BilaterFilter on depth scan")
+            ("bi-sigmaS,S", po::value<float>(), "BilaterFilter spatial width")
+            ("bi-sigmaR,Q", po::value<float>(), "BilaterFilter range sigma")
+            ("UsePrevFrame,U", "Use previous frames fitted parameters to increase performance");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
     po::notify(vm);
@@ -114,6 +115,7 @@ int main(int ac, const char* const *av) {
     std::string detectModelPath = vm["detector"].as<std::string>();
     std::string prnetGraphPath = vm["graph"].as<std::string>();
     std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
+    bool usePrevFrame = vm.count("UsePrevFrame")>0;
     float geoWeight, geoSearchRadius;
     int geoMaxPoints;
     bool addGeoTerm = vm.count("geo")>0;
@@ -129,13 +131,13 @@ int main(int ac, const char* const *av) {
     float biSigmaR = 5e-3;
     bool useBilaterlFilter = vm.count("bilaterFilter")>0;
     if (useBilaterlFilter) {
+        std::cout << "Adding BilaterFilter... " << std::endl;
         if (vm.count("bi-sigmaS")>0) {
             biSigmaS = vm["bi-sigmaS"].as<float>();
         }
         if (vm.count("bi-sigmaR")>0) {
             biSigmaR = vm["bi-sigmaR"].as<float>();
         }
-        std::cout << "Adding Geo Term..." << std::endl;
     }
 
 
@@ -159,7 +161,7 @@ int main(int ac, const char* const *av) {
     auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>([cloudPipe](auto in)-> decltype(auto){return (*cloudPipe)(in);});
 
 
-    auto nonrigid = PCAGPUNonRigidFittingPipe(geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm);
+    auto nonrigid = PCAGPUNonRigidFittingPipe(geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm, usePrevFrame);
     auto fitting2Projection = Fitting2ProjectionPipe();
     auto colorProjection = ColorProjectionPipe();
 

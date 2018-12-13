@@ -48,7 +48,8 @@ namespace telef::align {
     public:
         PCAGPUNonRigidFittingPipe();
         PCAGPUNonRigidFittingPipe(const float geoWeight, const int geoMaxPoints,
-                                  const float geoSearchRadius, const bool addGeoTerm=true);
+                                  const float geoSearchRadius, const bool addGeoTerm=true,
+                                  const bool usePrevFrame=false);
         PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that);
         PCAGPUNonRigidFittingPipe(PCAGPUNonRigidFittingPipe &&that) noexcept;
         PCAGPUNonRigidFittingPipe& operator=(const PCAGPUNonRigidFittingPipe &that);
@@ -66,6 +67,7 @@ namespace telef::align {
         float geoWeight;
         int geoMaxPoints;
         float geoSearchRadius;
+        bool usePrevFrame;
         bool addGeoTerm;
 
         std::vector<double> t;
