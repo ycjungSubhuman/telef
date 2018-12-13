@@ -140,7 +140,11 @@ namespace {
             "in vec3 normal; \n"
             "out vec4 out_color; \n"
             "void main() { \n"
-            "  out_color = vec4(normal, 1.0);\n"
+            "  if (abs(normal.x)+abs(normal.y)+abs(normal.z) > 0) {"
+            "     out_color = vec4(normal, 1.0);\n"
+            "  } else {"
+            "     out_color = vec4(0.0,0.0,0.0,0.0);"
+            "  }"
             "} \n"
             "";
 
@@ -431,22 +435,23 @@ namespace telef::vis {
 
             glfwSwapBuffers(window);
 
-            std::vector< unsigned char > pixels( width * height * 3 );
+            std::vector< unsigned char > pixels( width * height * 4 );
             glReadPixels(0, 0, width, height,
-                         GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+                         GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
 
-            static int nframe = 0;
+//            static int nframe = 0;
 
-            auto img = cv::Mat(height, width, CV_8UC3);
+            auto img = cv::Mat(height, width, CV_8UC4);
             memcpy(img.data, pixels.data(), pixels.size()*sizeof(uchar));
 
-            cvtColor(img, img, CV_RGB2BGR);
+            cvtColor(img, img, CV_RGBA2BGRA);
             cv::Mat flipped;
             cv::flip(img, flipped , 0);
-            cv::imwrite("test_normals" + std::to_string(nframe) + ".bmp", flipped);
+//            cv::imwrite("test_normals" + std::to_string(nframe) + ".bmp", flipped);
+            cv::imwrite("test_normals" + std::to_string(0) + ".bmp", flipped);
 //            telef::io::saveBMPFile("normals_frame" + std::to_string(nframe) + ".bmp",
 //                    pixels.data(), frame.image->getWidth(), frame.image->getHeight());
-            nframe++;
+//            nframe++;
 
         }
 
@@ -628,10 +633,10 @@ namespace telef::vis {
 //        float cx = 640/2;
 //        float cy = 480/2;
 
-        proj << 2*fx/640,       0,              0,                          0,
-                0,              2*fy/480,       0,                          0,
-                (640-2*cx)/640, (2*cy-480)/480, -zFar/(zFar-zNear), -1,
-                0,              0,              -zNear*zFar/(zFar-zNear), 0;
+        proj << 2.5*2*fx/640,       0,              0,                          0,
+                0,              2.5*2*fy/480,       0,                          0,
+                (640-2*cx)/640, (2*cy-480)/480, -(zFar+zNear)/(zFar-zNear), -1,
+                0,              0,              -2*zNear*zFar/(zFar-zNear), 0;
 
         return proj * view;
     }
