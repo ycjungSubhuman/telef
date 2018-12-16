@@ -24,7 +24,7 @@ set(CMAKE_CUDA_FLAGS_DEBUG "-g -G -DDEBUG")
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3" )
 set(CMAKE_CUDA_HOST_COMPILER gcc-7)
 
-find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration)
+find_package(PCL 1.8 REQUIRED COMPONENTS common io visualization filters kdtree registration features)
 find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
@@ -146,6 +146,7 @@ target_link_libraries(telef
 		${PCL_IO_LIBRARIES}
 		${PCL_KDTREE_LIBRARIES}
 		${PCL_VISUALIZATION_LIBRARIES}
+		${PCL_FEATURES_LIBRARIES}
 		opencv_core
 		opencv_objdetect
 		opencv_imgproc
@@ -235,6 +236,10 @@ target_link_libraries(3DLandmarkProject ${Boost_LIBRARIES} telef)
 add_executable(OrganizedPointKSearch app/byproducts/OrganizedPointKSearch.cpp src/io/modelio.cpp)
 target_link_libraries(OrganizedPointKSearch ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(OrganizedPointKSearch ${Boost_LIBRARIES} telef)
+
+add_executable(KinectSurfaceNormals app/byproducts/kinectSurfaceNormals.cpp src/io/modelio.cpp)
+target_link_libraries(KinectSurfaceNormals ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(KinectSurfaceNormals ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)
