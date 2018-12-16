@@ -448,7 +448,7 @@ namespace telef::vis {
             cv::Mat flipped;
             cv::flip(img, flipped , 0);
 //            cv::imwrite("test_normals" + std::to_string(nframe) + ".bmp", flipped);
-            cv::imwrite("test_normals" + std::to_string(0) + ".bmp", flipped);
+            cv::imwrite("test_normals" + std::to_string(0) + ".png", flipped);
 //            telef::io::saveBMPFile("normals_frame" + std::to_string(nframe) + ".bmp",
 //                    pixels.data(), frame.image->getWidth(), frame.image->getHeight());
 //            nframe++;

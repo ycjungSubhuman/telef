@@ -76,9 +76,9 @@ std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
 int main(int ac, const char* const *av) {
 
     google::InitGoogleLogging(av[0]);
-
-    float *d;
-    CUDA_CHECK(cudaMalloc((void**)(&d), sizeof(float)));
+//
+//    float *d;
+//    CUDA_CHECK(cudaMalloc((void**)(&d), sizeof(float)));
 
     po::options_description desc("Captures RGB-D from camera. Generate and write face mesh as ply and obj");
     desc.add_options()
