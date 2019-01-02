@@ -140,11 +140,13 @@ namespace {
             "in vec3 normal; \n"
             "out vec4 out_color; \n"
             "void main() { \n"
-            "  if (abs(normal.x)+abs(normal.y)+abs(normal.z) > 0) {"
-            "     out_color = vec4(normal, 1.0);\n"
-            "  } else {"
-            "     out_color = vec4(0.0,0.0,0.0,0.0);"
-            "  }"
+            "  if (abs(normal.x)+abs(normal.y)+abs(normal.z) > 0) {\n"
+            "     // Defualt FragShader returns Unsignd Char\n"
+            "     vec3 normal_int = (normal * 127 + 127) / 255;\n"
+            "     out_color = vec4(normal_int, 1.0);\n"
+            "  } else {\n"
+            "     out_color = vec4(0.0,0.0,0.0,0.0);\n"
+            "  }\n"
             "} \n"
             "";
 
@@ -288,7 +290,7 @@ namespace {
             meshGeo.push_back(mesh.position(3*meshGeoIdx[idx]+2));
         }
 
-        //telef::io::ply::writeObjMesh("test.obj", mesh);
+        //telef::io::ply::writeObjMesh("dahun2.obj", mesh);
 
         return Frame {.mesh=mesh, .vertexNormal=mesh.vertexNormals, .cloud=cloud, .image=image,
                 .scanLandmarks=scanLandmarks,
@@ -448,7 +450,7 @@ namespace telef::vis {
             cv::Mat flipped;
             cv::flip(img, flipped , 0);
 //            cv::imwrite("test_normals" + std::to_string(nframe) + ".bmp", flipped);
-            cv::imwrite("test_normals" + std::to_string(0) + ".png", flipped);
+            cv::imwrite("dahun2_normals" + std::to_string(0) + ".png", flipped);
 //            telef::io::saveBMPFile("normals_frame" + std::to_string(nframe) + ".bmp",
 //                    pixels.data(), frame.image->getWidth(), frame.image->getHeight());
 //            nframe++;
