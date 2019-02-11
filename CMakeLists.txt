@@ -236,6 +236,10 @@ add_executable(OrganizedPointKSearch app/byproducts/OrganizedPointKSearch.cpp sr
 target_link_libraries(OrganizedPointKSearch ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(OrganizedPointKSearch ${Boost_LIBRARIES} telef)
 
+add_executable(FaceTrackerClient app/byproducts/FaceTrackerClient.cpp src/io/modelio.cpp)
+target_link_libraries(FaceTrackerClient ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(FaceTrackerClient ${Boost_LIBRARIES} telef)
+
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)
 		add_executable(${testname} ${testpath})
@@ -260,7 +264,7 @@ if (BUILD_TESTS)
 		add_test(NAME ${testname} COMMAND ${testname})
 	endfunction(myaddtest)
 
-	find_package(CBLAS REQUIRED)
+	#find_package(CBLAS REQUIRED)
 	add_subdirectory(lib/googletest)
 	enable_testing()
 

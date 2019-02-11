@@ -48,6 +48,40 @@ namespace telef::io {
     };
 
     /** Visualize Pointcloud through PCL Visualizer */
+    class Feature2DDetectFrontEnd : public FrontEnd<telef::feature::FeatureDetectSuite> {
+    private:
+        dlib::image_window win;
+
+    public:
+        using InputPtrT = const boost::shared_ptr<telef::feature::FeatureDetectSuite>;
+
+        void process(InputPtrT input) override {
+            // Convert PCL image to dlib image
+
+            dlib::matrix<dlib::rgb_pixel> img;
+            auto pclImage = input->deviceInput->rawImage;
+
+            auto matImg = cv::Mat(pclImage->getHeight(), pclImage->getWidth(), CV_8UC3);
+            pclImage->fillRGB(matImg.cols, matImg.rows, matImg.data, matImg.step);
+            cv::cvtColor(matImg, matImg, CV_RGB2BGR);
+
+            dlib::cv_image<dlib::bgr_pixel> cvImg(matImg);
+            dlib::assign_image(img, cvImg);
+
+            win.clear_overlay();
+            win.set_image(img);
+
+            auto featurePts = input->feature->points;
+            for (size_t i = 0, size = featurePts.cols(); i < size; i++)
+            {
+                int radius = 1;
+                dlib::point point(featurePts(0, i), featurePts(1, i));
+                win.add_overlay(dlib::image_window::overlay_circle(point, radius, dlib::rgb_pixel(0,255,0)));
+            }
+        }
+    };
+
+    /** Visualize Pointcloud through PCL Visualizer */
     class FeatureDetectFrontEnd : public FrontEnd<telef::feature::FittingSuite > {
     private:
         using InputPtrT = const boost::shared_ptr<telef::feature::FittingSuite>;
