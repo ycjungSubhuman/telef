@@ -265,18 +265,25 @@ namespace telef::feature {
 
             cout << "Reading number of bytes: " << rsp_length << endl;
 
-            boost::asio::streambuf rbuf;
+            //boost::asio::streambuf rbuf;
+            uchar* rbuf = new uchar[rsp_length];
             error_code r_ec;
-            boost::asio::read(*clientSocket, sbuf, boost::asio::transfer_exactly(rsp_length), &r_ec);
-            istream serializedRsp(&rbuf);
+
+            //boost::asio::read(*clientSocket, sbuf, boost::asio::transfer_exactly(rsp_length), &r_ec);
+            //istream serializedRsp(&rbuf);
+            boost::asio::read(*clientSocket, boost::asio::buffer(rbuf, rsp_length));
 
             LmkRsp rspMsg;
-            rspMsg.ParseFromIstream(&serializedRsp);
-            cout << "Lmk Dim:\n" << rspMsg.dim().shape()[0] << endl;
-            cout << "Lmk Size:\n" << rspMsg.dim().shape().size() << endl;
+//            rspMsg.ParseFromIstream(&serializedRsp);
+            rspMsg.ParseFromArray(rbuf, rsp_length);
+            cout << "Lmk Size: " << rspMsg.dim().shape().size() << endl;
+            cout << "Lmk Dim: " << rspMsg.dim().shape()[0] << ", " << rspMsg.dim().shape()[1] << endl;
+
 //            rspMsg.data();
 //            landmarks = Eigen::Map<Eigen::MatrixXf>(rspMsg)
 //            cout << "Column-major:\n" <<  >(array) << endl;
+
+            delete[] rbuf;
         }
         catch(exception& e) {
             cout << e.what() << endl;

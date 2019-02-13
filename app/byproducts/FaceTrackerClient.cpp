@@ -134,5 +134,7 @@ int main(int ac, const char* const * av)
 
     device->run();
 
+    google::protobuf::ShutdownProtobufLibrary();
+
     return 0;
 }
