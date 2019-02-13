@@ -265,23 +265,31 @@ namespace telef::feature {
 
             cout << "Reading number of bytes: " << rsp_length << endl;
 
-            //boost::asio::streambuf rbuf;
-            uchar* rbuf = new uchar[rsp_length];
-            error_code r_ec;
+//            boost::asio::streambuf rbuf;
+//            error_code r_ec;
+//            boost::asio::read(*clientSocket, sbuf, boost::asio::transfer_exactly(rsp_length), &r_ec);
+//            istream serializedRsp(&rbuf);
 
-            //boost::asio::read(*clientSocket, sbuf, boost::asio::transfer_exactly(rsp_length), &r_ec);
-            //istream serializedRsp(&rbuf);
+            uchar* rbuf = new uchar[rsp_length];
+
             boost::asio::read(*clientSocket, boost::asio::buffer(rbuf, rsp_length));
 
             LmkRsp rspMsg;
-//            rspMsg.ParseFromIstream(&serializedRsp);
             rspMsg.ParseFromArray(rbuf, rsp_length);
             cout << "Lmk Size: " << rspMsg.dim().shape().size() << endl;
             cout << "Lmk Dim: " << rspMsg.dim().shape()[0] << ", " << rspMsg.dim().shape()[1] << endl;
 
-//            rspMsg.data();
-//            landmarks = Eigen::Map<Eigen::MatrixXf>(rspMsg)
-//            cout << "Column-major:\n" <<  >(array) << endl;
+            auto data = rspMsg.data();
+            //set the matrix's data
+            size_t dataSize = rspMsg.dim().shape()[0] *  rspMsg.dim().shape()[1];
+
+            //allocate the matrix
+            cv::Mat m(rspMsg.dim().shape()[0], rspMsg.dim().shape()[1],
+                    CV_32F, data.data());
+            cout << "M_lmks = "  << m << endl << endl;
+
+            cv::cv2eigen(m, landmarks);
+            cout << "eigen_Lmks:\n" <<  landmarks << endl;
 
             delete[] rbuf;
         }
