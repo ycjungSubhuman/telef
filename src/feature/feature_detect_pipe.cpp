@@ -15,14 +15,19 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/video/video.hpp>
+#include <boost/asio.hpp>
 
 #include "util/eigen_file_io.h"
 #include "util/pcl_cv.h"
 #include "feature/feature_detect_pipe.h"
 
+
+#include "messages/messages.pb.h"
+
 using namespace std;
 using namespace dlib;
 using namespace telef::io;
+using namespace boost::asio;
 
 
 namespace telef::feature {
@@ -194,4 +199,154 @@ namespace telef::feature {
         in->feature->points = landmarks;
         return in;
     }
+
+
+    FeatureDetectionClientPipe::FeatureDetectionClientPipe(string address_, boost::asio::io_service &service)
+        : isConnected(false), address(address_), ioService(service), clientSocket(), msg_id(0) { }
+
+//    FeatureDetectionClientPipe::~FeatureDetectionClientPipe(){
+//        // Cleanly close connection
+//        disconnect();
+//    };
+
+    FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(FeatureDetectionClientPipe::InputPtrT in) {
+
+        if ( clientSocket == nullptr || !isConnected ) {
+            if (connect()) {
+                return in;
+            }
+        }
+
+        // Convert PCL image to dlib image
+        auto pclImage = in->deviceInput->rawImage;
+        std::vector<unsigned char> imgBuffer(pclImage->getDataSize());
+
+
+//        auto matImg = cv::Mat(pclImage->getHeight(), pclImage->getWidth(), CV_8UC3);
+//        pclImage->fillRGB(matImg.cols, matImg.rows, matImg.data, matImg.step);
+//        cv::cvtColor(matImg, matImg, CV_RGB2BGR);
+
+        pclImage->fillRaw(imgBuffer.data());
+
+        LmkReq reqMsg;
+        auto hdr = reqMsg.mutable_hdr();
+        hdr->set_id(msg_id++);
+//        hdr->set_width(matImg.cols);
+//        hdr->set_height(matImg.rows);
+//        hdr->set_channels(matImg.channels());
+        hdr->set_width(pclImage->getHeight());
+        hdr->set_height(pclImage->getWidth());
+        hdr->set_channels(3);
+
+
+        auto imgData = reqMsg.mutable_data();
+//        imgData->set_buffer(matImg.data, matImg.total());
+        imgData->set_buffer(imgBuffer.data(), pclImage->getDataSize());
+
+        try {
+            // serialize
+            boost::asio::streambuf sbuf;
+            ostream serialized(&sbuf);
+            reqMsg.SerializeToOstream(&serialized);
+
+            uint32_t req_length = sbuf.size();
+
+            req_length = htonl(req_length); // host -> net endianness!
+
+            // Send header with request message size
+            boost::asio::write(*clientSocket, boost::asio::buffer(&req_length, sizeof(std::uint32_t)));
+            boost::asio::write(*clientSocket, sbuf);
+
+            // read header for expected rsp size
+            uint32_t rsp_length;
+            boost::asio::read(*clientSocket, boost::asio::buffer(&rsp_length, sizeof(std::uint32_t)));
+
+            rsp_length = ntohl(rsp_length); // net -> net endianness!
+
+            cout << "Reading number of bytes: " << rsp_length << endl;
+
+            boost::asio::streambuf rbuf;
+            error_code r_ec;
+            boost::asio::read(*clientSocket, sbuf, boost::asio::transfer_exactly(rsp_length), &r_ec);
+            istream serializedRsp(&rbuf);
+
+            LmkRsp rspMsg;
+            rspMsg.ParseFromIstream(&serializedRsp);
+            cout << "Lmk Dim:\n" << rspMsg.dim().shape()[0] << endl;
+            cout << "Lmk Size:\n" << rspMsg.dim().shape().size() << endl;
+//            rspMsg.data();
+//            landmarks = Eigen::Map<Eigen::MatrixXf>(rspMsg)
+//            cout << "Column-major:\n" <<  >(array) << endl;
+        }
+        catch(exception& e) {
+            cout << e.what() << endl;
+        }
+
+        return in;
+    }
+
+    bool FeatureDetectionClientPipe::connect(){
+        isConnected = false;
+
+        clientSocket = make_shared<SocketT>(ioService);
+
+        try {
+            clientSocket->connect(boost::asio::local::stream_protocol::endpoint(address));
+//            ioService.restart();
+            isConnected = true;
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+            std::cerr << "Failed to connect to server..." << std::endl;
+            disconnect();
+        }
+//
+        return isConnected;
+    }
+
+    void FeatureDetectionClientPipe::disconnect(){
+        isConnected = false;
+
+        try {
+            clientSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+            clientSocket->close();
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+            std::cerr << "Failed to connect to server..." << std::endl;
+        }
+
+        clientSocket.reset();
+    }
+
+//    void FeatureDetectionClientPipe::set_result(optional<error_code>* a, error_code b)
+//    {
+//        a->reset(b);
+//    }
+//
+//    bool FeatureDetectionClientPipe::read_with_timeout(boost::asio::streambuf& buffer)
+//    {
+//        optional<error_code> timer_result;
+//        deadline_timer timer(clientSocket->get_io_service());
+//        timer.expires_from_now(boost::posix_time::seconds(5));
+//        timer.async_wait(boost::bind(&FeatureDetectionClientPipe::set_result, &timer_result, _1));
+//
+//        optional<error_code> read_result;
+//        async_read(*clientSocket, buffer,
+//                   boost::bind(&FeatureDetectionClientPipe::set_result, &read_result, _1));
+//
+//        clientSocket->get_io_service().reset();
+//        while (clientSocket->get_io_service().run_one())
+//        {
+//            if (read_result)
+//                timer.cancel();
+//            else if (timer_result)
+//                clientSocket->cancel();
+//        }
+//
+//        if (*read_result)
+//            throw system_error(*read_result);
+//    }
 }

@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 
 #include <dlib/dnn.h>
+#include <boost/asio.hpp>
 
 #include "io/pipe.h"
 #include "feature/face.h"
@@ -81,9 +82,8 @@ namespace telef::feature {
         DummyFeatureDetectionPipe(fs::path recordPath);
     };
 
-
     /**
-     * Fake Face Feature Detection
+     * PRNet Face Feature Detection
     */
     class PRNetFeatureDetectionPipe : public telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite> {
     private:
@@ -102,6 +102,40 @@ namespace telef::feature {
 
     public:
         PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath);
+    };
+
+    /**
+     * Face Feature Detection Client
+    */
+    class FeatureDetectionClientPipe : public telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite> {
+    private:
+        using BaseT = telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite>;
+        using InputPtrT = FeatureDetectSuite::Ptr;
+        // Local Unix Socket for IPC
+        using SocketT = boost::asio::local::stream_protocol::socket;
+
+        bool isConnected;
+        std::string address;
+        boost::asio::io_service &ioService;
+        std::shared_ptr<SocketT> clientSocket;
+        //int clientIntputSize;
+        uint32_t msg_id;
+
+        Eigen::MatrixXf landmarks;
+
+        FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
+
+        // Connection
+        bool connect();
+        void disconnect();
+
+//        // io
+//        bool read_with_timeout(boost::asio::streambuf& buffer);
+//        void set_result(std::optional<std::error_code>* a, std::error_code b);
+
+    public:
+        FeatureDetectionClientPipe(std::string address, boost::asio::io_service &service);
+//        virtual ~FeatureDetectionClientPipe();
     };
 
 }

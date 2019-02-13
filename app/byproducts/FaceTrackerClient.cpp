@@ -17,6 +17,9 @@
 
 #include "glog/logging.h"
 
+
+#include "messages/messages.pb.h"
+
 namespace {
     using namespace telef::io;
     using namespace telef::align;
@@ -41,7 +44,8 @@ int main(int ac, const char* const * av)
             ("detector,D", po::value<std::string>(), "specify Dlib pretrained Face detection model path")
             ("graph,G", po::value<std::string>(), "specify path to PRNet graph definition")
             ("checkpoint,C", po::value<std::string>(), "specify path to pretrained PRNet checkpoint")
-            ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames");
+            ("fake,F", po::value<std::string>(), "specify directory path to captured kinect frames")
+            ("address,A", po::value<std::string>(), "specify server address for client to connect too");
 
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
@@ -69,14 +73,20 @@ int main(int ac, const char* const * av)
         return 1;
     }
 
+    if (vm.count("address") == 0) {
+        std::cout << "Please specify 'server address' for client to connect too"  << std::endl;
+        return 1;
+    }
     std::string detectModelPath;
     std::string prnetGraphPath;
     std::string prnetChkptPath;
     std::string fakePath("");
+    std::string address("");
 
     detectModelPath = vm["detector"].as<std::string>();
     prnetGraphPath = vm["graph"].as<std::string>();
     prnetChkptPath = vm["checkpoint"].as<std::string>();
+    address = vm["address"].as<std::string>();
 
     if (useFakeKinect) {
         fakePath = vm["fake"].as<std::string>();
@@ -93,7 +103,9 @@ int main(int ac, const char* const * av)
 
     auto viewFrontend = std::make_shared<Feature2DDetectFrontEnd>();
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
-    auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
+//    auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
+    boost::asio::io_service ioService;
+    auto featureDetector = FeatureDetectionClientPipe(address, ioService);
 
     auto pipe1 = compose(faceDetector, featureDetector);
     auto merger = std::make_shared<DeviceInputPipeMerger<FeatureDetectSuite >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
