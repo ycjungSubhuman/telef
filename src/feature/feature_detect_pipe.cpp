@@ -297,6 +297,7 @@ namespace telef::feature {
             cout << e.what() << endl;
         }
 
+        in->feature->points = landmarks;
         return in;
     }
 
