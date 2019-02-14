@@ -17,6 +17,8 @@
 #include <opencv2/video/video.hpp>
 #include <boost/asio.hpp>
 
+#include <google/protobuf/util/delimited_message_util.h>
+
 #include "util/eigen_file_io.h"
 #include "util/pcl_cv.h"
 #include "feature/feature_detect_pipe.h"
@@ -255,27 +257,25 @@ namespace telef::feature {
         return in;
     }
 
-    bool FeatureDetectionClientPipe::send(google::protobuf::Message &msg){
+    bool FeatureDetectionClientPipe::writeDelimitedTo(
+            const google::protobuf::MessageLite& message,
+            boost::asio::streambuf &sbuf) {
+        std::ostream output_stream(&sbuf);
+        google::protobuf::util::SerializeDelimitedToOstream(message, &output_stream);
+    }
+
+    bool FeatureDetectionClientPipe::send(google::protobuf::MessageLite &msg){
         if (isConnected != true) return false;
+
         try {
             // serialize
             boost::asio::streambuf sbuf;
-            ostream serialized(&sbuf);
-            msg.SerializeToOstream(&serialized);
+            writeDelimitedTo(msg, sbuf);
+
             uint32_t message_length = sbuf.size();
-
-//            string serialized;
-//            msg.SerializeToString(&serialized);
-//            uint32_t message_length = serialized.size();
-
             cout << "Sending Message ID: " << msg_id << " size: " << message_length << endl;
 
-            message_length = htonl(message_length); // host -> net endianness!
-
-            // Send header with request message size
-            boost::asio::write(*clientSocket, boost::asio::buffer(&message_length, sizeof(std::uint32_t)));
             boost::asio::write(*clientSocket, sbuf);
-//            boost::asio::write(*clientSocket, boost::asio::buffer(serialized));
         }
         catch(exception& e) {
             std::cerr << "Error while sending message: " << e.what() << endl;
@@ -286,23 +286,15 @@ namespace telef::feature {
         return true;
     }
 
-    bool FeatureDetectionClientPipe::recv(google::protobuf::Message &msg){
+    bool FeatureDetectionClientPipe::recv(google::protobuf::MessageLite &msg){
         if (isConnected != true) return false;
         try {
-            // read header for expected rsp size
-            uint32_t message_length;
-            boost::asio::read(*clientSocket, boost::asio::buffer(&message_length, sizeof(std::uint32_t)));
+            AsioInputStream ais(*clientSocket); // Where m_Socket is a instance of boost::asio::ip::tcp::socket
+            google::protobuf::io::CopyingInputStreamAdaptor cis_adp(&ais);
+            google::protobuf::io::CodedInputStream cis(&cis_adp);
+            bool parseStatus = false;
 
-            message_length = ntohl(message_length); // net -> net endianness!
-
-            cout << "Reading number of bytes: " << message_length << endl;
-
-            uchar* rbuf = new uchar[message_length];
-            boost::asio::read(*clientSocket, boost::asio::buffer(rbuf, message_length));
-
-            //Deserialize
-            msg.ParseFromArray(rbuf, message_length);
-            delete[] rbuf;
+            google::protobuf::util::ParseDelimitedFromCodedStream(&msg, &cis, &parseStatus);
         }
         catch(exception& e) {
             std::cerr << "Error while receiving message: " << e.what() << endl;
