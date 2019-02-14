@@ -41,7 +41,7 @@ set_property(TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS ${new_core_opti
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
-link_directories(${PROTOBUF_INCLUDE_DIR})
+include_directories(${Protobuf_INCLUDE_DIRS})
 
 add_subdirectory(messages)
 
@@ -133,13 +133,15 @@ target_include_directories(telef
         PUBLIC ${Eigen_INCLUDE_DIRS}
         PUBLIC ${Boost_INCLUDE_DIRS}
         PUBLIC ${CERES_INCLUDE_DIRS}
+        PUBLIC ${Protobuf_INCLUDE_DIRS}
         PUBLIC ${CMAKE_SOURCE_DIR}/include/
 		PUBLIC ${CMAKE_SOURCE_DIR}/include/face
         PUBLIC /usr/local/include
         PUBLIC ${CMAKE_CURRENT_BINARY_DIR} # TODO: Check if needed for protobuf messages
 		)
 
-#INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
         TensorflowCC::Shared
@@ -163,7 +165,7 @@ target_link_libraries(telef
         -lGLEW
         -lGL
         glfw
-        ${PROTOBUF_LIBRARIES}
+        ${Protobuf_LIBRARIES}
         messages
 		)
 
