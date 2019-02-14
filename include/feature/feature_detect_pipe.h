@@ -129,7 +129,10 @@ namespace telef::feature {
         bool connect();
         void disconnect();
 
-//        // io
+        // io
+        bool send(google::protobuf::Message &msg);
+        bool recv(google::protobuf::Message &msg);
+
 //        bool read_with_timeout(boost::asio::streambuf& buffer);
 //        void set_result(std::optional<std::error_code>* a, std::error_code b);
 
