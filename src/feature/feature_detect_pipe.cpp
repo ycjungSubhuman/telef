@@ -23,7 +23,7 @@
 #include "util/pcl_cv.h"
 #include "feature/feature_detect_pipe.h"
 
-
+#include "io/socket/asio.h"
 #include "messages/messages.pb.h"
 
 using namespace std;
@@ -204,7 +204,7 @@ namespace telef::feature {
 
 
     FeatureDetectionClientPipe::FeatureDetectionClientPipe(string address_, boost::asio::io_service &service)
-        : isConnected(false), address(address_), ioService(service), clientSocket(), msg_id(0) { }
+        : isConnected(false), address(address_), ioService(service), clientSocket(), msg_id(0) {}
 
 //    FeatureDetectionClientPipe::~FeatureDetectionClientPipe(){
 //        // Cleanly close connection
@@ -257,25 +257,16 @@ namespace telef::feature {
         return in;
     }
 
-    bool FeatureDetectionClientPipe::writeDelimitedTo(
-            const google::protobuf::MessageLite& message,
-            boost::asio::streambuf &sbuf) {
-        std::ostream output_stream(&sbuf);
-        google::protobuf::util::SerializeDelimitedToOstream(message, &output_stream);
-    }
-
     bool FeatureDetectionClientPipe::send(google::protobuf::MessageLite &msg){
         if (isConnected != true) return false;
 
         try {
-            // serialize
-            boost::asio::streambuf sbuf;
-            writeDelimitedTo(msg, sbuf);
+            telef::io::socket::AsioOutputStream aos(*clientSocket);
+            google::protobuf::io::CopyingOutputStreamAdaptor cos_adp(&aos);
+            google::protobuf::io::CodedOutputStream cos(&cos_adp);
 
-            uint32_t message_length = sbuf.size();
-            cout << "Sending Message ID: " << msg_id << " size: " << message_length << endl;
-
-            boost::asio::write(*clientSocket, sbuf);
+            google::protobuf::util::SerializeDelimitedToCodedStream(msg, &cos);
+            cout << "Sending Message ID: " << msg_id << endl;
         }
         catch(exception& e) {
             std::cerr << "Error while sending message: " << e.what() << endl;
@@ -289,7 +280,7 @@ namespace telef::feature {
     bool FeatureDetectionClientPipe::recv(google::protobuf::MessageLite &msg){
         if (isConnected != true) return false;
         try {
-            AsioInputStream ais(*clientSocket); // Where m_Socket is a instance of boost::asio::ip::tcp::socket
+            telef::io::socket::AsioInputStream ais(*clientSocket);
             google::protobuf::io::CopyingInputStreamAdaptor cis_adp(&ais);
             google::protobuf::io::CodedInputStream cis(&cis_adp);
             bool parseStatus = false;
@@ -298,7 +289,7 @@ namespace telef::feature {
         }
         catch(exception& e) {
             std::cerr << "Error while receiving message: " << e.what() << endl;
-            isConnected = false;
+            disconnect();
             return false;
         }
 

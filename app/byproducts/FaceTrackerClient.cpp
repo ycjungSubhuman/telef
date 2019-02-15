@@ -134,7 +134,7 @@ int main(int ac, const char* const * av)
 
     device->run();
 
-    google::protobuf::ShutdownProtobufLibrary();
+    featureDetector.disconnect();
 
     return 0;
 }

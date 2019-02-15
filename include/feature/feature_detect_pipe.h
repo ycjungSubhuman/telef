@@ -6,13 +6,11 @@
 
 #include <dlib/dnn.h>
 #include <boost/asio.hpp>
-#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 #include "io/pipe.h"
 #include "feature/face.h"
 
 #include "face/prnet.h"
-
 
 namespace {
     using namespace dlib;
@@ -126,84 +124,17 @@ namespace telef::feature {
 
         FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
 
-        // Connection
-        bool connect();
-        void disconnect();
-
         // io
         bool send(google::protobuf::MessageLite &msg);
         bool recv(google::protobuf::MessageLite &msg);
 
-//        bool read_with_timeout(boost::asio::streambuf& buffer);
-//        void set_result(std::optional<std::error_code>* a, std::error_code b);
-
-        bool writeDelimitedTo(const google::protobuf::MessageLite& message,
-                              boost::asio::streambuf &output);
-
-        bool readDelimitedFrom( google::protobuf::io::ZeroCopyInputStream* rawInput,
-                google::protobuf::MessageLite* message);
-
-
     public:
         FeatureDetectionClientPipe(std::string address, boost::asio::io_service &service);
 //        virtual ~FeatureDetectionClientPipe();
+
+        // Connection
+        bool connect();
+        void disconnect();
     };
-
-    template <typename SyncReadStream>
-    class AsioInputStream : public google::protobuf::io::CopyingInputStream {
-    public:
-        AsioInputStream(SyncReadStream& sock);
-        int Read(void* buffer, int size);
-    private:
-        SyncReadStream& m_Socket;
-    };
-
-
-    template <typename SyncReadStream>
-    AsioInputStream<SyncReadStream>::AsioInputStream(SyncReadStream& sock) :
-            m_Socket(sock) {}
-
-
-    template <typename SyncReadStream>
-    int
-    AsioInputStream<SyncReadStream>::Read(void* buffer, int size)
-    {
-        std::size_t bytes_read;
-        boost::system::error_code ec;
-        bytes_read = m_Socket.read_some(boost::asio::buffer(buffer, size), ec);
-
-        if(!ec) {
-            return bytes_read;
-        } else if (ec == boost::asio::error::eof) {
-            return 0;
-        } else {
-            return -1;
-        }
-    }
-
-
-    template <typename SyncWriteStream>
-    class AsioOutputStream : public google::protobuf::io::CopyingOutputStream {
-    public:
-        AsioOutputStream(SyncWriteStream& sock);
-        bool Write(const void* buffer, int size);
-    private:
-        SyncWriteStream& m_Socket;
-    };
-
-
-    template <typename SyncWriteStream>
-    AsioOutputStream<SyncWriteStream>::AsioOutputStream(SyncWriteStream& sock) :
-            m_Socket(sock) {}
-
-
-    template <typename SyncWriteStream>
-    bool
-    AsioOutputStream<SyncWriteStream>::Write(const void* buffer, int size)
-    {
-        boost::system::error_code ec;
-        m_Socket.write_some(boost::asio::buffer(buffer, size), ec);
-        return !ec;
-    }
 
 }
