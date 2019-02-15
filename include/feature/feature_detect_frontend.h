@@ -72,10 +72,10 @@ namespace telef::io {
             win.set_image(img);
 
             auto featurePts = input->feature->points;
-            for (size_t i = 0, size = featurePts.cols(); i < size; i++)
+            for (size_t i = 0, size = featurePts.rows(); i < size; i++)
             {
                 int radius = 1;
-                dlib::point point(featurePts(0, i), featurePts(1, i));
+                dlib::point point(featurePts(i, 0), featurePts(i, 1));
                 win.add_overlay(dlib::image_window::overlay_circle(point, radius, dlib::rgb_pixel(0,255,0)));
             }
         }

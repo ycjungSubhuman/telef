@@ -2,6 +2,16 @@
 
 #include <boost/asio.hpp>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+
+/**
+ * From:
+ * https://stackoverflow.com/questions/2340730/are-there-c-equivalents-for-the-protocol-buffers-delimited-i-o-functions-in-ja/13394290
+ *
+ * See
+ * https://www.boost.org/doc/libs/1_50_0/doc/html/boost_asio/reference/SyncReadStream.html
+ * https://www.boost.org/doc/libs/1_50_0/doc/html/boost_asio/reference/SyncWriteStream.html
+ */
+
 namespace telef::io::socket {
     template<typename SyncReadStream>
     class AsioInputStream : public google::protobuf::io::CopyingInputStream {
