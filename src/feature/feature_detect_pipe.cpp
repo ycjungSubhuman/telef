@@ -214,7 +214,8 @@ namespace telef::feature {
     FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(FeatureDetectionClientPipe::InputPtrT in) {
 
         if ( clientSocket == nullptr || !isConnected ) {
-            if (connect()) {
+            if (!connect()) {
+                in->feature->points = landmarks;
                 return in;
             }
         }
@@ -239,18 +240,21 @@ namespace telef::feature {
         LmkRsp rspMsg;
         if (msgSent && recv(rspMsg)) {
 
-            cout << "Lmk Size: " << rspMsg.dim().shape().size() << endl;
-            cout << "Lmk Dim: " << rspMsg.dim().shape()[0] << ", " << rspMsg.dim().shape()[1] << endl;
+//            cout << "Lmk Size: " << rspMsg.dim().shape().size() << endl;
+//            cout << "Lmk Dim: " << rspMsg.dim().shape()[0] << ", " << rspMsg.dim().shape()[1] << endl;
 
             auto data = rspMsg.data();
 
             //construct and populate the matrix
             cv::Mat m(rspMsg.dim().shape()[0], rspMsg.dim().shape()[1],
                     CV_32F, data.data());
-            cout << "M_lmks = "  << m << endl << endl;
+//            cout << "M_lmks = "  << m << endl << endl;
 
-            cv::cv2eigen(m, landmarks);
-            cout << "eigen_Lmks:\n" << landmarks << endl;
+            // make depth negative??
+            m.col(2) *= -1.0f;
+
+            cv::cv2eigen(m.t(), landmarks);
+//            cout << "eigen_Lmks:\n" << landmarks << endl;
         }
 
         in->feature->points = landmarks;
