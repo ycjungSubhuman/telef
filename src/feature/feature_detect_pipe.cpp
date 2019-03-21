@@ -15,14 +15,21 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/video/video.hpp>
+#include <boost/asio.hpp>
+
+#include <google/protobuf/util/delimited_message_util.h>
 
 #include "util/eigen_file_io.h"
 #include "util/pcl_cv.h"
 #include "feature/feature_detect_pipe.h"
 
+#include "io/socket/asio.h"
+#include "messages/messages.pb.h"
+
 using namespace std;
 using namespace dlib;
 using namespace telef::io;
+using namespace boost::asio;
 
 
 namespace telef::feature {
@@ -193,5 +200,141 @@ namespace telef::feature {
 
         in->feature->points = landmarks;
         return in;
+    }
+
+
+    FeatureDetectionClientPipe::FeatureDetectionClientPipe(string address_, boost::asio::io_service &service)
+        : isConnected(false), address(address_), ioService(service), clientSocket(), msg_id(0) {}
+
+//    FeatureDetectionClientPipe::~FeatureDetectionClientPipe(){
+//        // Cleanly close connection
+//        disconnect();
+//    };
+
+    FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(FeatureDetectionClientPipe::InputPtrT in) {
+
+        if ( clientSocket == nullptr || !isConnected ) {
+            if (!connect()) {
+                in->feature->points = landmarks;
+                return in;
+            }
+        }
+
+        // Convert PCL image to bytes
+        auto pclImage = in->deviceInput->rawImage;
+        std::vector<unsigned char> imgBuffer(pclImage->getDataSize());
+        pclImage->fillRaw(imgBuffer.data());
+
+        LmkReq reqMsg;
+        auto hdr = reqMsg.mutable_hdr();
+        hdr->set_id(++msg_id);
+        hdr->set_width(pclImage->getHeight());
+        hdr->set_height(pclImage->getWidth());
+        hdr->set_channels(3); // TODO: What if we have grey or 4-ch image??
+
+        auto imgData = reqMsg.mutable_data();
+        imgData->set_buffer(imgBuffer.data(), pclImage->getDataSize());
+
+        bool msgSent = send(reqMsg);
+
+        LmkRsp rspMsg;
+        if (msgSent && recv(rspMsg)) {
+
+//            cout << "Lmk Size: " << rspMsg.dim().shape().size() << endl;
+//            cout << "Lmk Dim: " << rspMsg.dim().shape()[0] << ", " << rspMsg.dim().shape()[1] << endl;
+
+            auto data = rspMsg.data();
+
+            //construct and populate the matrix
+            cv::Mat m(rspMsg.dim().shape()[0], rspMsg.dim().shape()[1],
+                    CV_32F, data.data());
+//            cout << "M_lmks = "  << m << endl << endl;
+
+            // make depth negative??
+            m.col(2) *= -1.0f;
+
+            cv::cv2eigen(m.t(), landmarks);
+//            cout << "eigen_Lmks:\n" << landmarks << endl;
+        }
+
+        in->feature->points = landmarks;
+        return in;
+    }
+
+    bool FeatureDetectionClientPipe::send(google::protobuf::MessageLite &msg){
+        if (isConnected != true) return false;
+
+        try {
+            telef::io::socket::AsioOutputStream aos(*clientSocket);
+            google::protobuf::io::CopyingOutputStreamAdaptor cos_adp(&aos);
+            google::protobuf::io::CodedOutputStream cos(&cos_adp);
+
+            google::protobuf::util::SerializeDelimitedToCodedStream(msg, &cos);
+            cout << "Sending Message ID: " << msg_id << endl;
+        }
+        catch(exception& e) {
+            std::cerr << "Error while sending message: " << e.what() << endl;
+            disconnect();
+            return false;
+        }
+
+        return true;
+    }
+
+    bool FeatureDetectionClientPipe::recv(google::protobuf::MessageLite &msg){
+        if (isConnected != true) return false;
+        try {
+            telef::io::socket::AsioInputStream ais(*clientSocket);
+            google::protobuf::io::CopyingInputStreamAdaptor cis_adp(&ais);
+            google::protobuf::io::CodedInputStream cis(&cis_adp);
+            bool parseStatus = false;
+
+            google::protobuf::util::ParseDelimitedFromCodedStream(&msg, &cis, &parseStatus);
+        }
+        catch(exception& e) {
+            std::cerr << "Error while receiving message: " << e.what() << endl;
+            disconnect();
+            return false;
+        }
+
+        return true;
+    }
+
+    bool FeatureDetectionClientPipe::connect(){
+        isConnected = false;
+
+        clientSocket = make_shared<SocketT>(ioService);
+
+        try {
+            clientSocket->connect(boost::asio::local::stream_protocol::endpoint(address));
+            isConnected = true;
+
+            cout << "Connected to server" << endl;
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+            std::cerr << "Failed to connect to server..." << std::endl;
+            disconnect();
+        }
+
+        return isConnected;
+    }
+
+    void FeatureDetectionClientPipe::disconnect(){
+        isConnected = false;
+
+        try {
+            clientSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+            clientSocket->close();
+            cout << "Disconnected..." << endl;
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+            std::cerr << "Failed to cleanly disconnect to server..." << std::endl;
+        }
+
+        clientSocket.reset();
     }
 }

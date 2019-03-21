@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)
 
 option (BUILD_TESTS "Build All Tests" ON)
 
@@ -33,6 +33,7 @@ find_package(CUDA REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(dlib REQUIRED)
 find_package(TensorflowCC REQUIRED COMPONENTS Shared)
+find_package(Protobuf 3.6.1 REQUIRED)
 
 get_property(core_options TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS)
 string(REPLACE "-fPIC" "" new_core_options ${core_options})
@@ -40,6 +41,9 @@ set_property(TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS ${new_core_opti
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
+include_directories(${Protobuf_INCLUDE_DIRS})
+
+add_subdirectory(messages)
 
 add_library(telef
         include/align/nonrigid_pipe.h
@@ -129,10 +133,14 @@ target_include_directories(telef
         PUBLIC ${Eigen_INCLUDE_DIRS}
         PUBLIC ${Boost_INCLUDE_DIRS}
         PUBLIC ${CERES_INCLUDE_DIRS}
+        PUBLIC ${Protobuf_INCLUDE_DIRS}
         PUBLIC ${CMAKE_SOURCE_DIR}/include/
 		PUBLIC ${CMAKE_SOURCE_DIR}/include/face
         PUBLIC /usr/local/include
+        PUBLIC ${CMAKE_CURRENT_BINARY_DIR} # TODO: Check if needed for protobuf messages
 		)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
@@ -157,7 +165,10 @@ target_link_libraries(telef
         -lGLEW
         -lGL
         glfw
+        ${Protobuf_LIBRARIES}
+        messages
 		)
+
 
 add_library(cutelef STATIC
 		include/util/cu_quaternion.h
@@ -180,6 +191,8 @@ target_link_libraries(cutelef -lcublas)
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 add_library(modelio src/io/modelio.cpp)
+
+
 
 add_executable(KinectConnectTest app/tools/KinectConnectTest.cpp)
 target_link_libraries(KinectConnectTest telef)
@@ -236,6 +249,10 @@ add_executable(OrganizedPointKSearch app/byproducts/OrganizedPointKSearch.cpp sr
 target_link_libraries(OrganizedPointKSearch ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(OrganizedPointKSearch ${Boost_LIBRARIES} telef)
 
+add_executable(FaceTrackerClient app/byproducts/FaceTrackerClient.cpp src/io/modelio.cpp)
+target_link_libraries(FaceTrackerClient ${CMAKE_SOURCE_DIR}/lib/libface.a)
+target_link_libraries(FaceTrackerClient ${Boost_LIBRARIES} telef)
+
 if (BUILD_TESTS)
 	function(myaddtest testname testpath)
 		add_executable(${testname} ${testpath})
@@ -260,7 +277,7 @@ if (BUILD_TESTS)
 		add_test(NAME ${testname} COMMAND ${testname})
 	endfunction(myaddtest)
 
-	find_package(CBLAS REQUIRED)
+	#find_package(CBLAS REQUIRED)
 	add_subdirectory(lib/googletest)
 	enable_testing()
 

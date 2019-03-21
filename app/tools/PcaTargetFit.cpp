@@ -96,7 +96,8 @@ int main(int ac, const char* const *av) {
             ("bilaterFilter,B", "Use BilaterFilter on depth scan")
             ("bi-sigmaS,S", po::value<float>(), "BilaterFilter spatial width")
             ("bi-sigmaR,Q", po::value<float>(), "BilaterFilter range sigma")
-            ("UsePrevFrame,U", "Use previous frames fitted parameters to increase performance");
+            ("UsePrevFrame,U", "Use previous frames fitted parameters to increase performance")
+            ("address,A", po::value<std::string>(), "specify server address for client to connect too");
     po::variables_map vm;
     po::store(po::parse_command_line(ac, av, desc), vm);
     po::notify(vm);
@@ -115,6 +116,15 @@ int main(int ac, const char* const *av) {
     std::string detectModelPath = vm["detector"].as<std::string>();
     std::string prnetGraphPath = vm["graph"].as<std::string>();
     std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
+    std::string address("");
+
+    if (vm.count("address") == 0) {
+        std::cout << "Please specify 'server address' for client to connect too"  << std::endl;
+        return 1;
+    }
+
+    address = vm["address"].as<std::string>();
+
     bool usePrevFrame = vm.count("UsePrevFrame")>0;
     float geoWeight, geoSearchRadius;
     int geoMaxPoints;
@@ -171,7 +181,11 @@ int main(int ac, const char* const *av) {
     auto modelFeeder = MorphableModelFeederPipe(model);
     std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult >> merger;
     auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
-    auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
+//    auto featureDetector = PRNetFeatureDetectionPipe(fs::path(prnetGraphPath), fs::path(prnetChkptPath));
+
+    boost::asio::io_service ioService;
+    auto featureDetector = FeatureDetectionClientPipe(address, ioService);
+
     auto lmkToScanFitting = LmkToScanRigidFittingPipe();
     auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting, modelFeeder, nonrigid);
     merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult >>([&pipe1](auto in)->decltype(auto){return pipe1(in);});
@@ -196,6 +210,7 @@ int main(int ac, const char* const *av) {
 
     free(cloudPipe);
     cloudPipe = NULL;
+    featureDetector.disconnect();
 
     return 0;
 }
