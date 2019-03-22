@@ -43,15 +43,4 @@ namespace telef::feature {
          */
         virtual Feature getFeature(const ImageT &image) = 0;
     };
-
-
-    /**
-     * Face Feature Detector using IntraFace Implementation
-     */
-    class IntraFace : FeatureDetector {
-    public:
-        using ImageT = FeatureDetector::ImageT;
-
-        Feature getFeature(const ImageT &image) override;
-    };
 }

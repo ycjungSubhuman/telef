@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 INCLUDE(FindProtobuf)
-FIND_PACKAGE(Protobuf 3.6.1 REQUIRED)
+FIND_PACKAGE(Protobuf 3.0.0 REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 

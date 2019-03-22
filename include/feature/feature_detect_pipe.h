@@ -28,20 +28,6 @@ namespace telef::feature {
     };
 
     /**
-     * Face Detection using Open CV haar cascade
-     */
-//    class HaarFaceDetectionPipe : public FaceDetectionPipe {
-//    private:
-//        using BaseT = FaceDetectionPipe::BaseT;
-//        using InputPtrT = FaceDetectionPipe::InputPtrT;
-//
-//        FaceDetectionSuite::Ptr _processData(InputPtrT in) override;
-//
-//    public:
-//        HaarFaceDetectionPipe(const std::string &pretrained_model, const bool faceProfile);
-//    };
-
-    /**
      * Face Detection using Dlib CNN, realtime on Titain X GPU ~20ms per frame
      */
     class DlibFaceDetectionPipe : public FaceDetectionPipe {
@@ -79,28 +65,6 @@ namespace telef::feature {
 
     public:
         DummyFeatureDetectionPipe(fs::path recordPath);
-    };
-
-    /**
-     * PRNet Face Feature Detection
-    */
-    class PRNetFeatureDetectionPipe : public telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite> {
-    private:
-        using BaseT = telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite>;
-        using InputPtrT = FeatureDetectSuite::Ptr;
-
-        telef::face::PRNetLandmarkDetector lmkDetector;
-        int prnetIntputSize;
-        Eigen::MatrixXf landmarks;
-
-        FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
-
-        void calculateTransformation(cv::Mat& transform, const cv::Mat& image, const BoundingBox& bbox, const int dst_size);
-        void warpImage(cv::Mat& warped, const cv::Mat& image, const cv::Mat& transform, const int dst_size);
-        void restore(Eigen::MatrixXf& restored, const Eigen::MatrixXf& result, const cv::Mat& transformation);
-
-    public:
-        PRNetFeatureDetectionPipe(fs::path graphPath, fs::path checkpointPath);
     };
 
     /**

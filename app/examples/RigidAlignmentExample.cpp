@@ -6,7 +6,6 @@
 #include "io/device.h"
 #include "io/align/align_frontend.h"
 #include "align/rigid_pipe.h"
-//#include "align/rigid.h"
 #include "face/model.h"
 
 namespace {

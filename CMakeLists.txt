@@ -10,11 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
-# Required because of relocated static libray. We can delete it after we get rid of it.
-set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
-endif()
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 ${OpenMP_CXX_FLAGS} -march=native -DUSE_SSE4_INSTRUCTIONS=ON")
 set(CUDA_GENCODES
 		"-gencode arch=compute_52,code=sm_52 -gencode arch=compute_61,code=sm_61 "
@@ -29,15 +24,8 @@ find_package(Eigen 3.3.4 REQUIRED)
 find_package(Boost 1.58 COMPONENTS program_options REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core objdetect highgui imgproc flann)
 find_package(Ceres REQUIRED)
-find_package(CUDA REQUIRED)
-find_package(Qt5 REQUIRED COMPONENTS Test Concurrent)
 find_package(dlib REQUIRED)
-find_package(TensorflowCC REQUIRED COMPONENTS Shared)
-find_package(Protobuf 3.6.1 REQUIRED)
-
-get_property(core_options TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS)
-string(REPLACE "-fPIC" "" new_core_options ${core_options})
-set_property(TARGET Qt5::Core PROPERTY INTERFACE_COMPILE_OPTIONS ${new_core_options})
+find_package(Protobuf 3.0.0 REQUIRED)
 
 link_directories(${PCL_LIBRARY_DIRS})
 link_directories(${OpenCV_LIBRARY_DIRS})
@@ -49,9 +37,6 @@ add_library(telef
         include/align/nonrigid_pipe.h
         include/align/rigid_pipe.h
         include/cloud/cloud_pipe.h
-        include/face/binary_model_file.h
-        include/face/FaceAlignment.h
-        include/face/XXDescriptor.h
         include/face/model.h
         include/feature/feature_detector.h
         include/io/align/align_frontend.h
@@ -72,33 +57,31 @@ add_library(telef
         include/util/UvPointMapping.h
         include/camera.h
         include/type.h
-		include/align/cost_func.h
-		include/face/classified_model.h
-		include/face/classify_pipe.h
-		include/face/deformation_model.h
-		include/io/devicecloud.h
-		include/io/png.h
-		include/io/fakeframe.h
-		include/util/fake_frame_record_device.h
-		include/io/matrix.h
-		include/io/landmark.h
-		include/util/convert_arr.h
-		include/face/model_cudahelper.h
-		include/face/raw_model.h
-        include/face/prnet.h
-		include/util/transform.h
-		include/feature/feature_detect_frontend.h
-        include/io/merger/device_input_merger.h
-        include/feature/feature_detect_pipe.h
-		include/util/eigen_file_io.h
-        include/feature/face.h
-		include/util/pcl_cv.h
-        include/vis/fitting_visualizer.h
+	include/align/cost_func.h
+	include/face/classified_model.h
+	include/face/classify_pipe.h
+	include/face/deformation_model.h
+	include/io/devicecloud.h
+	include/io/png.h
+	include/io/fakeframe.h
+	include/util/fake_frame_record_device.h
+	include/io/matrix.h
+	include/io/landmark.h
+	include/util/convert_arr.h
+	include/face/model_cudahelper.h
+	include/face/raw_model.h
+	include/util/transform.h
+	include/feature/feature_detect_frontend.h
+	include/io/merger/device_input_merger.h
+	include/feature/feature_detect_pipe.h
+	include/util/eigen_file_io.h
+	include/feature/face.h
+	include/util/pcl_cv.h
+	include/vis/fitting_visualizer.h
         include/util/po_util.h
         include/face/feeder.h
 
         src/cloud/cloud_pipe.cpp
-        src/feature/intraface_detector.cpp
         src/align/rigid_pipe.cpp
         src/io/align/align_frontend.cpp
         src/io/ply/meshio.cpp
@@ -119,7 +102,6 @@ add_library(telef
 		src/face/deformation_model.cpp
 		src/util/transform.cpp
         src/feature/feature_detect_pipe.cpp
-        src/face/prnet.cpp
 		src/util/transform.cpp
 		src/align/lmk_scan_rigid_pipe.cpp
         src/vis/fitting_visualizer.cpp
@@ -144,7 +126,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(telef ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(telef
-        TensorflowCC::Shared
 		stdc++fs
 		cutelef
 		${CERES_LIBRARIES}
@@ -190,42 +171,26 @@ target_link_libraries(cutelef -lcublas)
 
 set_target_properties(cutelef PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-add_library(modelio src/io/modelio.cpp)
-
-
 
 add_executable(KinectConnectTest app/tools/KinectConnectTest.cpp)
 target_link_libraries(KinectConnectTest telef)
 
-add_executable(LandmarkProject app/examples/LandmarkProject.cpp src/io/modelio.cpp)
-target_link_libraries(LandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(LandmarkProject ${Boost_LIBRARIES} telef)
-
-
-add_executable(FaceFeatureDetect app/byproducts/FaceFeatureDetect.cpp src/io/modelio.cpp include/io/ply/meshio.h)
+add_executable(FaceFeatureDetect app/byproducts/FaceFeatureDetect.cpp include/io/ply/meshio.h)
 target_link_libraries(FaceFeatureDetect ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceFeatureDetect telef)
 
 add_executable(RigidAlignment app/byproducts/RigidAlignment.cpp)
 target_link_libraries(RigidAlignment ${Boost_LIBRARIES} telef)
 
-add_executable(RigidAlignmentExample app/examples/RigidAlignmentExample.cpp src/io/modelio.cpp)
+add_executable(RigidAlignmentExample app/examples/RigidAlignmentExample.cpp)
 target_link_libraries(RigidAlignmentExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(RigidAlignmentExample telef ${Boost_LIBRAREIS})
 
-add_executable(PcaTargetFit app/tools/PcaTargetFit.cpp src/io/modelio.cpp)
+add_executable(PcaTargetFit app/tools/PcaTargetFit.cpp)
 target_link_libraries(PcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(PcaTargetFit ${Boost_LIBRARIES} telef)
 
-add_executable(PRNetPcaTargetFit app/tools/PRNetPcaTargetFit.cpp src/io/modelio.cpp)
-target_link_libraries(PRNetPcaTargetFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(PRNetPcaTargetFit ${Boost_LIBRARIES} telef)
-
-add_executable(PcaMultiModelFit app/tools/PcaMultiModalFit.cpp src/io/modelio.cpp)
-target_link_libraries(PcaMultiModelFit ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(PcaMultiModelFit ${Boost_LIBRARIES} telef)
-
-add_executable(MakePcaModel app/tools/MakePcaModel.cpp src/io/modelio.cpp)
+add_executable(MakePcaModel app/tools/MakePcaModel.cpp)
 target_link_libraries(MakePcaModel ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(MakePcaModel ${Boost_LIBRARIES} telef)
 
@@ -233,23 +198,19 @@ add_executable(RecordFakeFrame app/tools/RecordFakeFrame.cpp)
 target_link_libraries(RecordFakeFrame)
 target_link_libraries(RecordFakeFrame ${Boost_LIBRARIES} telef)
 
-add_executable(FakeDeviceExample app/examples/FakeDeviceExample.cpp src/io/modelio.cpp)
+add_executable(FakeDeviceExample app/examples/FakeDeviceExample.cpp)
 target_link_libraries(FakeDeviceExample ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FakeDeviceExample stdc++fs ${Boost_LIBRARIES} telef)
 
-add_executable(DNNFaceDetector app/byproducts/DNNFaceDetector.cpp src/io/modelio.cpp)
+add_executable(DNNFaceDetector app/byproducts/DNNFaceDetector.cpp)
 target_link_libraries(DNNFaceDetector ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(DNNFaceDetector ${Boost_LIBRARIES} telef)
 
-add_executable(3DLandmarkProject app/examples/3DLandmarkProject.cpp src/io/modelio.cpp)
-target_link_libraries(3DLandmarkProject ${CMAKE_SOURCE_DIR}/lib/libface.a)
-target_link_libraries(3DLandmarkProject ${Boost_LIBRARIES} telef)
-
-add_executable(OrganizedPointKSearch app/byproducts/OrganizedPointKSearch.cpp src/io/modelio.cpp)
+add_executable(OrganizedPointKSearch app/byproducts/OrganizedPointKSearch.cpp)
 target_link_libraries(OrganizedPointKSearch ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(OrganizedPointKSearch ${Boost_LIBRARIES} telef)
 
-add_executable(FaceTrackerClient app/byproducts/FaceTrackerClient.cpp src/io/modelio.cpp)
+add_executable(FaceTrackerClient app/byproducts/FaceTrackerClient.cpp)
 target_link_libraries(FaceTrackerClient ${CMAKE_SOURCE_DIR}/lib/libface.a)
 target_link_libraries(FaceTrackerClient ${Boost_LIBRARIES} telef)
 
@@ -282,5 +243,4 @@ if (BUILD_TESTS)
 	enable_testing()
 
 	myaddtest(test_cu_quaternion tests/util/test_cu_quaternion.cu)
-    myaddtest(test_prnet tests/face/test_prnet.cpp)
 endif()
