@@ -100,7 +100,11 @@ if [[ 1 == $USE_KINECT_1 ]]; then
         $CMAKE $FLAGS_CMAKE_FREENECT ../ &&
         $MAKE
     cd $DST_FREENECT &&
-        cp build/lib/OpenNI2-FreenectDriver/* $DIR_DRIVER_OPENNI2/
+        cp build/lib/OpenNI2-FreenectDriver/* $DIR_DRIVER_OPENNI2/ &&
+        rm $DIR_DRIVER_OPENNI2/libDummyDevice.so.0 &&
+        rm $DIR_DRIVER_OPENNI2/libDummyDevice.so &&
+        ln -s $DIR_DRIVER_OPENNI2/libFreenectDriver.so.0.6.0 $DIR_DRIVER_OPENNI2/libDummyDevice.so.0 &&
+        ln -s $DIR_DRIVER_OPENNI2/libFreenectDriver.so.0.6.0 $DIR_DRIVER_OPENNI2/libDummyDevice.so
 else
     ## libfreenect2 driver for OpenNI2
     URL_FREENECT2=https://github.com/OpenKinect/libfreenect2
@@ -121,11 +125,7 @@ else
 
     cd $DST_FREENECT2 &&
         cp build/lib/libfreenect2.so* $PREFIX/$DIR_LIB/ &&
-        cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/ &&
-        rm $DIR_DRIVER_OPENNI2/libDummyDevice.so.0 &&
-        rm $DIR_DRIVER_OPENNI2/libDummyDevice.so &&
-        ln -n $DIR_DRIVER_OPENNI2/libFreenectDriver.so.0.6 $DIR_DRIVER_OPENNI2/libDummyDevice.so.0 &&
-        ln -n $DIR_DRIVER_OPENNI2/libFreenectDriver.so.0.6 $DIR_DRIVER_OPENNI2/libDummyDevice.so
+        cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/
 fi
 
 

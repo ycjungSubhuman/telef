@@ -31,6 +31,7 @@ To build in the session,
 
 ## Known Issues
 
+* Fitting does not work with Kinect v2 (Grabber implementation have bug right now)
 * The project is not real-time yet
 
 ## Reference
