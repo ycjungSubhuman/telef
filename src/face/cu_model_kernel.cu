@@ -113,6 +113,8 @@ void cudaMatMul(float *matC, cublasHandle_t cnpHandle,
                         matC, bRows/*leading dim*/); //(4xN) or (mxk)
 
     if (status != CUBLAS_STATUS_SUCCESS) {
+      printf("SGEMM a b : (%d,%d), (%d,%d)\n", aRows, aCols, bRows, bCols);
+      printf("SGEMM status: %d\n", status);
         throw std::runtime_error("MatMul Failed\n");
     }
 }

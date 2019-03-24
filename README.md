@@ -22,6 +22,8 @@ To build in the session,
 
 #### Demo (Real-time 3D Face Fitting using 3DFAN)
 
+1. Download pre-recorded sequence [Google Drive](https://drive.google.com/file/d/1nkaSN5eUxHexwP11FEWXasgs1QmX3mle/view?usp=sharing)
+1. Unzip the file and place the folder as `jake` under `build/`
 1. Run `1.face_detector_server_demo.sh` in your host machine (not in the Docker container!)
 1. Wait for the server to be initialized
 1. Run `2.run_tracker.sh` in your host machine (not in the Docker container!)
