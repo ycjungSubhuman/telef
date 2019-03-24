@@ -32,6 +32,7 @@ To build in the session,
 ## Known Issues
 
 * `docker/run_bash_kinect1.sh` does not detect kinect 1 device. For now, use `docker/run_bash_kinect2.sh`
+* The project is not real-time yet
 
 ## Reference
 
