@@ -121,7 +121,11 @@ else
 
     cd $DST_FREENECT2 &&
         cp build/lib/libfreenect2.so* $PREFIX/$DIR_LIB/ &&
-        cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/
+        cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/ &&
+        rm $DIR_DRIVER_OPENNI2/libDummyDevice.so.0 &&
+        rm $DIR_DRIVER_OPENNI2/libDummyDevice.so &&
+        ln -n $DIR_DRIVER_OPENNI2/libFreenectDriver.so.0.6 $DIR_DRIVER_OPENNI2/libDummyDevice.so.0 &&
+        ln -n $DIR_DRIVER_OPENNI2/libFreenectDriver.so.0.6 $DIR_DRIVER_OPENNI2/libDummyDevice.so
 fi
 
 
