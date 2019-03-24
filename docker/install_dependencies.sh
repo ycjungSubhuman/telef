@@ -5,7 +5,6 @@
 # Last Update : 2019/03/21
 
 # exit on error
-set -e
 
 # Configuration
 ## If set to '1', build dependencies with the most recent master branches
@@ -36,7 +35,7 @@ function clone_git () {
     DST=$4
 
     if [[ ! -d $DST ]]; then
-        $GIT clone $URL $DST
+        $GIT clone --recursive $URL $DST
     fi
 
     cd $DST
@@ -50,7 +49,36 @@ function clone_git () {
 }
 
 
-set -x
+set -xe
+
+## protobuf
+VER_PROTOBUF=3.7.0
+TARGET_PROTOBUF=protobuf-cpp-$VER_PROTOBUF.tar.gz
+TAR_PROTOBUF=$ROOT_SOURCE/$TARGET_PROTOBUF
+URL_TAR_PROTOBUF=https://github.com/protocolbuffers/protobuf/releases/download/v$VER_PROTOBUF/$TARGET_PROTOBUF
+DST_PROTOBUF=$ROOT_SOURCE/protobuf-$VER_PROTOBUF
+
+curl -L $URL_TAR_PROTOBUF > $TAR_PROTOBUF &&
+    tar -xvf $TAR_PROTOBUF -C $ROOT_SOURCE && 
+    cd $DST_PROTOBUF &&
+    ./configure && $MAKE && $MAKE install &&
+    ldconfig
+
+
+## dlib
+URL_DLIB=https://github.com/davisking/dlib
+BRANCH_DLIB=master
+SIG_DLIB=ae406bf
+DST_DLIB=$ROOT_SOURCE/dlib
+FLAGS_CMAKE_DLIB="\
+    -DCMAKE_BUILD_TYPE=$BUILD_TYPE_CMAKE \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX"
+
+clone_git $URL_DLIB $BRANCH_DLIB $SIG_DLIB $DST_DLIB
+
+cd $DST_DLIB && $MKDIR build/ && cd build/ &&
+    $CMAKE $FLAGS_CMAKE_DLIB ../ &&
+    $MAKE && $MAKE install
 
 ## libfreenect driver for OpenNI2
 URL_FREENECT=https://github.com/OpenKinect/libfreenect
@@ -95,7 +123,7 @@ cd $DST_FREENECT2 &&
     cp build/lib/libfreenect2.so* $PREFIX/$DIR_LIB/ &&
     cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/
 
-set +x
+set +xe
 
 ## PCL (Experimental)
 ## We use experimental version of PCL to use a correct OpenNI2Grabber implementation

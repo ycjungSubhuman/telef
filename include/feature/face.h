@@ -2,11 +2,13 @@
 
 #include <boost/shared_ptr.hpp>
 #include <cxcore.h>
+
 #include <dlib/geometry/rectangle.h>
+
 #include "type.h"
 #include "io/merger/device_input.h"
 
-namespace telef::feature {
+namespace telef { namespace feature {
     using BoundingBox = struct BoundingBox {
         // Bounding box for face
         int x;
@@ -65,4 +67,4 @@ namespace telef::feature {
 
         Feature::Ptr feature;
     };
-}
+  }}

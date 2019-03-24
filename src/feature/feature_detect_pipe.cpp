@@ -19,7 +19,6 @@
 
 #include <google/protobuf/util/delimited_message_util.h>
 
-#include "util/eigen_file_io.h"
 #include "util/pcl_cv.h"
 #include "feature/feature_detect_pipe.h"
 
@@ -77,36 +76,6 @@ namespace telef::feature {
         return result;
     }
 
-    /**
-     * Dummy Detector path based on PRNet (Python), Doesn't give compatible landmarks with our FW
-     *
-     * @param recordPath, Path given to fake device with captured landmarks
-     */
-    DummyFeatureDetectionPipe::DummyFeatureDetectionPipe(fs::path recordPath) : frameLmks() {
-        std::cout << "Loading Fake Landmarks..." << std::endl;
-        for(int i=1; ; i++) {
-            fs::path framePath = recordPath/(fs::path(std::to_string(i)));
-
-            auto exists = fs::exists(framePath.replace_extension(".3dlmk.txt"));
-
-            if(!exists) {
-                break;
-            }
-
-            auto lmks = telef::util::readCSVtoEigan(framePath);
-            frameLmks.push(*lmks);
-            std::cout << "Loaded landmarks " << std::to_string(i) << std::endl;
-        }
-    }
-
-    FeatureDetectSuite::Ptr DummyFeatureDetectionPipe::_processData(InputPtrT in) {
-        auto currentLmks = frameLmks.front();
-
-        in->feature->points = currentLmks;
-        frameLmks.pop();
-
-        return in;
-    }
     FeatureDetectionClientPipe::FeatureDetectionClientPipe(string address_, boost::asio::io_service &service)
         : isConnected(false), address(address_), ioService(service), clientSocket(), msg_id(0) {}
 

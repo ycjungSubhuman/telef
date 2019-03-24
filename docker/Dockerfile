@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     libxmu-dev libxi-dev libudev-dev freeglut3-dev \
     libceres-dev libeigen3-dev libvtk7-dev libboost1.65-all-dev \
     libflann-dev doxygen ninja-build graphviz libopenni2-dev libopencv-dev \
-    libdlib-dev libprotobuf-dev
+    autoconf automake libtool curl make unzip
 
 COPY install_dependencies.sh /workspace/install_dependencies.sh
 RUN bash /workspace/install_dependencies.sh

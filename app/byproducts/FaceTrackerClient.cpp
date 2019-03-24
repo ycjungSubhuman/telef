@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 #include <ostream>
-#include <pcl/io/openni2_grabber.h>
 
 #include "io/device.h"
 #include "io/grabber.h"

@@ -10,8 +10,6 @@
 #include "io/pipe.h"
 #include "feature/face.h"
 
-#include "face/prnet.h"
-
 namespace {
     using namespace dlib;
 }
@@ -50,21 +48,6 @@ namespace telef::feature {
 
     public:
         DlibFaceDetectionPipe(const std::string &pretrained_model);
-    };
-
-    /**
-     * Fake Face Feature Detection
-    */
-    class DummyFeatureDetectionPipe : public telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite> {
-    private:
-        using BaseT = telef::io::Pipe<FeatureDetectSuite, FeatureDetectSuite>;
-        using InputPtrT = FeatureDetectSuite::Ptr;
-        std::queue<Eigen::MatrixXf> frameLmks;
-
-        FeatureDetectSuite::Ptr _processData(InputPtrT in) override;
-
-    public:
-        DummyFeatureDetectionPipe(fs::path recordPath);
     };
 
     /**

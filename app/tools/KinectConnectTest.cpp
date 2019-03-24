@@ -1,5 +1,4 @@
 #include <iostream>
-#include <pcl/io/openni2_grabber.h>
 
 #include "io/device.h"
 #include "cloud/cloud_pipe.h"
