@@ -33,6 +33,8 @@ To build in the session,
 1. Run `2.run_tracker.sh` in your host machine (not in the Docker container!)
 1. After all exepiments are done, run `3.clean_demo.sh` before relaunching `1.face_detector_server_demo.sh`
 
+If you want to try your Kinect instead of pre-recorded video, you can delete `-F /jake/` line in `2.run_tacker.sh`
+
 
 #### Recording a video sequence
 
