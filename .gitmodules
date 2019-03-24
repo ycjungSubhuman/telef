@@ -1,3 +1,6 @@
 [submodule "lib/googletest"]
 	path = lib/googletest
 	url = https://github.com/google/googletest
+[submodule "lib/face-alignment"]
+	path = lib/face-alignment
+	url = https://github.com/spacejake/face-alignment.git

@@ -19,7 +19,7 @@ namespace telef::io {
         auto metaPath = p.replace_extension(".meta");
         auto cloudPath = p.replace_extension(".pcd");
         auto mappingPath = p.replace_extension(".mapping");
-        auto imagePath = p.replace_extension(".png");
+        auto depthImagePath = p.replace_extension(".d.png");
 
         size_t width = dc.cloud->width;
         size_t height = dc.cloud->height;
@@ -39,13 +39,18 @@ namespace telef::io {
 
         // Write Mapping
         dc.img2cloudMapping->save(mappingPath);
+
+	// Write Depth Map
+	if (dc.depthImage) {
+	  saveDepthPNG(depthImagePath, *dc.depthImage);
+        }
     }
 
     void loadDeviceCloud(fs::path p, DeviceCloud &dc) {
         auto metaPath = p.replace_extension(".meta");
         auto cloudPath = p.replace_extension(".pcd");
         auto mappingPath = p.replace_extension(".mapping");
-        auto imagePath = p.replace_extension(".png");
+        auto depthImagePath = p.replace_extension(".d.png");
 
         size_t width;
         size_t height;
@@ -68,6 +73,11 @@ namespace telef::io {
 
         // Read Mapping
         auto mapping = std::make_shared<Uv2PointIdMapT>(mappingPath);
+	// Read Depth Image
+        if (fs::exists(depthImagePath)) {
+	  auto depthImage = loadDepthPNG(depthImagePath);
+	  dc.depthImage = depthImage;
+        }
 
         dc.cloud = cloud;
         dc.img2cloudMapping = mapping;

@@ -1,5 +1,13 @@
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+FROM nvidia/cudagl:10.1-devel-ubuntu18.04
 
+ARG use_kinect_1=0
+
+RUN apt-get update && apt-get install -y libcudnn7 libcudnn7-dev
+
+# Install tzdata package
+# All the lines are doing is to automate interactive configuration
+# If you are setting up an environment in your host machine,
+# You can just `apt-get install tzdata` instead of these.
 RUN export DEBIAN_FRONTEND=noninteractive && \
     export DEBCONF_NONITERACTIVE_SEEN=true && \
     echo "tzdata tzdata/Areas select Asia" > /tmp/tzdata-selection && \
@@ -16,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     libflann-dev doxygen ninja-build graphviz libopenni2-dev libopencv-dev \
     autoconf automake libtool curl make unzip
 
+ENV USE_KINECT_1=$use_kinect_1
 COPY install_dependencies.sh /workspace/install_dependencies.sh
 RUN bash /workspace/install_dependencies.sh
 

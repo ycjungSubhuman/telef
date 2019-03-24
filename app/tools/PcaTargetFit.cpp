@@ -85,8 +85,6 @@ int main(int ac, const char* const *av) {
             ("help,H", "print this help message")
             ("model,M", po::value<std::string>(), "specify PCA model path")
             ("detector,D", po::value<std::string>(), "specify Dlib pretrained Face detection model path")
-            ("graph,G", po::value<std::string>(), "specify path to PRNet graph definition")
-            ("checkpoint,C", po::value<std::string>(), "specify path to pretrained PRNet checkpoint")
             ("vis,V", "run visualizer")
             ("geo,Z", "Adds Geometric Term")
             ("geo-weight,W", po::value<float>(), "Weight control for Geometric Term")
@@ -102,20 +100,17 @@ int main(int ac, const char* const *av) {
     po::store(po::parse_command_line(ac, av, desc), vm);
     po::notify(vm);
 
-    require(vm, "model");
-    require(vm, "detector");
-    require(vm, "graph");
-    require(vm, "checkpoint");
-
     if(vm.count("help") > 0) {
         std::cout << desc << std::endl;
         return 1;
     }
 
+    require(vm, "model");
+    require(vm, "detector");
+
+
     std::string modelPath = vm["model"].as<std::string>();
     std::string detectModelPath = vm["detector"].as<std::string>();
-    std::string prnetGraphPath = vm["graph"].as<std::string>();
-    std::string prnetChkptPath = vm["checkpoint"].as<std::string>();
     std::string address("");
 
     if (vm.count("address") == 0) {

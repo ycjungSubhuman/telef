@@ -25,6 +25,7 @@ namespace telef::io {
 
         boost::shared_ptr<DeviceCloud> getDeviceCloud();
         ImagePtrT getImage();
+        pcl::io::DepthImage::ConstPtr getDepthImage();
 
         /** Load from existing file */
         FakeFrame(fs::path p);

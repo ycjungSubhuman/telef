@@ -20,6 +20,7 @@ PREFIX="/usr/local"
 PREFIX_SYSTEM="/usr"
 DIR_LIB="lib"
 DIR_INCLUDE="include"
+USE_KINECT_1=${USE_KINECT_1:=0}
 
 ## Change these variables to use other compiler i.e.) gcc and g++
 CC=clang
@@ -80,48 +81,49 @@ cd $DST_DLIB && $MKDIR build/ && cd build/ &&
     $CMAKE $FLAGS_CMAKE_DLIB ../ &&
     $MAKE && $MAKE install
 
-## libfreenect driver for OpenNI2
-URL_FREENECT=https://github.com/OpenKinect/libfreenect
-BRANCH_FREENECT=master
-SIG_FREENECT=aca6046
-DST_FREENECT=$ROOT_SOURCE/libfreenect
-FLAGS_CMAKE_FREENECT="\
-    -DCMAKE_BUILD_TYPE=$BUILD_TYPE_CMAKE \
-    -DCMAKE_INSTALL_PREFIX=$PREFIX \
-    -DBUILD_OPENNI2_DRIVER=ON"
-
-clone_git $URL_FREENECT $BRANCH_FREENECT $SIG_FREENECT $DST_FREENECT
-
-cd $DST_FREENECT && $MKDIR build/ && cd build/ &&
-    $CMAKE $FLAGS_CMAKE_FREENECT ../ &&
-    $MAKE
-
-## libfreenect2 driver for OpenNI2
-URL_FREENECT2=https://github.com/OpenKinect/libfreenect2
-BRANCH_FREENECT2=master
-SIG_FREENECT2=dfd4eaf
-DST_FREENECT2=$ROOT_SOURCE/libfreenect2
-FLAGS_CMAKE_FREENECT2="\
-    -DCMAKE_BUILD_TYPE=$BUILD_TYPE_CMAKE \
-    -DCMAKE_INSTALL_PREFIX=$PREFIX \
-    -DBUILD_OPENNI2_DRIVER=ON \
-    -DENABLE_CUDA=OFF"
-
-clone_git $URL_FREENECT2 $BRANCH_FREENECT2 $SIG_FREENECT2 $DST_FREENECT2
-
-cd $DST_FREENECT2 && $MKDIR build/ && cd build/ &&
-    $CMAKE $FLAGS_CMAKE_FREENECT2 ../ &&
-    $MAKE
-
 DIR_DRIVER_OPENNI2=$PREFIX_SYSTEM/$DIR_LIB/OpenNI2/Drivers
 
-## Install OpenNI2 drivers (libfreenect, libfreenect2)
-cd $DST_FREENECT &&
-    cp build/lib/OpenNI2-FreenectDriver/* $DIR_DRIVER_OPENNI2/
+if [[ 1 == $USE_KINECT_1 ]]; then
+    ## libfreenect driver for OpenNI2
+    URL_FREENECT=https://github.com/OpenKinect/libfreenect
+    BRANCH_FREENECT=master
+    SIG_FREENECT=aca6046
+    DST_FREENECT=$ROOT_SOURCE/libfreenect
+    FLAGS_CMAKE_FREENECT="\
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE_CMAKE \
+        -DCMAKE_INSTALL_PREFIX=$PREFIX \
+        -DBUILD_OPENNI2_DRIVER=ON"
 
-cd $DST_FREENECT2 &&
-    cp build/lib/libfreenect2.so* $PREFIX/$DIR_LIB/ &&
-    cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/
+    clone_git $URL_FREENECT $BRANCH_FREENECT $SIG_FREENECT $DST_FREENECT
+
+    cd $DST_FREENECT && $MKDIR build/ && cd build/ &&
+        $CMAKE $FLAGS_CMAKE_FREENECT ../ &&
+        $MAKE
+    cd $DST_FREENECT &&
+        cp build/lib/OpenNI2-FreenectDriver/* $DIR_DRIVER_OPENNI2/
+else
+    ## libfreenect2 driver for OpenNI2
+    URL_FREENECT2=https://github.com/OpenKinect/libfreenect2
+    BRANCH_FREENECT2=master
+    SIG_FREENECT2=dfd4eaf
+    DST_FREENECT2=$ROOT_SOURCE/libfreenect2
+    FLAGS_CMAKE_FREENECT2="\
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE_CMAKE \
+        -DCMAKE_INSTALL_PREFIX=$PREFIX \
+        -DBUILD_OPENNI2_DRIVER=ON \
+        -DENABLE_CUDA=OFF"
+
+    clone_git $URL_FREENECT2 $BRANCH_FREENECT2 $SIG_FREENECT2 $DST_FREENECT2
+
+    cd $DST_FREENECT2 && $MKDIR build/ && cd build/ &&
+        $CMAKE $FLAGS_CMAKE_FREENECT2 ../ &&
+        $MAKE
+
+    cd $DST_FREENECT2 &&
+        cp build/lib/libfreenect2.so* $PREFIX/$DIR_LIB/ &&
+        cp build/lib/libfreenect2-openni2.so* $DIR_DRIVER_OPENNI2/
+fi
+
 
 set +xe
 

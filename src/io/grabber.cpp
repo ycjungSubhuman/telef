@@ -171,6 +171,7 @@ namespace telef::io {
             result->img2cloudMapping = uvToPointIdMap;
             result->fx = fx;
             result->fy = fy;
+	    result->depthImage = depth_image;
 
             return result;
         }
