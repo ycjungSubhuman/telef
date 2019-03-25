@@ -1,8 +1,10 @@
-FROM nvidia/cudagl:10.1-devel-ubuntu18.04
+FROM nvidia/cudagl:9.2-devel-ubuntu18.04
 
 ARG use_kinect_1=0
 
-RUN apt-get update && apt-get install -y libcudnn7 libcudnn7-dev
+RUN apt-get update && apt-get install -y \
+    libcudnn7=7.5.0.56-1+cuda9.2 \
+    libcudnn7-dev=7.5.0.56-1+cuda9.2
 
 # Install tzdata package
 # All the lines are doing is to automate interactive configuration
