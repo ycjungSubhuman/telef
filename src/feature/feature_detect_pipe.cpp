@@ -198,8 +198,8 @@ namespace telef::feature {
         isConnected = false;
 
         try {
-            clientSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            clientSocket->close();
+	  //clientSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+	  //clientSocket->close();
             cout << "Disconnected..." << endl;
         }
         catch (std::exception& e)

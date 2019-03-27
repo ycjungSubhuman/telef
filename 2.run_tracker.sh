@@ -12,7 +12,7 @@ cd docker/ &&
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
     telef:kinect1 /bin/bash -c "cd build/ && \
     cmake ../ && make -j8 && \
-    ./PcaTargetFit -V \
+    ./PcaTargetFit -T depth/ \
     -M ../pcamodels/bs-5 \
     -D ../models/mmod_human_face_detector.dat \
     -F jake/ \

@@ -86,7 +86,8 @@ int main(int ac, const char* const *av) {
             ("model,M", po::value<std::string>(), "specify PCA model path")
             ("detector,D", po::value<std::string>(), "specify Dlib pretrained Face detection model path")
             ("vis,V", "run visualizer")
-            ("geo,Z", "Adds Geometric Term")
+	    ("depthnormal,T", po::value<std::string>(), "record depth normal image to specified directory")
+	    ("geo,Z", "Adds Geometric Term")
             ("geo-weight,W", po::value<float>(), "Weight control for Geometric Term")
             ("geo-radius,R", po::value<float>(), "Search Radius for Mesh to Scan correspondance")
             ("geo-max-points,P", po::value<int>(), "Max Number of points used in Geometric Term")
@@ -189,10 +190,15 @@ int main(int ac, const char* const *av) {
         merger->addFrontEnd(frontend);
     }
 
+    if(vm.count("depthnormal")>0) {
+        auto frontend = std::make_shared<MeshNormalDepthRenderer>(vm["depthnormal"].as<std::string>());
+        merger->addFrontEnd(frontend);
+    }
+
     std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>> device = NULL;
 
     if (useFakeKinect) {
-        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30_LOOP);
+        device = std::make_shared<FakeImagePointCloudDevice <DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(fs::path(fakePath), PlayMode::FPS_30);
     } else {
         auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
         device = std::make_shared<ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult >>(std::move(grabber), false);
