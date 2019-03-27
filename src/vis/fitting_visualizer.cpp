@@ -1,4 +1,5 @@
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <cstddef>
@@ -140,18 +141,15 @@ const char *mesh_normal_vertex_shader = "#version 460 \n"
 					"in vec3 _normal; \n"
                                         "out vec3 normal; \n"
                                         "void main() { \n"
-                                        "  gl_Position = mvp * pos; \n"
+                                        "  gl_Position = mvp*pos; \n"
                                         "  normal = _normal; \n"
                                         "} \n ";
 
 const char *mesh_normal_fragment_shader = "#version 460 \n"
-                                          "uniform sampler2D tex; \n"
-                                          "uniform int mesh_mode; \n"
-                                          "in vec2 uv; \n"
                                           "in vec3 normal; \n"
                                           "out vec4 out_color; \n"
                                           "void main() { \n"
-                                          "  out_color = vec4(normal, 1.0);\n"
+                                          "  out_color = vec4(normalize(normal), 1.0);\n"
                                           "} \n"
                                           "";
 
@@ -601,8 +599,11 @@ Eigen::Matrix4f FittingVisualizer::getMvpMatrix() {
   Eigen::Matrix4f proj;
   auto yscale = 1.0f / tanf((M_PI * zoom * 0.5) / 2);
   auto xscale = yscale / (16.0f / 9.0f);
-  proj << xscale, 0, 0, 0, 0, yscale, 0, 0, 0, 0, -zFar / (zFar - zNear), -1, 0,
-      0, -zNear * zFar / (zFar - zNear), 0;
+  proj <<
+    xscale, 0, 0, 0,
+    0, yscale, 0, 0,
+    0, 0, -zFar / (zFar - zNear), -1,
+    0, 0, -zNear * zFar / (zFar - zNear), 0;
 
   return proj * view;
 }
@@ -760,7 +761,7 @@ void MeshNormalDepthRenderer::initFrameBuffers(InputPtrT input)
 
   const auto prevWindow = PrepareNewContext();
 
-  //     Compiler normal renderer program
+  //     Compile normal renderer program
   m_normal_prog =
       getShaderProgram(mesh_normal_vertex_shader, mesh_normal_fragment_shader);
 
@@ -825,8 +826,9 @@ void MeshNormalDepthRenderer::_process(InputPtrT input)
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-    glFrontFace(GL_CW);
+    glFrontFace(GL_CW); // Because the model is using +Z as towards screen
     glCullFace(GL_BACK);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //    Use normal rendering program
     glUseProgram(m_normal_prog);
@@ -860,17 +862,27 @@ void MeshNormalDepthRenderer::_process(InputPtrT input)
     Eigen::Matrix4f mv = input->transformation;
     float fx = input->fx;
     float fy = input->fy;
-    float cx = m_maybe_width/2.0f;
-    float cy = m_maybe_height/2.0f;
-    float far = 100.0f;
-    float near = 0.0001f;
+    float cx = m_maybe_width / 2.0f;
+    float cy = m_maybe_height / 2.0f;
+    float far = 0.9f;
+    float near = 0.4f;
+
     Eigen::Matrix4f p1;
     p1 <<
-	fx, 0.0f, 0.0f, 0.0f,
-	0.0f, fy, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
+	fx/cx, 0.0f, 0.0f, 0.0f,
+	0.0f, fy/cy, 0.0f, 0.0f,
+      	0.0f, 0.0f, -(near+far)/(far-near), -2.0f*near*far/(far-near),
 	0.0f, 0.0f, -1.0f, 0.0f;
-    Eigen::Matrix4f mvp = p1*mv;
+    Eigen::Matrix4f flip; // flips z coordinate to -z
+    flip <<
+	1.0, 0.0f, 0.0f, 0.0f,
+	0.0f, 1.0f, 0.0f, 0.0f,
+      	0.0f, 0.0f, -1.0f, 0.0f,
+	0.0f, 0.0f, 0.0f, 1.0f;
+    Eigen::Matrix4f mvp = p1*flip*mv;
+
+    Eigen::MatrixXf pos =
+      Eigen::Map<Eigen::MatrixXf>(mesh.position.data(), 3, mesh.position.size()/3);
     
     GLint mvpPosition = glGetUniformLocation(m_normal_prog, "mvp");
     glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
@@ -883,7 +895,7 @@ void MeshNormalDepthRenderer::_process(InputPtrT input)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_tbuf);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * sizeof(unsigned int),
 		triangles.data(), GL_STREAM_DRAW);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()/3),
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()),
 		    GL_UNSIGNED_INT, NULL);
 
     //    Get pixel values
@@ -896,7 +908,7 @@ void MeshNormalDepthRenderer::_process(InputPtrT input)
 		 GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, raw_depth.data());
 
     //    Save pixel values
-    std::cout << "Saving " << "frame " << m_index << std::endl;
+    std::cout << "Saving " << "frame " << m_index-1 << std::endl;
     const auto filename = m_filename_generator(m_index++);
     const auto path = m_record_root/fs::path(filename);
 
