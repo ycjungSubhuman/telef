@@ -150,7 +150,9 @@ const char *mesh_normal_fragment_shader =
     "in vec3 normal; \n"
     "out vec4 out_color; \n"
     "void main() { \n"
-    "  out_color = vec4(normalize(normal), 1.0);\n"
+    "  vec3 n_normed = normalize(normal);\n"
+    "  vec3 n_posit = (0.5*n_normed)+vec3(0.5, 0.5, 0.5);\n"
+    "  out_color = vec4(n_posit, 1.0);\n"
     "} \n"
     "";
 
@@ -882,13 +884,13 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
                  GL_UNSIGNED_INT, NULL);
 
   //    Get pixel values
-  std::vector<unsigned char> raw_normals(m_maybe_width * m_maybe_height * 3);
-  std::vector<unsigned char> raw_depth(m_maybe_width * m_maybe_height);
+  std::vector<unsigned short> raw_normals(m_maybe_width * m_maybe_height * 3);
+  std::vector<unsigned short> raw_depth(m_maybe_width * m_maybe_height);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
-  glReadPixels(0, 0, m_maybe_width, m_maybe_height, GL_RGB, GL_UNSIGNED_BYTE,
+  glReadPixels(0, 0, m_maybe_width, m_maybe_height, GL_RGB, GL_UNSIGNED_SHORT,
                raw_normals.data());
   glReadPixels(0, 0, m_maybe_width, m_maybe_height, GL_DEPTH_COMPONENT,
-               GL_UNSIGNED_BYTE, raw_depth.data());
+               GL_UNSIGNED_SHORT, raw_depth.data());
 
   //    Save pixel values
   std::cout << "Saving "
@@ -900,9 +902,9 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
   input->image->fillRaw(raw_color.data());
   pcl::io::saveCharPNGFile(path.string() + m_color_ext, raw_color.data(),
                            m_maybe_width, m_maybe_height, 3);
-  pcl::io::saveCharPNGFile(path.string() + m_depth_ext, raw_depth.data(),
+  pcl::io::saveShortPNGFile(path.string() + m_depth_ext, raw_depth.data(),
                            m_maybe_width, m_maybe_height, 1);
-  pcl::io::saveCharPNGFile(path.string() + m_normal_ext, raw_normals.data(),
+  pcl::io::saveShortPNGFile(path.string() + m_normal_ext, raw_normals.data(),
                            m_maybe_width, m_maybe_height, 3);
 
   //    Clean up
