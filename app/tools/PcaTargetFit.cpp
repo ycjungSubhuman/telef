@@ -102,6 +102,7 @@ int main(int ac, const char *const *av) {
       "fake,F",
       po::value<std::string>(),
       "specify directory path to captured kinect frames")(
+      "fake-loop", "If specified, loops in fake mode")(
       "bilaterFilter,B", "Use BilaterFilter on depth scan")(
       "bi-sigmaS,S", po::value<float>(), "BilaterFilter spatial width")(
       "bi-sigmaR,Q", po::value<float>(), "BilaterFilter range sigma")(
@@ -224,11 +225,13 @@ int main(int ac, const char *const *av) {
       device = NULL;
 
   if (useFakeKinect) {
+    const auto playmode =
+        (0 < vm.count("fake-loop")) ? PlayMode::FPS_30_LOOP : PlayMode::FPS_30;
     device = std::make_shared<FakeImagePointCloudDevice<
         DeviceCloudConstT,
         ImageT,
         DeviceInputSuite,
-        PCANonRigidFittingResult>>(fs::path(fakePath), PlayMode::FPS_30);
+        PCANonRigidFittingResult>>(fs::path(fakePath), playmode);
   } else {
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     device = std::make_shared<ImagePointCloudDeviceImpl<
