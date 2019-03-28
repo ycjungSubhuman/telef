@@ -6,9 +6,8 @@
 
 namespace telef::util {
 boost::shared_ptr<cv::Mat> convert(boost::shared_ptr<pcl::io::Image> pclImage) {
-
-  auto matImg = boost::make_shared<cv::Mat>(pclImage->getHeight(),
-                                            pclImage->getWidth(), CV_8UC3);
+  auto matImg = boost::make_shared<cv::Mat>(
+      pclImage->getHeight(), pclImage->getWidth(), CV_8UC3);
   pclImage->fillRGB(matImg->cols, matImg->rows, matImg->data, matImg->step);
   cv::cvtColor(*matImg, *matImg, CV_RGB2BGR);
 

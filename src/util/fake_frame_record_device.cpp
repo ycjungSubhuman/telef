@@ -11,16 +11,18 @@ using namespace telef::types;
 
 namespace telef::io {
 
-FakeFrameMerger::OutPtrT
-FakeFrameMerger::merge(FakeFrameMerger::DataAPtrT image,
-                       FakeFrameMerger::DataBPtrT dc) {
+FakeFrameMerger::OutPtrT FakeFrameMerger::merge(
+    FakeFrameMerger::DataAPtrT image, FakeFrameMerger::DataBPtrT dc) {
   return boost::make_shared<FakeFrame>(dc, image);
 }
 
-FakeFrameRecordDevice::FakeFrameRecordDevice(TelefOpenNI2Grabber *grabber,
-                                             fs::path recordRoot)
-    : ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FakeFrame,
-                                FakeFrame>(grabber, false) {
+FakeFrameRecordDevice::FakeFrameRecordDevice(
+    TelefOpenNI2Grabber *grabber, fs::path recordRoot)
+    : ImagePointCloudDeviceImpl<
+          DeviceCloudConstT,
+          ImageT,
+          FakeFrame,
+          FakeFrame>(grabber, false) {
   this->cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>();
   this->imageChannel = std::make_shared<DummyImageChannel<ImageT>>();
   auto merger = std::make_shared<FakeFrameMerger>();

@@ -12,8 +12,8 @@ public:
 };
 
 class ClassifyMorphableModelPipe
-    : public telef::io::Pipe<telef::feature::FittingSuite,
-                             ClassifiedFittingSuiteT> {
+    : public telef::io::
+          Pipe<telef::feature::FittingSuite, ClassifiedFittingSuiteT> {
 private:
   using InT = ClassifiedFittingSuiteT;
 
@@ -35,12 +35,12 @@ private:
 };
 
 class ClassifiedRigidFittingPipe
-    : public telef::io::Pipe<ClassifiedFittingSuiteT,
-                             telef::align::PCANonRigidAlignmentSuite> {
+    : public telef::io::Pipe<
+          ClassifiedFittingSuiteT,
+          telef::align::PCANonRigidAlignmentSuite> {
 private:
   boost::shared_ptr<telef::align::PCANonRigidAlignmentSuite>
   _processData(boost::shared_ptr<ClassifiedFittingSuiteT> in) override {
-
     telef::align::PCARigidFittingPipe rigidPipe(in->model);
     return rigidPipe(in->fittingSuite);
   }

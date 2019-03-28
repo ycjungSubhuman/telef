@@ -26,8 +26,8 @@ void PCARigidVisualizerFrontEnd::process(InputPtrT input) {
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud(
       new pcl::PointCloud<pcl::PointXYZ>());
-  pcl::transformPointCloud(*pcaPtCld, *transformed_cloud,
-                           input->transformation);
+  pcl::transformPointCloud(
+      *pcaPtCld, *transformed_cloud, input->transformation);
 
   //        pcl::PCLPointCloud2 mesh;
   //        pcl::toPCLPointCloud2(pcaPointCloud, mesh);

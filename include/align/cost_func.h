@@ -24,20 +24,29 @@ class PCAGPUDistanceFunctor : public ceres::CostFunction {
 public:
   // TODO: If you are going to copy or move this object, implement 'the rule of
   // 5'
-  PCAGPUDistanceFunctor(C_PcaDeformModel c_deformModel,
-                        C_ScanPointCloud c_scanPointCloud,
-                        cublasHandle_t cublasHandle, const float weight,
-                        const int numResiduals)
+  PCAGPUDistanceFunctor(
+      C_PcaDeformModel c_deformModel,
+      C_ScanPointCloud c_scanPointCloud,
+      cublasHandle_t cublasHandle,
+      const float weight,
+      const int numResiduals)
       : c_deformModel(c_deformModel), c_scanPointCloud(c_scanPointCloud),
         cublasHandle(cublasHandle), weight(weight) {
-    allocParamsToCUDADevice(&c_params, c_deformModel.shapeRank,
-                            c_deformModel.expressionRank, TRANSLATE_COEFF,
-                            ROTATE_COEFF);
+    allocParamsToCUDADevice(
+        &c_params,
+        c_deformModel.shapeRank,
+        c_deformModel.expressionRank,
+        TRANSLATE_COEFF,
+        ROTATE_COEFF);
     allocPositionCUDA(&position_d, c_deformModel.dim);
     allocResidualsToCUDADevice(&c_residuals, numResiduals);
     allocJacobiansToCUDADevice(
-        &c_jacobians, numResiduals, c_deformModel.shapeRank,
-        c_deformModel.expressionRank, TRANSLATE_COEFF, ROTATE_COEFF);
+        &c_jacobians,
+        numResiduals,
+        c_deformModel.shapeRank,
+        c_deformModel.expressionRank,
+        TRANSLATE_COEFF,
+        ROTATE_COEFF);
     // TODO: allocate PointPair
     set_num_residuals(numResiduals);
     mutable_parameter_block_sizes()->push_back(c_deformModel.shapeRank);
@@ -73,9 +82,10 @@ public:
     delete[] fuJacobians;
   }
 
-  virtual bool Evaluate(double const *const *parameters, double *residuals,
-                        double **jacobians) const {
-
+  virtual bool Evaluate(
+      double const *const *parameters,
+      double *residuals,
+      double **jacobians) const {
     // According to ceres-solver documentation, jacobians and jacobians[i] can
     // be null depending on optimization methods. if either is null, we don't
     // have to compute jacobian
@@ -87,9 +97,16 @@ public:
     convertArray(parameters[2], ftParams, TRANSLATE_COEFF);
     convertArray(parameters[3], fuParams, ROTATE_COEFF);
 
-    updateParams(c_params, fa1Params, c_deformModel.shapeRank, fa2Params,
-                 c_deformModel.expressionRank, ftParams, TRANSLATE_COEFF,
-                 fuParams, ROTATE_COEFF);
+    updateParams(
+        c_params,
+        fa1Params,
+        c_deformModel.shapeRank,
+        fa2Params,
+        c_deformModel.expressionRank,
+        ftParams,
+        TRANSLATE_COEFF,
+        fuParams,
+        ROTATE_COEFF);
 
     zeroResidualsCUDA(c_residuals);
     zeroJacobiansCUDA(c_jacobians);
@@ -100,12 +117,16 @@ public:
     convertArray(fresiduals, residuals, num_residuals());
 
     if (isJacobianRequired) {
-      convertArray(fa1Jacobians, jacobians[0],
-                   num_residuals() * c_deformModel.shapeRank);
-      convertArray(fa2Jacobians, jacobians[1],
-                   num_residuals() * c_deformModel.expressionRank);
-      convertArray(ftJacobians, jacobians[2],
-                   num_residuals() * TRANSLATE_COEFF);
+      convertArray(
+          fa1Jacobians,
+          jacobians[0],
+          num_residuals() * c_deformModel.shapeRank);
+      convertArray(
+          fa2Jacobians,
+          jacobians[1],
+          num_residuals() * c_deformModel.expressionRank);
+      convertArray(
+          ftJacobians, jacobians[2], num_residuals() * TRANSLATE_COEFF);
       convertArray(fuJacobians, jacobians[3], num_residuals() * ROTATE_COEFF);
     }
 
@@ -139,19 +160,35 @@ protected:
 
 class PCAGPULandmarkDistanceFunctor : public PCAGPUDistanceFunctor {
 public:
-  PCAGPULandmarkDistanceFunctor(C_PcaDeformModel c_deformModel,
-                                C_ScanPointCloud c_scanPointCloud,
-                                cublasHandle_t cublasHandle)
-      : PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle,
-                              1.f, c_scanPointCloud.numLmks * 3) {}
+  PCAGPULandmarkDistanceFunctor(
+      C_PcaDeformModel c_deformModel,
+      C_ScanPointCloud c_scanPointCloud,
+      cublasHandle_t cublasHandle)
+      : PCAGPUDistanceFunctor(
+            c_deformModel,
+            c_scanPointCloud,
+            cublasHandle,
+            1.f,
+            c_scanPointCloud.numLmks * 3) {}
 
   virtual ~PCAGPULandmarkDistanceFunctor() {}
 
   virtual bool evaluateLoss(const bool isJacobianRequired) const {
-    calculateLandmarkLoss(fresiduals, fa1Jacobians, fa2Jacobians, ftJacobians,
-                          fuJacobians, position_d, cublasHandle, c_params,
-                          c_deformModel, c_scanPointCloud, c_residuals,
-                          c_jacobians, weight, isJacobianRequired);
+    calculateLandmarkLoss(
+        fresiduals,
+        fa1Jacobians,
+        fa2Jacobians,
+        ftJacobians,
+        fuJacobians,
+        position_d,
+        cublasHandle,
+        c_params,
+        c_deformModel,
+        c_scanPointCloud,
+        c_residuals,
+        c_jacobians,
+        weight,
+        isJacobianRequired);
 
     return true;
   }
@@ -159,22 +196,40 @@ public:
 
 class PCAGPUGeometricDistanceFunctor : public PCAGPUDistanceFunctor {
 public:
-  PCAGPUGeometricDistanceFunctor(C_PcaDeformModel c_deformModel,
-                                 C_ScanPointCloud c_scanPointCloud,
-                                 cublasHandle_t cublasHandle,
-                                 const int num_residuals, const float weight,
-                                 const float searchRadius)
-      : PCAGPUDistanceFunctor(c_deformModel, c_scanPointCloud, cublasHandle,
-                              weight, num_residuals),
+  PCAGPUGeometricDistanceFunctor(
+      C_PcaDeformModel c_deformModel,
+      C_ScanPointCloud c_scanPointCloud,
+      cublasHandle_t cublasHandle,
+      const int num_residuals,
+      const float weight,
+      const float searchRadius)
+      : PCAGPUDistanceFunctor(
+            c_deformModel,
+            c_scanPointCloud,
+            cublasHandle,
+            weight,
+            num_residuals),
         searchRadius(searchRadius) {}
 
   virtual ~PCAGPUGeometricDistanceFunctor() {}
 
   virtual bool evaluateLoss(const bool isJacobianRequired) const {
     calculateGeometricLoss(
-        fresiduals, fa1Jacobians, fa2Jacobians, ftJacobians, fuJacobians,
-        position_d, cublasHandle, c_params, c_deformModel, c_scanPointCloud,
-        c_residuals, c_jacobians, searchRadius, weight, isJacobianRequired);
+        fresiduals,
+        fa1Jacobians,
+        fa2Jacobians,
+        ftJacobians,
+        fuJacobians,
+        position_d,
+        cublasHandle,
+        c_params,
+        c_deformModel,
+        c_scanPointCloud,
+        c_residuals,
+        c_jacobians,
+        searchRadius,
+        weight,
+        isJacobianRequired);
 
     return true;
   }
@@ -191,8 +246,10 @@ public:
     mutable_parameter_block_sizes()->push_back(coeffSize);
   }
 
-  virtual bool Evaluate(double const *const *parameters, double *residuals,
-                        double **jacobians) const {
+  virtual bool Evaluate(
+      double const *const *parameters,
+      double *residuals,
+      double **jacobians) const {
     double sqrt_lambda = sqrt(multiplier);
     for (int i = 0; i < coeffSize; i++) {
       residuals[i] = sqrt_lambda * parameters[0][i];
@@ -239,9 +296,10 @@ public:
     mutable_parameter_block_sizes()->push_back(coeffSize);
   }
 
-  virtual bool Evaluate(double const *const *parameters, double *residuals,
-                        double **jacobians) const {
-
+  virtual bool Evaluate(
+      double const *const *parameters,
+      double *residuals,
+      double **jacobians) const {
     for (int i = 0; i < coeffSize; i++) {
       const double x = parameters[0][i];
       if (x < 0) {
@@ -301,9 +359,10 @@ public:
     mutable_parameter_block_sizes()->push_back(coeffSize);
   }
 
-  virtual bool Evaluate(double const *const *parameters, double *residuals,
-                        double **jacobians) const {
-
+  virtual bool Evaluate(
+      double const *const *parameters,
+      double *residuals,
+      double **jacobians) const {
     for (int i = 0; i < coeffSize; i++) {
       const double x = parameters[0][i];
       if (x < 0) {
@@ -355,17 +414,18 @@ private:
  */
 class LinearUpperBarrierFunctor : public ceres::CostFunction {
 public:
-  LinearUpperBarrierFunctor(int coeffSize, double multiplier,
-                            double barrierSlope, double barrier)
+  LinearUpperBarrierFunctor(
+      int coeffSize, double multiplier, double barrierSlope, double barrier)
       : coeffSize(coeffSize), multiplier(multiplier),
         barrierSlope(barrierSlope), barrier(barrier) {
     set_num_residuals(coeffSize);
     mutable_parameter_block_sizes()->push_back(coeffSize);
   }
 
-  virtual bool Evaluate(double const *const *parameters, double *residuals,
-                        double **jacobians) const {
-
+  virtual bool Evaluate(
+      double const *const *parameters,
+      double *residuals,
+      double **jacobians) const {
     for (int i = 0; i < coeffSize; i++) {
       const double x = parameters[0][i];
       if (x > 0) {

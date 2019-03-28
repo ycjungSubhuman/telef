@@ -14,8 +14,8 @@ namespace telef::io {
 
 class BufferFrameWrapper : public pcl::io::FrameWrapper {
 public:
-  BufferFrameWrapper(std::vector<uint8_t> data, unsigned width,
-                     unsigned height);
+  BufferFrameWrapper(
+      std::vector<uint8_t> data, unsigned width, unsigned height);
   const void *getData() const override;
   unsigned getDataSize() const override;
   unsigned getFrameID() const override;

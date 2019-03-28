@@ -18,8 +18,10 @@ namespace telef::io {
  */
 class TelefOpenNI2Grabber : public pcl::io::OpenNI2Grabber {
 public:
-  TelefOpenNI2Grabber(const std::string &device_id, const Mode &depth_mode,
-                      const Mode &image_mode);
+  TelefOpenNI2Grabber(
+      const std::string &device_id,
+      const Mode &depth_mode,
+      const Mode &image_mode);
 
 private:
   using sig_cb_openni_image_point_cloud_rgba = void(
@@ -29,11 +31,10 @@ private:
       *image_point_cloud_rgba_signal;
 
   // Override method to achieve cloud-image synchronization
-  void imageDepthImageCallback(const Image::Ptr &image,
-                               const DepthImage::Ptr &depth_image) override;
+  void imageDepthImageCallback(
+      const Image::Ptr &image, const DepthImage::Ptr &depth_image) override;
 
-  boost::shared_ptr<DeviceCloud>
-  mapToXYZRGBPointCloud(const Image::Ptr &image,
-                        const DepthImage::Ptr &depth_image);
+  boost::shared_ptr<DeviceCloud> mapToXYZRGBPointCloud(
+      const Image::Ptr &image, const DepthImage::Ptr &depth_image);
 };
 } // namespace telef::io

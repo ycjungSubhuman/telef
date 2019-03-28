@@ -11,8 +11,8 @@ using namespace telef::align;
 
 namespace telef::face {
 class MorphableModelFeederPipe
-    : public telef::io::Pipe<telef::feature::FittingSuite,
-                             PCANonRigidAlignmentSuite> {
+    : public telef::io::
+          Pipe<telef::feature::FittingSuite, PCANonRigidAlignmentSuite> {
 private:
   using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel>;
   using BaseT =

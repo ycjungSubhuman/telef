@@ -35,8 +35,8 @@ LmkToScanRigidFittingPipe::_processData(FeatureDetectSuite::Ptr in) {
     int validLmkCount = 0;
     for (long i = 0; i < feature->points.cols(); i++) {
       try {
-        auto pointInd = mapping->getMappedPointId(feature->points(0, i),
-                                                  feature->points(1, i));
+        auto pointInd = mapping->getMappedPointId(
+            feature->points(0, i), feature->points(1, i));
         auto scanPoint = rawCloud->at(pointInd);
         scanCorr->push_back(scanPoint);
         rawCloudLmkIdx.push_back(pointInd);
@@ -63,11 +63,11 @@ LmkToScanRigidFittingPipe::_processData(FeatureDetectSuite::Ptr in) {
     Eigen::Matrix4f currentTransform;
 
     // Fill correspondance list with range 0, ..., n valid landmarks.
-    pcl::registration::TransformationEstimationSVDScale<pcl::PointXYZRGBA,
-                                                        pcl::PointXYZRGBA>
-        svd;
-    svd.estimateRigidTransformation(*prnetCorr, rigidCorr, *scanCorr, rigidCorr,
-                                    currentTransform);
+    pcl::registration::
+        TransformationEstimationSVDScale<pcl::PointXYZRGBA, pcl::PointXYZRGBA>
+            svd;
+    svd.estimateRigidTransformation(
+        *prnetCorr, rigidCorr, *scanCorr, rigidCorr, currentTransform);
 
     // Return Aligned 3D Landmarks via PointCloud
     auto transformed_lmks = boost::make_shared<CloudT>();

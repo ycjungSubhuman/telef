@@ -21,8 +21,8 @@ using ProjectionSuite = struct ProjectionSuite {
 };
 
 class Fitting2ProjectionPipe
-    : public telef::io::Pipe<telef::align::PCANonRigidFittingResult,
-                             ProjectionSuite> {
+    : public telef::io::
+          Pipe<telef::align::PCANonRigidFittingResult, ProjectionSuite> {
 private:
   boost::shared_ptr<ProjectionSuite> _processData(
       boost::shared_ptr<telef::align::PCANonRigidFittingResult> in) override;

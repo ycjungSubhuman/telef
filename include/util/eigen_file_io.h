@@ -51,7 +51,6 @@ boost::shared_ptr<cv::Mat> readCSVtoCV(string fname) {
  * @return
  */
 boost::shared_ptr<Eigen::MatrixXf> readCSVtoEigan(string fname) {
-
   // Using OpenCV to be able to create an arbitrary sized matrix
   // as well as not reinventing the wheel.
   boost::shared_ptr<cv::Mat> cvsMat = readCSVtoCV(fname);

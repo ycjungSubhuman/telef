@@ -86,7 +86,6 @@ FeatureDetectionClientPipe::FeatureDetectionClientPipe(
 
 FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(
     FeatureDetectionClientPipe::InputPtrT in) {
-
   if (clientSocket == nullptr || !isConnected) {
     if (!connect()) {
       in->feature->points = landmarks;
@@ -113,7 +112,6 @@ FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(
 
   LmkRsp rspMsg;
   if (msgSent && recv(rspMsg)) {
-
     //            cout << "Lmk Size: " << rspMsg.dim().shape().size() << endl;
     //            cout << "Lmk Dim: " << rspMsg.dim().shape()[0] << ", " <<
     //            rspMsg.dim().shape()[1] << endl;
@@ -121,8 +119,8 @@ FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(
     auto data = rspMsg.data();
 
     // construct and populate the matrix
-    cv::Mat m(rspMsg.dim().shape()[0], rspMsg.dim().shape()[1], CV_32F,
-              data.data());
+    cv::Mat m(
+        rspMsg.dim().shape()[0], rspMsg.dim().shape()[1], CV_32F, data.data());
     //            cout << "M_lmks = "  << m << endl << endl;
 
     // make depth negative??
@@ -165,8 +163,8 @@ bool FeatureDetectionClientPipe::recv(google::protobuf::MessageLite &msg) {
     google::protobuf::io::CodedInputStream cis(&cis_adp);
     bool parseStatus = false;
 
-    google::protobuf::util::ParseDelimitedFromCodedStream(&msg, &cis,
-                                                          &parseStatus);
+    google::protobuf::util::ParseDelimitedFromCodedStream(
+        &msg, &cis, &parseStatus);
   } catch (exception &e) {
     std::cerr << "Error while receiving message: " << e.what() << endl;
     disconnect();

@@ -14,21 +14,25 @@ using namespace telef::types;
 }
 
 /** Loads MorphableFaceModel to GPU Device */
-void loadModelToCUDADevice(C_PcaDeformModel *deformModel,
-                           const Eigen::MatrixXf shapeDeformBasis,
-                           const Eigen::MatrixXf expressionDeformBasis,
-                           const Eigen::VectorXf ref,
-                           const Eigen::VectorXf shapeDeformationCenter,
-                           const Eigen::VectorXf expressionDeformationCenter,
-                           const std::vector<int> lmkInds);
+void loadModelToCUDADevice(
+    C_PcaDeformModel *deformModel,
+    const Eigen::MatrixXf shapeDeformBasis,
+    const Eigen::MatrixXf expressionDeformBasis,
+    const Eigen::VectorXf ref,
+    const Eigen::VectorXf shapeDeformationCenter,
+    const Eigen::VectorXf expressionDeformationCenter,
+    const std::vector<int> lmkInds);
 void freeModelCUDA(C_PcaDeformModel deformModel);
 
 /** Loads PointCloud to GPU Device */
 void loadScanToCUDADevice(
     C_ScanPointCloud *scanPointCloud,
-    boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan, float fx,
-    float fy, std::vector<int> modelLandmarkSelection,
-    Eigen::Matrix4f rigidTransform, CloudConstPtrT landmark3d);
+    boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA>> scan,
+    float fx,
+    float fy,
+    std::vector<int> modelLandmarkSelection,
+    Eigen::Matrix4f rigidTransform,
+    CloudConstPtrT landmark3d);
 
 void freeScanCUDA(C_ScanPointCloud scanPointCloud);
 
@@ -37,19 +41,31 @@ void freeScanCUDA(C_ScanPointCloud scanPointCloud);
  *
  * If update is true, doesn't malloc. uses previously allocated address
  */
-void allocParamsToCUDADevice(C_Params *params, int numa1, int numa2, int numt,
-                             int numu);
-void updateParams(const C_Params params, const float *const a1In, int numa1,
-                  const float *const a2In, int numa2, const float *const tIn,
-                  int numt, const float *const uIn, int numu);
+void allocParamsToCUDADevice(
+    C_Params *params, int numa1, int numa2, int numt, int numu);
+void updateParams(
+    const C_Params params,
+    const float *const a1In,
+    int numa1,
+    const float *const a2In,
+    int numa2,
+    const float *const tIn,
+    int numt,
+    const float *const uIn,
+    int numu);
 void freeParamsCUDA(C_Params params);
 
 void allocResidualsToCUDADevice(C_Residuals *residuals, int num_residuals);
 void zeroResidualsCUDA(const C_Residuals residuals);
 void freeResidualsCUDA(const C_Residuals residuals);
 
-void allocJacobiansToCUDADevice(C_Jacobians *jacobians, int num_residuals,
-                                int numa1, int numa2, int numt, int numu);
+void allocJacobiansToCUDADevice(
+    C_Jacobians *jacobians,
+    int num_residuals,
+    int numa1,
+    int numa2,
+    int numt,
+    int numu);
 void zeroJacobiansCUDA(const C_Jacobians jacobians);
 void freeJacobiansCUDA(const C_Jacobians jacobians);
 

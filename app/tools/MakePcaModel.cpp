@@ -15,18 +15,25 @@ int main(int argc, char **argv) {
   po::options_description desc("Constructs a PCA model from multiple meshes in "
                                "vertex-wise correspondence");
   desc.add_options()("help,H", "print this help message")(
-      "ref,R", po::value<std::string>(),
+      "ref,R",
+      po::value<std::string>(),
       "specify a path of ply file for a PLY mesh model")(
-      "shape,S", po::value<std::string>(),
+      "shape,S",
+      po::value<std::string>(),
       "specify a path of text file for a list of PLY mesh models with shape "
-      "variance")("exp,E", po::value<std::string>(),
-                  "specify a path of text file for a list of PLY mesh models "
-                  "with expression variance")(
-      "landmark,L", po::value<std::string>(),
+      "variance")(
+      "exp,E",
+      po::value<std::string>(),
+      "specify a path of text file for a list of PLY mesh models "
+      "with expression variance")(
+      "landmark,L",
+      po::value<std::string>(),
       "specify a path of text file for a list of landmark indices")(
-      "shaperank,P", po::value<int>(),
+      "shaperank,P",
+      po::value<int>(),
       "specify the maximum number of shape PCA basis(default 40)")(
-      "exprank,X", po::value<int>(),
+      "exprank,X",
+      po::value<int>(),
       "specify the maximum number of expression PCA basis(default 10)")(
       "output,O", po::value<std::string>(), "specify a output model path");
   po::variables_map vm;
@@ -69,9 +76,12 @@ int main(int argc, char **argv) {
   }
 
   telef::face::MorphableFaceModel model(
-      fs::path(vm["ref"].as<std::string>()), shapeSamplePaths,
-      expressionSamplePaths, fs::path(vm["landmark"].as<std::string>()),
-      shapeRank, expressionRank);
+      fs::path(vm["ref"].as<std::string>()),
+      shapeSamplePaths,
+      expressionSamplePaths,
+      fs::path(vm["landmark"].as<std::string>()),
+      shapeRank,
+      expressionRank);
 
   model.save(fs::path(vm["output"].as<std::string>()));
   return 0;

@@ -19,8 +19,8 @@ void savePNG(fs::path p, ImageT &image) {
   std::vector<uint8_t> imageData(image.getWidth() * image.getHeight() * 3);
   image.fillRaw(imageData.data());
   std::vector<uint8_t> pngData;
-  pcl::io::encodeRGBImageToPNG(imageData, image.getWidth(), image.getHeight(),
-                               pngData);
+  pcl::io::encodeRGBImageToPNG(
+      imageData, image.getWidth(), image.getHeight(), pngData);
 
   // Save PNG
   std::ofstream imagef(p, std::ios_base::binary);
@@ -62,8 +62,8 @@ ImagePtrT loadPNG(fs::path p) {
 
   size_t decodedWidth, decodedHeight;
   unsigned int decodedChannels;
-  pcl::io::decodePNGToImage(pngData, imageData, decodedWidth, decodedHeight,
-                            decodedChannels);
+  pcl::io::decodePNGToImage(
+      pngData, imageData, decodedWidth, decodedHeight, decodedChannels);
 
   pcl::io::FrameWrapper::Ptr frame = boost::make_shared<BufferFrameWrapper>(
       imageData, decodedWidth, decodedHeight);
@@ -71,8 +71,8 @@ ImagePtrT loadPNG(fs::path p) {
   return image;
 }
 
-BufferFrameWrapper::BufferFrameWrapper(std::vector<uint8_t> data,
-                                       unsigned width, unsigned height) {
+BufferFrameWrapper::BufferFrameWrapper(
+    std::vector<uint8_t> data, unsigned width, unsigned height) {
   this->data = std::move(data);
   this->width = width;
   this->height = height;

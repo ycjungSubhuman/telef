@@ -75,7 +75,6 @@ std::vector<std::pair<std::string, fs::path>> readGroups(fs::path p) {
 /** Loads an RGB image and a corresponding pointcloud. Make and write PLY face
  * mesh out of it. */
 int main(int ac, const char *const *av) {
-
   google::InitGoogleLogging(av[0]);
 
   float *d;
@@ -85,25 +84,31 @@ int main(int ac, const char *const *av) {
                                "face mesh as ply and obj");
   desc.add_options()("help,H", "print this help message")(
       "model,M", po::value<std::string>(), "specify PCA model path")(
-      "detector,D", po::value<std::string>(),
-      "specify Dlib pretrained Face detection model path")("vis,V",
-                                                           "run visualizer")(
-      "depthnormal,T", po::value<std::string>(),
+      "detector,D",
+      po::value<std::string>(),
+      "specify Dlib pretrained Face detection model path")(
+      "vis,V", "run visualizer")(
+      "depthnormal,T",
+      po::value<std::string>(),
       "record depth normal image to specified directory")(
-      "geo,Z", "Adds Geometric Term")("geo-weight,W", po::value<float>(),
-                                      "Weight control for Geometric Term")(
-      "geo-radius,R", po::value<float>(),
+      "geo,Z", "Adds Geometric Term")(
+      "geo-weight,W", po::value<float>(), "Weight control for Geometric Term")(
+      "geo-radius,R",
+      po::value<float>(),
       "Search Radius for Mesh to Scan correspondance")(
-      "geo-max-points,P", po::value<int>(),
+      "geo-max-points,P",
+      po::value<int>(),
       "Max Number of points used in Geometric Term")(
-      "fake,F", po::value<std::string>(),
+      "fake,F",
+      po::value<std::string>(),
       "specify directory path to captured kinect frames")(
       "bilaterFilter,B", "Use BilaterFilter on depth scan")(
       "bi-sigmaS,S", po::value<float>(), "BilaterFilter spatial width")(
       "bi-sigmaR,Q", po::value<float>(), "BilaterFilter range sigma")(
       "UsePrevFrame,U",
       "Use previous frames fitted parameters to increase performance")(
-      "address,A", po::value<std::string>(),
+      "address,A",
+      po::value<std::string>(),
       "specify server address for client to connect too");
   po::variables_map vm;
   po::store(po::parse_command_line(ac, av, desc), vm);
@@ -195,8 +200,8 @@ int main(int ac, const char *const *av) {
   auto featureDetector = FeatureDetectionClientPipe(address, ioService);
 
   auto lmkToScanFitting = LmkToScanRigidFittingPipe();
-  auto pipe1 = compose(faceDetector, featureDetector, lmkToScanFitting,
-                       modelFeeder, nonrigid);
+  auto pipe1 = compose(
+      faceDetector, featureDetector, lmkToScanFitting, modelFeeder, nonrigid);
   merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult>>(
       [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });
   if (vm.count("vis") > 0) {
@@ -212,18 +217,25 @@ int main(int ac, const char *const *av) {
   }
 
   std::shared_ptr<ImagePointCloudDevice<
-      DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>>
+      DeviceCloudConstT,
+      ImageT,
+      DeviceInputSuite,
+      PCANonRigidFittingResult>>
       device = NULL;
 
   if (useFakeKinect) {
     device = std::make_shared<FakeImagePointCloudDevice<
-        DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>>(
-        fs::path(fakePath), PlayMode::FPS_30);
+        DeviceCloudConstT,
+        ImageT,
+        DeviceInputSuite,
+        PCANonRigidFittingResult>>(fs::path(fakePath), PlayMode::FPS_30);
   } else {
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     device = std::make_shared<ImagePointCloudDeviceImpl<
-        DeviceCloudConstT, ImageT, DeviceInputSuite, PCANonRigidFittingResult>>(
-        std::move(grabber), false);
+        DeviceCloudConstT,
+        ImageT,
+        DeviceInputSuite,
+        PCANonRigidFittingResult>>(std::move(grabber), false);
   }
 
   device->setCloudChannel(cloudChannel);

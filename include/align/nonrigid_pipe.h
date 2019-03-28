@@ -46,14 +46,16 @@ public:
 };
 
 class PCAGPUNonRigidFittingPipe
-    : public telef::io::Pipe<PCANonRigidAlignmentSuite,
-                             PCANonRigidFittingResult> {
+    : public telef::io::
+          Pipe<PCANonRigidAlignmentSuite, PCANonRigidFittingResult> {
 public:
   PCAGPUNonRigidFittingPipe();
-  PCAGPUNonRigidFittingPipe(const float geoWeight, const int geoMaxPoints,
-                            const float geoSearchRadius,
-                            const bool addGeoTerm = true,
-                            const bool usePrevFrame = false);
+  PCAGPUNonRigidFittingPipe(
+      const float geoWeight,
+      const int geoMaxPoints,
+      const float geoSearchRadius,
+      const bool addGeoTerm = true,
+      const bool usePrevFrame = false);
   PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that);
   PCAGPUNonRigidFittingPipe(PCAGPUNonRigidFittingPipe &&that) noexcept;
   PCAGPUNonRigidFittingPipe &operator=(const PCAGPUNonRigidFittingPipe &that);

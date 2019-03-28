@@ -25,8 +25,11 @@ using namespace std::chrono_literals;
 
 namespace telef::io {
 
-template <class CloudOutT, class ImageOutT, class MergeOutT,
-          class MergePipeOutT>
+template <
+    class CloudOutT,
+    class ImageOutT,
+    class MergeOutT,
+    class MergePipeOutT>
 class ImagePointCloudDevice {
 private:
   using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
@@ -66,11 +69,16 @@ protected:
  * @tparam MergeOutT Merger Output Type
  * @tparam MergePipeOutT Merger Final Output Processed by Pipe in Merger
  */
-template <class CloudOutT, class ImageOutT, class MergeOutT,
-          class MergePipeOutT>
-class ImagePointCloudDeviceImpl
-    : public ImagePointCloudDevice<CloudOutT, ImageOutT, MergeOutT,
-                                   MergePipeOutT> {
+template <
+    class CloudOutT,
+    class ImageOutT,
+    class MergeOutT,
+    class MergePipeOutT>
+class ImagePointCloudDeviceImpl : public ImagePointCloudDevice<
+                                      CloudOutT,
+                                      ImageOutT,
+                                      MergeOutT,
+                                      MergePipeOutT> {
 private:
   using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
   using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
@@ -78,15 +86,15 @@ private:
   using FrontEndT = FrontEnd<MergePipeOutT>;
 
 public:
-  explicit ImagePointCloudDeviceImpl(TelefOpenNI2Grabber *grabber,
-                                     bool runOnce = false)
+  explicit ImagePointCloudDeviceImpl(
+      TelefOpenNI2Grabber *grabber, bool runOnce = false)
       : runOnce(runOnce) {
     this->grabber = grabber;
 
-    boost::function<void(const ImagePtrT &,
-                         const boost::shared_ptr<DeviceCloud>)>
-        callback = boost::bind(&ImagePointCloudDeviceImpl::imageCloudCallback,
-                               this, _1, _2);
+    boost::function<void(
+        const ImagePtrT &, const boost::shared_ptr<DeviceCloud>)>
+        callback = boost::bind(
+            &ImagePointCloudDeviceImpl::imageCloudCallback, this, _1, _2);
     boost::function<void(const ImagePtrT &)> dummyImageCallback =
         [](const ImagePtrT &) {};
     boost::function<void(const CloudConstPtrT &)> dummyCloudCallback =
@@ -143,8 +151,8 @@ private:
     this->mergers.clear();
   }
 
-  void imageCloudCallback(const ImagePtrT &image,
-                          const boost::shared_ptr<DeviceCloud> dc) {
+  void imageCloudCallback(
+      const ImagePtrT &image, const boost::shared_ptr<DeviceCloud> dc) {
     std::unique_lock<std::mutex> lk(dataMutex);
     if (this->cloudChannel) {
       this->cloudChannel->grabberCallback(dc);
@@ -165,18 +173,23 @@ private:
 };
 
 enum PlayMode {
-  FIRST_FRAME_ONLY,    // Use the first frame only and terminate
+  FIRST_FRAME_ONLY, // Use the first frame only and terminate
   ONE_FRAME_PER_ENTER, // Proceed to the next frame every time you press enter
-  FPS_30,              // Play at 30 FPS
-  FPS_30_LOOP          // Play at 30 FPS + Loop
+  FPS_30, // Play at 30 FPS
+  FPS_30_LOOP // Play at 30 FPS + Loop
 };
 
 /** Fake device for easy experiments */
-template <class CloudOutT, class ImageOutT, class MergeOutT,
-          class MergePipeOutT>
-class FakeImagePointCloudDevice
-    : public ImagePointCloudDevice<CloudOutT, ImageOutT, MergeOutT,
-                                   MergePipeOutT> {
+template <
+    class CloudOutT,
+    class ImageOutT,
+    class MergeOutT,
+    class MergePipeOutT>
+class FakeImagePointCloudDevice : public ImagePointCloudDevice<
+                                      CloudOutT,
+                                      ImageOutT,
+                                      MergeOutT,
+                                      MergePipeOutT> {
 private:
   using CloudOutPtrT = boost::shared_ptr<CloudOutT>;
   using ImageOutPtrT = boost::shared_ptr<ImageOutT>;
@@ -193,8 +206,8 @@ public:
    *                      These records can be recorded using
    * FakeFrameRecordDevice
    */
-  FakeImagePointCloudDevice(fs::path recordPath,
-                            PlayMode mode = PlayMode::FIRST_FRAME_ONLY) {
+  FakeImagePointCloudDevice(
+      fs::path recordPath, PlayMode mode = PlayMode::FIRST_FRAME_ONLY) {
     std::cout << "Loading Fake Frames..." << std::endl;
     this->mode = mode;
     for (int i = 1;; i++) {

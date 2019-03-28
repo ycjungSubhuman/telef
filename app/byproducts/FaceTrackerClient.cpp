@@ -38,11 +38,14 @@ int main(int ac, const char *const *av) {
   po::options_description desc("Capture 3D Landmark Points from RGBD Camera "
                                "and Save into multiple CSV files");
   desc.add_options()("help,H", "print help message")(
-      "detector,D", po::value<std::string>(),
+      "detector,D",
+      po::value<std::string>(),
       "specify Dlib pretrained Face detection model path")(
-      "fake,F", po::value<std::string>(),
+      "fake,F",
+      po::value<std::string>(),
       "specify directory path to captured kinect frames")(
-      "address,A", po::value<std::string>(),
+      "address,A",
+      po::value<std::string>(),
       "specify server address for client to connect too");
 
   po::variables_map vm;
@@ -99,19 +102,26 @@ int main(int ac, const char *const *av) {
   auto merger = std::make_shared<DeviceInputPipeMerger<FeatureDetectSuite>>(
       [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });
 
-  std::shared_ptr<ImagePointCloudDevice<DeviceCloudConstT, ImageT,
-                                        DeviceInputSuite, FeatureDetectSuite>>
+  std::shared_ptr<ImagePointCloudDevice<
+      DeviceCloudConstT,
+      ImageT,
+      DeviceInputSuite,
+      FeatureDetectSuite>>
       device;
 
   if (useFakeKinect) {
     device = std::make_shared<FakeImagePointCloudDevice<
-        DeviceCloudConstT, ImageT, DeviceInputSuite, FeatureDetectSuite>>(
-        fs::path(fakePath), PlayMode::FPS_30);
+        DeviceCloudConstT,
+        ImageT,
+        DeviceInputSuite,
+        FeatureDetectSuite>>(fs::path(fakePath), PlayMode::FPS_30);
   } else {
     auto grabber = new TelefOpenNI2Grabber("#1", depth_mode, image_mode);
     device = std::make_shared<ImagePointCloudDeviceImpl<
-        DeviceCloudConstT, ImageT, DeviceInputSuite, FeatureDetectSuite>>(
-        std::move(grabber), false);
+        DeviceCloudConstT,
+        ImageT,
+        DeviceInputSuite,
+        FeatureDetectSuite>>(std::move(grabber), false);
   }
 
   device->setCloudChannel(cloudChannel);

@@ -20,8 +20,8 @@ namespace telef::io {
 // a -> pipe2 -> PipeOutT
 template <class PipeOutT>
 class DeviceInputPipeMerger
-    : public telef::io::BinaryMerger<ImageT, DeviceCloudConstT,
-                                     DeviceInputSuite, PipeOutT> {
+    : public telef::io::
+          BinaryMerger<ImageT, DeviceCloudConstT, DeviceInputSuite, PipeOutT> {
 private:
   using BaseT =
       BinaryMerger<ImageT, DeviceCloudConstT, DeviceInputSuite, PipeOutT>;
@@ -33,8 +33,8 @@ private:
 public:
   DeviceInputPipeMerger(FuncT pipe) : BaseT(pipe) {}
 
-  OutPtrT merge(const ImagePtrT image,
-                const DeviceCloudBoostPtrT deviceCloud) override {
+  OutPtrT merge(
+      const ImagePtrT image, const DeviceCloudBoostPtrT deviceCloud) override {
     auto result = boost::make_shared<DeviceInputSuite>();
     result->rawCloud = deviceCloud->cloud;
     result->rawImage = image;

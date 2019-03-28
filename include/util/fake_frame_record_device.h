@@ -27,9 +27,11 @@ public:
 };
 
 /** Ready-made device object for recording fake frames */
-class FakeFrameRecordDevice
-    : public ImagePointCloudDeviceImpl<DeviceCloudConstT, ImageT, FakeFrame,
-                                       FakeFrame> {
+class FakeFrameRecordDevice : public ImagePointCloudDeviceImpl<
+                                  DeviceCloudConstT,
+                                  ImageT,
+                                  FakeFrame,
+                                  FakeFrame> {
 public:
   FakeFrameRecordDevice(TelefOpenNI2Grabber *grabber, fs::path recordRoot);
 };

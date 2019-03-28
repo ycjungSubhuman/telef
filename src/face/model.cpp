@@ -8,21 +8,28 @@ using namespace telef::io;
 
 namespace telef::face {
 MorphableFaceModel::MorphableFaceModel(
-    fs::path refSamplePath, const std::vector<fs::path> &shapeSamplePaths,
+    fs::path refSamplePath,
+    const std::vector<fs::path> &shapeSamplePaths,
     const std::vector<fs::path> &expressionSamplePaths,
-    fs::path landmarkIdxPath, int shapeRank, int expressionRank)
+    fs::path landmarkIdxPath,
+    int shapeRank,
+    int expressionRank)
     : mt(rd()) {
   assert(shapeSamplePaths.size() > 0);
   assert(expressionSamplePaths.size() > 0);
   refMesh = telef::io::ply::readPlyMesh(refSamplePath);
   std::vector<ColorMesh> shapeSamples(shapeSamplePaths.size());
   std::vector<ColorMesh> expressionSamples(expressionSamplePaths.size());
-  std::transform(shapeSamplePaths.begin(), shapeSamplePaths.end(),
-                 shapeSamples.begin(),
-                 [](auto &a) { return telef::io::ply::readPlyMesh(a); });
-  std::transform(expressionSamplePaths.begin(), expressionSamplePaths.end(),
-                 expressionSamples.begin(),
-                 [](auto &a) { return telef::io::ply::readPlyMesh(a); });
+  std::transform(
+      shapeSamplePaths.begin(),
+      shapeSamplePaths.end(),
+      shapeSamples.begin(),
+      [](auto &a) { return telef::io::ply::readPlyMesh(a); });
+  std::transform(
+      expressionSamplePaths.begin(),
+      expressionSamplePaths.end(),
+      expressionSamples.begin(),
+      [](auto &a) { return telef::io::ply::readPlyMesh(a); });
 
   shapeModel =
       std::make_shared<PCADeformationModel>(shapeSamples, refMesh, shapeRank);
@@ -47,23 +54,23 @@ void MorphableFaceModel::save(fs::path fileName) {
   writeLmk((fileName.string() + ".lmk").c_str(), landmarks);
 }
 
-Eigen::VectorXf
-MorphableFaceModel::genPosition(Eigen::VectorXf shapeCoeff,
-                                Eigen::VectorXf expressionCoeff) {
+Eigen::VectorXf MorphableFaceModel::genPosition(
+    Eigen::VectorXf shapeCoeff, Eigen::VectorXf expressionCoeff) {
   return refMesh.position + shapeModel->genDeform(shapeCoeff) +
-         expressionModel->genDeform(expressionCoeff);
+      expressionModel->genDeform(expressionCoeff);
 }
 
-Eigen::VectorXf MorphableFaceModel::genPosition(const double *shapeCoeff,
-                                                int shapeCoeffSize,
-                                                const double *expressionCoeff,
-                                                int expressionCoeffSize) {
+Eigen::VectorXf MorphableFaceModel::genPosition(
+    const double *shapeCoeff,
+    int shapeCoeffSize,
+    const double *expressionCoeff,
+    int expressionCoeffSize) {
   return refMesh.position + shapeModel->genDeform(shapeCoeff, shapeCoeffSize) +
-         expressionModel->genDeform(expressionCoeff, expressionCoeffSize);
+      expressionModel->genDeform(expressionCoeff, expressionCoeffSize);
 }
 
-ColorMesh MorphableFaceModel::genMesh(Eigen::VectorXf shapeCoeff,
-                                      Eigen::VectorXf expressionCoeff) {
+ColorMesh MorphableFaceModel::genMesh(
+    Eigen::VectorXf shapeCoeff, Eigen::VectorXf expressionCoeff) {
   ColorMesh result;
   result.position = genPosition(shapeCoeff, expressionCoeff);
   result.triangles = refMesh.triangles;
@@ -71,13 +78,14 @@ ColorMesh MorphableFaceModel::genMesh(Eigen::VectorXf shapeCoeff,
   return result;
 }
 
-ColorMesh MorphableFaceModel::genMesh(const double *shapeCoeff,
-                                      int shapeCoeffSize,
-                                      const double *expressionCoeff,
-                                      int expressionCoeffSize) {
+ColorMesh MorphableFaceModel::genMesh(
+    const double *shapeCoeff,
+    int shapeCoeffSize,
+    const double *expressionCoeff,
+    int expressionCoeffSize) {
   ColorMesh result;
-  result.position = genPosition(shapeCoeff, shapeCoeffSize, expressionCoeff,
-                                expressionCoeffSize);
+  result.position = genPosition(
+      shapeCoeff, shapeCoeffSize, expressionCoeff, expressionCoeffSize);
   result.triangles = refMesh.triangles;
 
   return result;

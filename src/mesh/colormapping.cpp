@@ -1,8 +1,8 @@
 #include "mesh/colormapping.h"
 
 namespace {
-Eigen::Vector2i convertXyzToUv(const Eigen::Vector3f &xyz, float fx, float fy,
-                               float cx, float cy) {
+Eigen::Vector2i convertXyzToUv(
+    const Eigen::Vector3f &xyz, float fx, float fy, float cx, float cy) {
   Eigen::Vector2i uv;
   uv(0) = static_cast<int>(std::round(xyz(0) * fx / xyz(2) + cx));
   uv(1) = static_cast<int>(std::round(xyz(1) * fy / xyz(2) + cy));

@@ -51,14 +51,14 @@ typedef struct C_Params {
 
 typedef struct C_residuals {
   float *residual_d; // pair loss calculation
-  int numResuduals;  // Is Needed????
+  int numResuduals; // Is Needed????
 } C_Residuals;
 
 typedef struct C_jacobians {
   float *fa1Jacobian_d; // used for shape parameters
   float *fa2Jacobian_d; // used for expression parameters
-  float *ftJacobian_d;  // used for shape parameters
-  float *fuJacobian_d;  // used for shape parameters
+  float *ftJacobian_d; // used for shape parameters
+  float *fuJacobian_d; // used for shape parameters
 
   int numa1j;
   int numa2j;

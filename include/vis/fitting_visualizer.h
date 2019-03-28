@@ -15,18 +15,18 @@ using namespace telef::align;
 namespace telef::vis {
 class FittingVisualizer : public telef::io::FrontEnd<PCANonRigidFittingResult> {
 public:
-  FittingVisualizer(const int geoMaxPoints = 2000,
-                    const float geoSearchRadius = 0.005);
+  FittingVisualizer(
+      const int geoMaxPoints = 2000, const float geoSearchRadius = 0.005);
   ~FittingVisualizer();
   using InputPtrT = boost::shared_ptr<PCANonRigidFittingResult>;
   void process(InputPtrT input) override;
   void stop() override;
   void mousePositionCallback(GLFWwindow *window, double xpos, double ypos);
   void mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset);
-  void mouseButtonCallback(GLFWwindow *window, int button, int action,
-                           int mods);
-  void keyCallback(GLFWwindow *window, int key, int scancode, int action,
-                   int mods);
+  void
+  mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+  void
+  keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
 private:
   void render();
@@ -34,13 +34,20 @@ private:
   Eigen::Matrix4f getMvpMatrix();
 
   void drawPointCloud(CloudConstPtrT cloud);
-  void drawMesh(const ColorMesh &mesh, const std::vector<float> &normal,
-                ImagePtrT image);
-  void drawColorPoints(const std::vector<float> &points, float pointSize,
-                       float r, float g, float b);
-  void drawCorrespondence(const std::vector<float> &pointSet1,
-                          const std::vector<float> &pointSet2, float r, float g,
-                          float b);
+  void drawMesh(
+      const ColorMesh &mesh, const std::vector<float> &normal, ImagePtrT image);
+  void drawColorPoints(
+      const std::vector<float> &points,
+      float pointSize,
+      float r,
+      float g,
+      float b);
+  void drawCorrespondence(
+      const std::vector<float> &pointSet1,
+      const std::vector<float> &pointSet2,
+      float r,
+      float g,
+      float b);
   void cycleMeshMode();
   void resetCamera();
 
@@ -120,12 +127,13 @@ public:
    * @param normal_ext		extension for normal image file.
    * 				If not given, defaults to .n.png
    */
-  MeshNormalDepthRenderer(fs::path record_root,
-                          std::function<std::string(int i)> filename_generator =
-                              [](int i) { return std::to_string(i); },
-                          std::string color_ext = ".png",
-                          std::string depth_ext = ".d.png",
-                          std::string normal_ext = ".n.png");
+  MeshNormalDepthRenderer(
+      fs::path record_root,
+      std::function<std::string(int i)> filename_generator =
+          [](int i) { return std::to_string(i); },
+      std::string color_ext = ".png",
+      std::string depth_ext = ".d.png",
+      std::string normal_ext = ".n.png");
 
   virtual ~MeshNormalDepthRenderer();
 
@@ -141,8 +149,8 @@ private:
   std::string m_normal_ext;
 
   GLuint m_normal_prog;
-  GLuint m_fb;  // framebuffer
-  GLuint m_rb;  // renderbufer
+  GLuint m_fb; // framebuffer
+  GLuint m_rb; // renderbufer
   GLuint m_drb; // depth renderbuffer
 
   GLuint m_vbuf;

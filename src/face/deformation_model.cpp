@@ -16,8 +16,8 @@ Eigen::MatrixXf getPCABase(Eigen::MatrixXf data, int maxRank) {
   auto d = data.transpose();
   Eigen::MatrixXf centered = d.rowwise() - d.colwise().mean();
   // Fast singlular value computation using devide-and-conquer
-  Eigen::BDCSVD<Eigen::MatrixXf> bdc(centered,
-                                     Eigen::ComputeThinU | Eigen::ComputeThinV);
+  Eigen::BDCSVD<Eigen::MatrixXf> bdc(
+      centered, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
   // Sort eigenvectors according to (singular value)^2 / (n -1), which is equal
   // to eigenvalues
@@ -36,12 +36,13 @@ Eigen::MatrixXf getPCABase(Eigen::MatrixXf data, int maxRank) {
     auto s2 = s * s;
     std::cout << s2 << ", ";
     pairs[i] = std::make_pair(
-        s2,                    // propertional to eigenvalue (omitted /(n-1))
+        s2, // propertional to eigenvalue (omitted /(n-1))
         bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
   }
   std::cout << std::endl;
-  std::sort(pairs.begin(), pairs.end(),
-            [](auto &l, auto &r) { return l.first > r.first; });
+  std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {
+    return l.first > r.first;
+  });
 
   Eigen::MatrixXf result(d.cols(), maxRank);
   for (int i = 0;
@@ -63,9 +64,11 @@ Eigen::MatrixXf getPCABase(Eigen::MatrixXf data, int maxRank) {
   return result;
 }
 
-Eigen::VectorXf linearSum(const Eigen::MatrixXf basisMatrix,
-                          const Eigen::VectorXf center, const double *coeff,
-                          int rank) {
+Eigen::VectorXf linearSum(
+    const Eigen::MatrixXf basisMatrix,
+    const Eigen::VectorXf center,
+    const double *coeff,
+    int rank) {
   if (rank != basisMatrix.cols()) {
     throw std::runtime_error("Coefficient dimension mismatch");
   }
@@ -87,8 +90,8 @@ Eigen::MatrixXf PCADeformationModel::getBasisMatrix() {
   return pcaBasisVectors;
 }
 
-PCADeformationModel::PCADeformationModel(const std::vector<ColorMesh> &samples,
-                                         const ColorMesh &refMesh, int rank) {
+PCADeformationModel::PCADeformationModel(
+    const std::vector<ColorMesh> &samples, const ColorMesh &refMesh, int rank) {
   pcaBasisVectors.resize(samples.size(), rank);
   auto numData = samples.size();
   auto dataDim = refMesh.position.size();
@@ -133,8 +136,10 @@ BlendShapeDeformationModel::BlendShapeDeformationModel(
   blendShapeVectors.resize(refMesh.position.size(), rank);
   for (int i = 0; i < rank; i++) {
     Eigen::VectorXf deformation = samples[i].position - refMesh.position;
-    std::copy_n(deformation.data(), deformation.size(),
-                blendShapeVectors.data() + i * refMesh.position.size());
+    std::copy_n(
+        deformation.data(),
+        deformation.size(),
+        blendShapeVectors.data() + i * refMesh.position.size());
   }
   this->rank = rank;
 }
@@ -159,8 +164,8 @@ Eigen::VectorXf BlendShapeDeformationModel::genDeform(Eigen::VectorXf coeff) {
   return linearSum(blendShapeVectors, getCenter(), c.data(), rank);
 }
 
-Eigen::VectorXf BlendShapeDeformationModel::genDeform(const double *coeff,
-                                                      int size) {
+Eigen::VectorXf
+BlendShapeDeformationModel::genDeform(const double *coeff, int size) {
   assert(size == rank);
   return linearSum(blendShapeVectors, getCenter(), coeff, rank);
 }

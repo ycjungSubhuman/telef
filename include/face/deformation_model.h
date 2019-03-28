@@ -25,8 +25,10 @@ public:
 /** PCA model for deformations */
 class PCADeformationModel : public LinearModel {
 public:
-  PCADeformationModel(const std::vector<ColorMesh> &samples,
-                      const ColorMesh &refMesh, int rank);
+  PCADeformationModel(
+      const std::vector<ColorMesh> &samples,
+      const ColorMesh &refMesh,
+      int rank);
 
   explicit PCADeformationModel(fs::path path);
 
@@ -51,8 +53,10 @@ private:
 /** Simple blend shape of deformations reletive to reference mesh */
 class BlendShapeDeformationModel : public LinearModel {
 public:
-  BlendShapeDeformationModel(const std::vector<ColorMesh> &samples,
-                             const ColorMesh &refMesh, int rank);
+  BlendShapeDeformationModel(
+      const std::vector<ColorMesh> &samples,
+      const ColorMesh &refMesh,
+      int rank);
   explicit BlendShapeDeformationModel(fs::path path);
   int getRank() override;
   Eigen::VectorXf getCenter() override;

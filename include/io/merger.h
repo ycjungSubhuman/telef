@@ -92,8 +92,8 @@ private:
   using MappedConstBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
 
 public:
-  OutPtrT merge(const ImagePtrT image,
-                const MappedConstBoostPtrT cloudPair) override = 0;
+  OutPtrT merge(
+      const ImagePtrT image, const MappedConstBoostPtrT cloudPair) override = 0;
 };
 
 /**
@@ -106,8 +106,9 @@ private:
   using DeviceCloudConstBoostPtrT = boost::shared_ptr<DeviceCloudConstT>;
 
 public:
-  OutPtrT merge(const ImagePtrT image,
-                const DeviceCloudConstBoostPtrT deviceCloud) override {
+  OutPtrT merge(
+      const ImagePtrT image,
+      const DeviceCloudConstBoostPtrT deviceCloud) override {
     return deviceCloud->cloud;
   }
 };

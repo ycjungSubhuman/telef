@@ -25,7 +25,7 @@ typedef float PLY_ELEMENT_FLOAT;
 template <typename T> inline const char *ply_type(); // not implemented
 
 // specialized implementation for different types
-#define DEFINE_PLY_TYPE(type, name)                                            \
+#define DEFINE_PLY_TYPE(type, name) \
   template <> inline const char *ply_type<type>() { return #name; }
 
 // definitions according to http://paulbourke.net/dataformats/ply/
@@ -59,8 +59,8 @@ public:
   std::string name;
   virtual bool load(std::istream &istr, size_t nr, bool binary) = 0;
   virtual void print_header(std::ostream &ostr) const = 0;
-  virtual void print_data(std::ostream &ostr, const size_t nr,
-                          bool binary) const = 0;
+  virtual void
+  print_data(std::ostream &ostr, const size_t nr, bool binary) const = 0;
 };
 
 template <typename SCALAR> class PLY_PROPERTY_SCALAR : public PLY_PROPERTY {
@@ -88,8 +88,8 @@ public:
     ostr << "property " << ply_type<SCALAR>() << " " << name << std::endl;
   }
 
-  virtual void print_data(std::ostream &ostr, const size_t nr,
-                          bool binary) const {
+  virtual void
+  print_data(std::ostream &ostr, const size_t nr, bool binary) const {
     if (binary)
       ostr.write((char *)&data[nr], sizeof(SCALAR));
     else
@@ -100,9 +100,8 @@ public:
 // we have to specialize uchar and char for ascii (otherwise its not printed as
 // a number)
 template <>
-inline void PLY_PROPERTY_SCALAR<unsigned char>::print_data(std::ostream &ostr,
-                                                           const size_t nr,
-                                                           bool binary) const {
+inline void PLY_PROPERTY_SCALAR<unsigned char>::print_data(
+    std::ostream &ostr, const size_t nr, bool binary) const {
   if (binary)
     ostr.write((char *)&data[nr], 1);
   else
@@ -110,9 +109,8 @@ inline void PLY_PROPERTY_SCALAR<unsigned char>::print_data(std::ostream &ostr,
 }
 
 template <>
-inline void PLY_PROPERTY_SCALAR<char>::print_data(std::ostream &ostr,
-                                                  const size_t nr,
-                                                  bool binary) const {
+inline void PLY_PROPERTY_SCALAR<char>::print_data(
+    std::ostream &ostr, const size_t nr, bool binary) const {
   if (binary)
     ostr.write((char *)&data[nr], 1);
   else
@@ -120,8 +118,8 @@ inline void PLY_PROPERTY_SCALAR<char>::print_data(std::ostream &ostr,
 }
 
 template <>
-inline bool PLY_PROPERTY_SCALAR<uint8_t>::load(std::istream &istr, size_t nr,
-                                               bool binary) {
+inline bool
+PLY_PROPERTY_SCALAR<uint8_t>::load(std::istream &istr, size_t nr, bool binary) {
   if (binary)
     istr.read((char *)&data[nr], 1);
   else {
@@ -164,8 +162,8 @@ public:
          << ply_type<SCALAR>() << " " << name << std::endl;
   }
 
-  virtual void print_data(std::ostream &ostr, const size_t nr,
-                          bool binary) const {
+  virtual void
+  print_data(std::ostream &ostr, const size_t nr, bool binary) const {
     LIST_SCALAR size(data[nr].size());
     if (binary) {
       ostr.write((char *)&size, sizeof(LIST_SCALAR));
@@ -234,8 +232,8 @@ void PLY_ELEMENT::setScalars(const char *names, const TYPE *data) {
 }
 
 template <typename TYPE>
-void PLY_ELEMENT::setList(const char *name,
-                          const std::vector<std::vector<TYPE>> &data) {
+void PLY_ELEMENT::setList(
+    const char *name, const std::vector<std::vector<TYPE>> &data) {
   PLY_PROPERTY_LIST<TYPE, uint32_t> &property =
       getPropertyCreate<PLY_PROPERTY_LIST<TYPE, uint32_t>>(name);
   if (nrElements != data.size()) {
@@ -296,8 +294,8 @@ inline bool PLY_ELEMENT::existsProperties(const char *name) const {
   return true;
 }
 
-inline std::shared_ptr<PLY_PROPERTY> make_property(const std::string &line,
-                                                   const size_t nrElements) {
+inline std::shared_ptr<PLY_PROPERTY>
+make_property(const std::string &line, const size_t nrElements) {
   std::shared_ptr<PLY_PROPERTY> p(nullptr);
 
   std::vector<std::string> tok = split(line, ' ');
@@ -376,7 +374,6 @@ inline PLY_ELEMENT &PlyFile::operator[](const std::string &name) {
 }
 
 inline void PlyFile::save(const char *fname, bool binary) const {
-
   // test endianness
   int32_t n = 0;
   bool bigEndian = *(char *)&n == 1;
@@ -403,9 +400,10 @@ inline void PlyFile::save(const char *fname, bool binary) const {
   pFile.close();
 
   // output the points
-  std::ofstream pData(fname,
-                      (binary ? std::ofstream::binary | std::ofstream::app
-                              : std::ofstream::app));
+  std::ofstream pData(
+      fname,
+      (binary ? std::ofstream::binary | std::ofstream::app
+              : std::ofstream::app));
 
   for (const auto &elp : elements_) {
     for (size_t ii = 0; ii < elp.nrElements; ii++) {
@@ -422,7 +420,6 @@ inline void PlyFile::save(const char *fname, bool binary) const {
 }
 
 inline bool PlyFile::load(const std::string &file) {
-
   PLY_FORMAT ply_format = PLY_FORMAT::unknown;
   elements_.clear();
 

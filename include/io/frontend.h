@@ -152,10 +152,11 @@ private:
   void _process(InputPtrT input) override;
 
 public:
-  explicit FittingSuiteWriterFrontEnd(bool ignoreIncomplete = true,
-                                      bool saveRGB = false,
-                                      bool saveRawCloud = false,
-                                      int expectedPointsCount = 49);
+  explicit FittingSuiteWriterFrontEnd(
+      bool ignoreIncomplete = true,
+      bool saveRGB = false,
+      bool saveRawCloud = false,
+      int expectedPointsCount = 49);
 };
 
 /** Record Fake Frames */

@@ -42,11 +42,13 @@ private:
 
 public:
   /** Construct PCA Model using a list of mesh files */
-  MorphableFaceModel(fs::path refSamplePath,
-                     const std::vector<fs::path> &shapeSamplePaths,
-                     const std::vector<fs::path> &expressionSamplePaths,
-                     fs::path landmarkIdxPath, int shapeRank,
-                     int expressionRank);
+  MorphableFaceModel(
+      fs::path refSamplePath,
+      const std::vector<fs::path> &shapeSamplePaths,
+      const std::vector<fs::path> &expressionSamplePaths,
+      fs::path landmarkIdxPath,
+      int shapeRank,
+      int expressionRank);
 
   /** Load from existing model file */
   explicit MorphableFaceModel(fs::path fileName);
@@ -55,19 +57,24 @@ public:
   void save(fs::path fileName);
 
   /** Generate a xyzxyz... position vector using given coefficients */
-  Eigen::VectorXf genPosition(Eigen::VectorXf shapeCoeff,
-                              Eigen::VectorXf expressionCoeff);
+  Eigen::VectorXf
+  genPosition(Eigen::VectorXf shapeCoeff, Eigen::VectorXf expressionCoeff);
 
-  Eigen::VectorXf genPosition(const double *shapeCoeff, int shapeCoeffSize,
-                              const double *expressionCoeff,
-                              int expressionCoeffSize);
+  Eigen::VectorXf genPosition(
+      const double *shapeCoeff,
+      int shapeCoeffSize,
+      const double *expressionCoeff,
+      int expressionCoeffSize);
 
   /** Generate a ColorMesh using given coefficients */
-  ColorMesh genMesh(Eigen::VectorXf shapeCoeff,
-                    Eigen::VectorXf expressionCoeff);
+  ColorMesh
+  genMesh(Eigen::VectorXf shapeCoeff, Eigen::VectorXf expressionCoeff);
 
-  ColorMesh genMesh(const double *shapeCoeff, int shapeCoeffSize,
-                    const double *expressionCoeff, int expressionCoeffSize);
+  ColorMesh genMesh(
+      const double *shapeCoeff,
+      int shapeCoeffSize,
+      const double *expressionCoeff,
+      int expressionCoeffSize);
 
   /** Returns PCA basis matrix for shape */
   Eigen::MatrixXf getShapeBasisMatrix();

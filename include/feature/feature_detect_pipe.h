@@ -44,7 +44,11 @@ private:
   template <typename SUBNET> using rcon5 = relu<affine<con5<45, SUBNET>>>;
 
   using net_type = loss_mmod<
-      con<1, 9, 9, 1, 1,
+      con<1,
+          9,
+          9,
+          1,
+          1,
           rcon5<rcon5<
               rcon5<downsampler<input_rgb_image_pyramid<pyramid_down<6>>>>>>>>;
 
@@ -85,8 +89,8 @@ private:
   bool recv(google::protobuf::MessageLite &msg);
 
 public:
-  FeatureDetectionClientPipe(std::string address,
-                             boost::asio::io_service &service);
+  FeatureDetectionClientPipe(
+      std::string address, boost::asio::io_service &service);
   //        virtual ~FeatureDetectionClientPipe();
 
   // Connection

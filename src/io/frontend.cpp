@@ -36,22 +36,23 @@ void FittingSuiteWriterFrontEnd::_process(
   outCsv << sstream.str();
   outCsv.close();
   if (saveRGB) {
-    telef::io::saveBMPFile(pathPrefix.replace_extension(std::string(".bmp")),
-                           *input->rawImage);
+    telef::io::saveBMPFile(
+        pathPrefix.replace_extension(std::string(".bmp")), *input->rawImage);
   }
   if (saveRawCloud) {
-    pcl::io::savePLYFile(pathPrefix.replace_extension(std::string(".ply")),
-                         *input->rawCloud);
+    pcl::io::savePLYFile(
+        pathPrefix.replace_extension(std::string(".ply")), *input->rawCloud);
   }
 
   frameCount++;
   std::cout << "Captured" << std::endl;
 }
 
-FittingSuiteWriterFrontEnd::FittingSuiteWriterFrontEnd(bool ignoreIncomplete,
-                                                       bool saveRGB,
-                                                       bool saveRawCloud,
-                                                       int expectedPointsCount)
+FittingSuiteWriterFrontEnd::FittingSuiteWriterFrontEnd(
+    bool ignoreIncomplete,
+    bool saveRGB,
+    bool saveRawCloud,
+    int expectedPointsCount)
     : ignoreIncomplete(ignoreIncomplete), saveRGB(saveRGB),
       saveRawCloud(saveRawCloud), expectedPointsCount(expectedPointsCount),
       frameCount(0) {

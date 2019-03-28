@@ -28,8 +28,11 @@ PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe()
 }
 
 PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(
-    const float geoWeight, const int geoMaxPoints, const float geoSearchRadius,
-    const bool addGeoTerm, const bool usePrevFrame)
+    const float geoWeight,
+    const int geoMaxPoints,
+    const float geoSearchRadius,
+    const bool addGeoTerm,
+    const bool usePrevFrame)
     : isModelInitialized(false), geoWeight(geoWeight),
       geoMaxPoints(geoMaxPoints), geoSearchRadius(geoSearchRadius),
       addGeoTerm(addGeoTerm), usePrevFrame(usePrevFrame) {
@@ -126,16 +129,26 @@ PCAGPUNonRigidFittingPipe::_processData(
     auto meanExpressionDeformation =
         in->pca_model->getExpressionDeformationCenter();
     auto landmarks = in->pca_model->getLandmarks();
-    loadModelToCUDADevice(&this->c_deformModel, shapeBasis, expressionBasis,
-                          ref, meanShapeDeformation, meanExpressionDeformation,
-                          landmarks);
+    loadModelToCUDADevice(
+        &this->c_deformModel,
+        shapeBasis,
+        expressionBasis,
+        ref,
+        meanShapeDeformation,
+        meanExpressionDeformation,
+        landmarks);
     isModelInitialized = true;
   }
 
   C_ScanPointCloud c_scanPointCloud;
-  loadScanToCUDADevice(&c_scanPointCloud, in->rawCloud, in->fx, in->fy,
-                       landmarkSelection, in->transformation,
-                       in->fittingSuite->landmark3d);
+  loadScanToCUDADevice(
+      &c_scanPointCloud,
+      in->rawCloud,
+      in->fx,
+      in->fy,
+      landmarkSelection,
+      in->transformation,
+      in->fittingSuite->landmark3d);
 
   /* Setup Optimizer */
   // std::cout << "Fitting PCA model to scan..." << std::endl;
@@ -152,27 +165,43 @@ PCAGPUNonRigidFittingPipe::_processData(
     t.assign(3, 0.0);
   if (!usePrevFrame || u.size() == 0)
     u = {3.14, 0.0, 0.0};
-  problem.AddResidualBlock(lmkCost, new ceres::CauchyLoss(0.5),
-                           shapeCoeff.data(), expressionCoeff.data(), t.data(),
-                           u.data());
+  problem.AddResidualBlock(
+      lmkCost,
+      new ceres::CauchyLoss(0.5),
+      shapeCoeff.data(),
+      expressionCoeff.data(),
+      t.data(),
+      u.data());
 
   if (addGeoTerm == true) {
     auto geoCost = new PCAGPUGeometricDistanceFunctor(
-        this->c_deformModel, c_scanPointCloud, cublasHandle, geoMaxPoints * 3,
-        sqrtf(geoWeight), geoSearchRadius);
-    problem.AddResidualBlock(geoCost, new ceres::CauchyLoss(0.5),
-                             shapeCoeff.data(), expressionCoeff.data(),
-                             t.data(), u.data());
+        this->c_deformModel,
+        c_scanPointCloud,
+        cublasHandle,
+        geoMaxPoints * 3,
+        sqrtf(geoWeight),
+        geoSearchRadius);
+    problem.AddResidualBlock(
+        geoCost,
+        new ceres::CauchyLoss(0.5),
+        shapeCoeff.data(),
+        expressionCoeff.data(),
+        t.data(),
+        u.data());
   }
   problem.AddResidualBlock(
-      new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002), NULL,
+      new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002),
+      NULL,
       shapeCoeff.data());
   problem.AddResidualBlock(
-      new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10), NULL,
+      new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10),
+      NULL,
       expressionCoeff.data());
-  problem.AddResidualBlock(new LinearUpperBarrierFunctor(
-                               c_deformModel.expressionRank, 0.00002, 2, 1.0),
-                           NULL, expressionCoeff.data());
+  problem.AddResidualBlock(
+      new LinearUpperBarrierFunctor(
+          c_deformModel.expressionRank, 0.00002, 2, 1.0),
+      NULL,
+      expressionCoeff.data());
   ceres::Solver::Options options;
   options.minimizer_progress_to_stdout = false;
   options.max_num_iterations = 1000;
@@ -201,8 +230,8 @@ PCAGPUNonRigidFittingPipe::_processData(
       Eigen::Map<Eigen::VectorXd>(shapeCoeff.data(), c_deformModel.shapeRank)
           .cast<float>();
   result->expressionCoeff =
-      Eigen::Map<Eigen::VectorXd>(expressionCoeff.data(),
-                                  c_deformModel.expressionRank)
+      Eigen::Map<Eigen::VectorXd>(
+          expressionCoeff.data(), c_deformModel.expressionRank)
           .cast<float>();
 
   std::cout << "Fitted(Shape): " << std::endl;

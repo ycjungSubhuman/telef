@@ -29,8 +29,8 @@ void init() {
   }
 }
 
-void mouseButtonCallbackGLFW(GLFWwindow *window, int button, int action,
-                             int mods) {
+void mouseButtonCallbackGLFW(
+    GLFWwindow *window, int button, int action, int mods) {
   FittingVisualizer *visualizer =
       static_cast<FittingVisualizer *>(glfwGetWindowUserPointer(window));
   visualizer->mouseButtonCallback(window, button, action, mods);
@@ -42,15 +42,15 @@ void mousePositionCallbackGLFW(GLFWwindow *window, double xpos, double ypos) {
   visualizer->mousePositionCallback(window, xpos, ypos);
 }
 
-void mouseScrollCallbackGLFW(GLFWwindow *window, double xoffset,
-                             double yoffset) {
+void mouseScrollCallbackGLFW(
+    GLFWwindow *window, double xoffset, double yoffset) {
   FittingVisualizer *visualizer =
       static_cast<FittingVisualizer *>(glfwGetWindowUserPointer(window));
   visualizer->mouseScrollCallback(window, xoffset, yoffset);
 }
 
-void keyCallbackGLFW(GLFWwindow *window, int key, int scancode, int action,
-                     int mods) {
+void keyCallbackGLFW(
+    GLFWwindow *window, int key, int scancode, int action, int mods) {
   FittingVisualizer *visualizer =
       static_cast<FittingVisualizer *>(glfwGetWindowUserPointer(window));
   visualizer->keyCallback(window, key, scancode, action, mods);
@@ -135,18 +135,19 @@ const char *mesh_fragment_shader =
     "} \n"
     "";
 
-const char *mesh_normal_vertex_shader = "#version 460 \n"
-                                        "uniform mat4 mvp; \n"
-                                        "in vec4 pos; \n"
-                                        "in vec3 _normal; \n"
-                                        "out vec3 normal; \n"
-                                        "void main() { \n"
-                                        "  vec4 xy_z = mvp*pos; \n"
-                                        "  xy_z /= xy_z.w; \n"
-                                        "  vec4 xyz = vec4(xy_z.x, xy_z.y, -pos.z, 1.0); \n"
-                                        "  gl_Position = xyz; \n"
-                                        "  normal = _normal; \n"
-                                        "} \n ";
+const char *mesh_normal_vertex_shader =
+    "#version 460 \n"
+    "uniform mat4 mvp; \n"
+    "in vec4 pos; \n"
+    "in vec3 _normal; \n"
+    "out vec3 normal; \n"
+    "void main() { \n"
+    "  vec4 xy_z = mvp*pos; \n"
+    "  xy_z /= xy_z.w; \n"
+    "  vec4 xyz = vec4(xy_z.x, xy_z.y, -pos.z, 1.0); \n"
+    "  gl_Position = xyz; \n"
+    "  normal = _normal; \n"
+    "} \n ";
 
 const char *mesh_normal_fragment_shader =
     "#version 460 \n"
@@ -215,8 +216,10 @@ std::vector<float> getVertexNormal(ColorMesh mesh) {
   return vertexNormal;
 }
 
-Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input,
-               const int geoMaxPoints, const float geoRadius) {
+Frame getFrame(
+    telef::vis::FittingVisualizer::InputPtrT input,
+    const int geoMaxPoints,
+    const float geoRadius) {
   auto model = input->pca_model;
   auto mesh = model->genMesh(input->shapeCoeff, input->expressionCoeff);
 
@@ -230,9 +233,10 @@ Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input,
   const size_t lmkCount = input->pca_model->getLandmarks().size();
   std::vector<float> meshLandmarks(lmkCount * 3);
   for (size_t i = 0; i < lmkCount; i++) {
-    std::copy_n(mesh.position.data() +
-                    3 * (input->pca_model->getLandmarks()[i]),
-                3, &meshLandmarks[3 * i]);
+    std::copy_n(
+        mesh.position.data() + 3 * (input->pca_model->getLandmarks()[i]),
+        3,
+        &meshLandmarks[3 * i]);
   }
 
   std::vector<float> scanLandmarks(lmkCount * 3);
@@ -267,15 +271,32 @@ Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input,
     CUDA_CHECK(cudaMalloc((void **)(&numCorr_d), sizeof(int)));
 
     CUDA_CHECK(cudaMalloc((void **)(&mesh_d), nMeshSize * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(mesh_d, mesh.position.data(),
-                          nMeshSize * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(
+        mesh_d,
+        mesh.position.data(),
+        nMeshSize * sizeof(float),
+        cudaMemcpyHostToDevice));
 
     C_ScanPointCloud scan;
-    loadScanToCUDADevice(&scan, input->cloud, input->fx, input->fy, scanLmkIdx,
-                         input->transformation, emptyLmks);
+    loadScanToCUDADevice(
+        &scan,
+        input->cloud,
+        input->fx,
+        input->fy,
+        scanLmkIdx,
+        input->transformation,
+        emptyLmks);
 
-    find_mesh_to_scan_corr(meshCorr_d, scanCorr_d, distance_d, numCorr_d,
-                           mesh_d, nMeshSize, scan, geoRadius, geoMaxPoints);
+    find_mesh_to_scan_corr(
+        meshCorr_d,
+        scanCorr_d,
+        distance_d,
+        numCorr_d,
+        mesh_d,
+        nMeshSize,
+        scan,
+        geoRadius,
+        geoMaxPoints);
 
     CUDA_CHECK(
         cudaMemcpy(&numCorr, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
@@ -287,10 +308,16 @@ Frame getFrame(telef::vis::FittingVisualizer::InputPtrT input,
     meshGeoIdx.resize(numCorr);
     scanGeoIdx.resize(numCorr);
 
-    CUDA_CHECK(cudaMemcpy(meshGeoIdx.data(), meshCorr_d, numCorr * sizeof(int),
-                          cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(scanGeoIdx.data(), scanCorr_d, numCorr * sizeof(int),
-                          cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(
+        meshGeoIdx.data(),
+        meshCorr_d,
+        numCorr * sizeof(int),
+        cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(
+        scanGeoIdx.data(),
+        scanCorr_d,
+        numCorr * sizeof(int),
+        cudaMemcpyDeviceToHost));
 
     CUDA_CHECK(cudaFree(meshCorr_d));
     CUDA_CHECK(cudaFree(scanCorr_d));
@@ -336,8 +363,8 @@ GLuint compileShader(const char *source, GLenum type) {
   return result;
 }
 
-GLuint getShaderProgram(const char *vertexShaderSource,
-                        const char *fragmentShaderSource) {
+GLuint getShaderProgram(
+    const char *vertexShaderSource, const char *fragmentShaderSource) {
   GLuint vertexShader = compileShader(vertexShaderSource, GL_VERTEX_SHADER);
   GLuint fragmentShader =
       compileShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
@@ -352,8 +379,8 @@ GLuint getShaderProgram(const char *vertexShaderSource,
 
 namespace telef::vis {
 
-FittingVisualizer::FittingVisualizer(const int geoMaxPoints,
-                                     const float geoSearchRadius)
+FittingVisualizer::FittingVisualizer(
+    const int geoMaxPoints, const float geoSearchRadius)
     : renderRunning{true}, renderThread(&FittingVisualizer::render, this),
       renderTarget{nullptr}, clickInitialized{false}, phi{M_PI}, theta{0.0f},
       trackballMode(None), translation{0.0f, 0.0f, 0.8f}, zoom{1.0f},
@@ -418,8 +445,8 @@ void FittingVisualizer::render() {
     drawMesh(frame.mesh, frame.vertexNormal, frame.image);
     drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
     drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
-    drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f,
-                       0.0f);
+    drawCorrespondence(
+        frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
     drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
     drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
     drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
@@ -430,8 +457,8 @@ void FittingVisualizer::render() {
     glViewport(960, 0, 960, 540);
     drawColorPoints(frame.meshLandmarks, 10.0f, 1.0f, 0.0f, 0.0f);
     drawColorPoints(frame.scanLandmarks, 10.0f, 0.0f, 0.0f, 1.0f);
-    drawCorrespondence(frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f,
-                       0.0f);
+    drawCorrespondence(
+        frame.meshLandmarks, frame.scanLandmarks, 0.0f, 1.0f, 0.0f);
     drawColorPoints(frame.meshGeo, 5.0f, 1.0f, 1.0f, 1.0f);
     drawColorPoints(frame.scanGeo, 5.0f, 0.0f, 0.3f, 0.5f);
     drawCorrespondence(frame.meshGeo, frame.scanGeo, 0.5f, 0.5f, 0.5f);
@@ -457,23 +484,32 @@ void FittingVisualizer::drawPointCloud(CloudConstPtrT cloud) {
   glEnableVertexAttribArray(0); // pos
   glEnableVertexAttribArray(1); //_rgb
   glBindBuffer(GL_ARRAY_BUFFER, pointCloud);
-  glBufferData(GL_ARRAY_BUFFER,
-               cloud->points.size() * sizeof(pcl::PointXYZRGBA),
-               cloud->points.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      cloud->points.size() * sizeof(pcl::PointXYZRGBA),
+      cloud->points.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(
-      0, 3, GL_FLOAT, GL_FALSE, sizeof(pcl::PointXYZRGBA),
+      0,
+      3,
+      GL_FLOAT,
+      GL_FALSE,
+      sizeof(pcl::PointXYZRGBA),
       reinterpret_cast<void *>(offsetof(pcl::PointXYZRGBA, x)));
   glVertexAttribPointer(
-      1, 1, GL_FLOAT, GL_FALSE, sizeof(pcl::PointXYZRGBA),
+      1,
+      1,
+      GL_FLOAT,
+      GL_FALSE,
+      sizeof(pcl::PointXYZRGBA),
       reinterpret_cast<void *>(offsetof(pcl::PointXYZRGBA, rgba)));
   glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(cloud->points.size()));
   glDisableVertexAttribArray(0);
   glDisableVertexAttribArray(1);
 }
 
-void FittingVisualizer::drawMesh(const ColorMesh &mesh,
-                                 const std::vector<float> &normal,
-                                 ImagePtrT image) {
+void FittingVisualizer::drawMesh(
+    const ColorMesh &mesh, const std::vector<float> &normal, ImagePtrT image) {
   std::vector<unsigned int> triangles(mesh.triangles.size() * 3);
   for (int i = 0; i < mesh.triangles.size(); i++) {
     std::copy_n(mesh.triangles[i].data(), 3, &triangles[3 * i]);
@@ -488,24 +524,44 @@ void FittingVisualizer::drawMesh(const ColorMesh &mesh,
   glEnableVertexAttribArray(1); //_uv
   glEnableVertexAttribArray(2); //_normal
   glBindBuffer(GL_ARRAY_BUFFER, meshPosition);
-  glBufferData(GL_ARRAY_BUFFER, mesh.position.size() * sizeof(float),
-               mesh.position.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      mesh.position.size() * sizeof(float),
+      mesh.position.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
   glBindBuffer(GL_ARRAY_BUFFER, meshUVCoords);
-  glBufferData(GL_ARRAY_BUFFER, mesh.uv.size() * sizeof(float), mesh.uv.data(),
-               GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      mesh.uv.size() * sizeof(float),
+      mesh.uv.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
   glBindBuffer(GL_ARRAY_BUFFER, meshNormal);
-  glBufferData(GL_ARRAY_BUFFER, normal.size() * sizeof(float), normal.data(),
-               GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      normal.size() * sizeof(float),
+      normal.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshTriangles);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * sizeof(int),
-               triangles.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ELEMENT_ARRAY_BUFFER,
+      triangles.size() * sizeof(int),
+      triangles.data(),
+      GL_STREAM_DRAW);
 
   glBindTexture(GL_TEXTURE_2D, meshTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->getWidth(), image->getHeight(),
-               0, GL_RGB, GL_UNSIGNED_BYTE, image->getData());
+  glTexImage2D(
+      GL_TEXTURE_2D,
+      0,
+      GL_RGB,
+      image->getWidth(),
+      image->getHeight(),
+      0,
+      GL_RGB,
+      GL_UNSIGNED_BYTE,
+      image->getData());
   GLint texPosition = glGetUniformLocation(meshShader, "tex");
   glUniform1i(texPosition, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -519,16 +575,22 @@ void FittingVisualizer::drawMesh(const ColorMesh &mesh,
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   }
 
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()),
-                 GL_UNSIGNED_INT, NULL);
+  glDrawElements(
+      GL_TRIANGLES,
+      static_cast<GLsizei>(triangles.size()),
+      GL_UNSIGNED_INT,
+      NULL);
   glDisableVertexAttribArray(0); // pos
   glDisableVertexAttribArray(1); //_uv
   glDisableVertexAttribArray(2); //_normal
 }
 
-void FittingVisualizer::drawColorPoints(const std::vector<float> &points,
-                                        float pointSize, float r, float g,
-                                        float b) {
+void FittingVisualizer::drawColorPoints(
+    const std::vector<float> &points,
+    float pointSize,
+    float r,
+    float g,
+    float b) {
   Eigen::Matrix4f mvp = getMvpMatrix();
 
   glUseProgram(colorPointShader);
@@ -539,16 +601,22 @@ void FittingVisualizer::drawColorPoints(const std::vector<float> &points,
 
   glEnableVertexAttribArray(0); // pos
   glBindBuffer(GL_ARRAY_BUFFER, colorPointPosition);
-  glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(),
-               GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      points.size() * sizeof(float),
+      points.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
   glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(points.size() / 3));
   glDisableVertexAttribArray(0);
 }
 
-void FittingVisualizer::drawCorrespondence(const std::vector<float> &pointSet1,
-                                           const std::vector<float> &pointSet2,
-                                           float r, float g, float b) {
+void FittingVisualizer::drawCorrespondence(
+    const std::vector<float> &pointSet1,
+    const std::vector<float> &pointSet2,
+    float r,
+    float g,
+    float b) {
   Eigen::Matrix4f mvp = getMvpMatrix();
 
   glUseProgram(colorPointShader);
@@ -567,8 +635,11 @@ void FittingVisualizer::drawCorrespondence(const std::vector<float> &pointSet1,
 
   glEnableVertexAttribArray(0); // pos
   glBindBuffer(GL_ARRAY_BUFFER, lineCorrespondence);
-  glBufferData(GL_ARRAY_BUFFER, corrLines.size() * sizeof(float),
-               corrLines.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      corrLines.size() * sizeof(float),
+      corrLines.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
   glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(corrLines.size() / 3));
   glDisableVertexAttribArray(0);
@@ -610,8 +681,8 @@ Eigen::Matrix4f FittingVisualizer::getMvpMatrix() {
   return proj * view;
 }
 
-void FittingVisualizer::mousePositionCallback(GLFWwindow *window, double xpos,
-                                              double ypos) {
+void FittingVisualizer::mousePositionCallback(
+    GLFWwindow *window, double xpos, double ypos) {
   auto mode = trackballMode;
 
   if (mode != FittingVisualizer::None) {
@@ -641,14 +712,14 @@ void FittingVisualizer::mousePositionCallback(GLFWwindow *window, double xpos,
   }
 }
 
-void FittingVisualizer::mouseScrollCallback(GLFWwindow *window, double xoffset,
-                                            double yoffset) {
+void FittingVisualizer::mouseScrollCallback(
+    GLFWwindow *window, double xoffset, double yoffset) {
   auto zoom = this->zoom;
   this->zoom = static_cast<float>(zoom + 0.01 * yoffset);
 }
 
-void FittingVisualizer::mouseButtonCallback(GLFWwindow *window, int button,
-                                            int action, int mods) {
+void FittingVisualizer::mouseButtonCallback(
+    GLFWwindow *window, int button, int action, int mods) {
   if (action == GLFW_PRESS) {
     switch (button) {
     case GLFW_MOUSE_BUTTON_LEFT:
@@ -667,8 +738,8 @@ void FittingVisualizer::mouseButtonCallback(GLFWwindow *window, int button,
   }
 }
 
-void FittingVisualizer::keyCallback(GLFWwindow *window, int key, int scancode,
-                                    int action, int mods) {
+void FittingVisualizer::keyCallback(
+    GLFWwindow *window, int key, int scancode, int action, int mods) {
   if (action != GLFW_PRESS) {
     return;
   }
@@ -735,8 +806,11 @@ GLFWwindow *RestoreContext(GLFWwindow *prevContext) {
 
 } // namespace
 MeshNormalDepthRenderer::MeshNormalDepthRenderer(
-    fs::path record_root, std::function<std::string(int i)> filename_generator,
-    std::string color_ext, std::string depth_ext, std::string normal_ext)
+    fs::path record_root,
+    std::function<std::string(int i)> filename_generator,
+    std::string color_ext,
+    std::string depth_ext,
+    std::string normal_ext)
     : m_record_root(std::move(record_root)),
       m_filename_generator(std::move(filename_generator)),
       m_color_ext(std::move(color_ext)), m_depth_ext(std::move(depth_ext)),
@@ -777,19 +851,25 @@ void MeshNormalDepthRenderer::initFrameBuffers(InputPtrT input) {
 
   //    Setup color/depth renderbuffers and attach them to framebuffer
   glBindRenderbuffer(GL_RENDERBUFFER, m_rb);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA, input->image->getWidth(),
-                        input->image->getHeight());
+  glRenderbufferStorage(
+      GL_RENDERBUFFER,
+      GL_RGBA,
+      input->image->getWidth(),
+      input->image->getHeight());
   glBindFramebuffer(GL_FRAMEBUFFER, m_fb);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                            GL_RENDERBUFFER, m_rb);
+  glFramebufferRenderbuffer(
+      GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_rb);
   assert(GL_NO_ERROR == glGetError());
 
   glBindRenderbuffer(GL_RENDERBUFFER, m_drb);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT,
-                        input->image->getWidth(), input->image->getHeight());
+  glRenderbufferStorage(
+      GL_RENDERBUFFER,
+      GL_DEPTH_COMPONENT,
+      input->image->getWidth(),
+      input->image->getHeight());
   glBindFramebuffer(GL_FRAMEBUFFER, m_fb);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, m_drb);
+  glFramebufferRenderbuffer(
+      GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_drb);
   assert(GL_NO_ERROR == glGetError());
 
   assert(GL_FRAMEBUFFER_COMPLETE == glCheckFramebufferStatus(GL_FRAMEBUFFER));
@@ -813,8 +893,9 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
 
   const auto prevContext = PrepareContext(m_dummy_window);
 
-  assert(m_maybe_width == input->image->getWidth() &&
-         m_maybe_height == input->image->getHeight());
+  assert(
+      m_maybe_width == input->image->getWidth() &&
+      m_maybe_height == input->image->getHeight());
 
   // Render normal image
   //    Initialize opengl render flags
@@ -841,14 +922,20 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
 
   //        vertex positions
   glBindBuffer(GL_ARRAY_BUFFER, m_vbuf);
-  glBufferData(GL_ARRAY_BUFFER, vertexPosition.size() * sizeof(float),
-               vertexPosition.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      vertexPosition.size() * sizeof(float),
+      vertexPosition.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
   //        vertex normals
   glBindBuffer(GL_ARRAY_BUFFER, m_nbuf);
-  glBufferData(GL_ARRAY_BUFFER, vertexNormal.size() * sizeof(float),
-               vertexNormal.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      vertexNormal.size() * sizeof(float),
+      vertexNormal.data(),
+      GL_STREAM_DRAW);
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
   //    Setup uniforms
@@ -864,22 +951,17 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
   //    the output z component will be meaningless
   //    the shader uses raw z values (in meter)
   Eigen::Matrix4f p1;
-  p1 <<
-    fx / cx, 0.0f, 0.0f, 0.0f,
-    0.0f, fy / cy, 0.0f, 0.0f,
-    0.0f, 0.0f, -(near + far) / (far - near), -2.0f * near * far / (far - near),
-    0.0f, 0.0f, -1.0f, 0.0f;
+  p1 << fx / cx, 0.0f, 0.0f, 0.0f, 0.0f, fy / cy, 0.0f, 0.0f, 0.0f, 0.0f,
+      -(near + far) / (far - near), -2.0f * near * far / (far - near), 0.0f,
+      0.0f, -1.0f, 0.0f;
   Eigen::Matrix4f flip; // flips z coordinate to -z
-  flip <<
-    1.0, 0.0f, 0.0f, 0.0f,
-    0.0f, 1.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, -1.0f, 0.0f,
-    0.0f, 0.0f, 0.0f, 1.0f;
+  flip << 1.0, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
+      0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
 
   Eigen::Matrix4f mvp = p1 * flip * mv;
 
-  Eigen::MatrixXf pos = Eigen::Map<Eigen::MatrixXf>(mesh.position.data(), 3,
-                                                    mesh.position.size() / 3);
+  Eigen::MatrixXf pos = Eigen::Map<Eigen::MatrixXf>(
+      mesh.position.data(), 3, mesh.position.size() / 3);
 
   GLint mvpPosition = glGetUniformLocation(m_normal_prog, "mvp");
   glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
@@ -890,19 +972,37 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
     std::copy_n(mesh.triangles[i].data(), 3, &triangles[3 * i]);
   }
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_tbuf);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * sizeof(unsigned int),
-               triangles.data(), GL_STREAM_DRAW);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(triangles.size()),
-                 GL_UNSIGNED_INT, NULL);
+  glBufferData(
+      GL_ELEMENT_ARRAY_BUFFER,
+      triangles.size() * sizeof(unsigned int),
+      triangles.data(),
+      GL_STREAM_DRAW);
+  glDrawElements(
+      GL_TRIANGLES,
+      static_cast<GLsizei>(triangles.size()),
+      GL_UNSIGNED_INT,
+      NULL);
 
   //    Get pixel values
   std::vector<unsigned short> raw_normals(m_maybe_width * m_maybe_height * 3);
   std::vector<unsigned short> raw_depth(m_maybe_width * m_maybe_height);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
-  glReadPixels(0, 0, m_maybe_width, m_maybe_height, GL_RGB, GL_UNSIGNED_SHORT,
-               raw_normals.data());
-  glReadPixels(0, 0, m_maybe_width, m_maybe_height, GL_DEPTH_COMPONENT,
-               GL_UNSIGNED_SHORT, raw_depth.data());
+  glReadPixels(
+      0,
+      0,
+      m_maybe_width,
+      m_maybe_height,
+      GL_RGB,
+      GL_UNSIGNED_SHORT,
+      raw_normals.data());
+  glReadPixels(
+      0,
+      0,
+      m_maybe_width,
+      m_maybe_height,
+      GL_DEPTH_COMPONENT,
+      GL_UNSIGNED_SHORT,
+      raw_depth.data());
 
   //    Save pixel values
   std::cout << "Saving "
@@ -912,12 +1012,24 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
 
   std::vector<unsigned char> raw_color(m_maybe_width * m_maybe_height * 3);
   input->image->fillRaw(raw_color.data());
-  pcl::io::saveCharPNGFile(path.string() + m_color_ext, raw_color.data(),
-                           m_maybe_width, m_maybe_height, 3);
-  pcl::io::saveShortPNGFile(path.string() + m_depth_ext, raw_depth.data(),
-                           m_maybe_width, m_maybe_height, 1);
-  pcl::io::saveShortPNGFile(path.string() + m_normal_ext, raw_normals.data(),
-                           m_maybe_width, m_maybe_height, 3);
+  pcl::io::saveCharPNGFile(
+      path.string() + m_color_ext,
+      raw_color.data(),
+      m_maybe_width,
+      m_maybe_height,
+      3);
+  pcl::io::saveShortPNGFile(
+      path.string() + m_depth_ext,
+      raw_depth.data(),
+      m_maybe_width,
+      m_maybe_height,
+      1);
+  pcl::io::saveShortPNGFile(
+      path.string() + m_normal_ext,
+      raw_normals.data(),
+      m_maybe_width,
+      m_maybe_height,
+      3);
 
   //    Clean up
   glDisableVertexAttribArray(0);

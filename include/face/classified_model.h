@@ -88,8 +88,8 @@ public:
 
         std::vector<int> nearestPointInds;
         std::vector<float> nearestPointDists;
-        auto numPointsFound = kdtree.nearestKSearch(point, 1, nearestPointInds,
-                                                    nearestPointDists);
+        auto numPointsFound = kdtree.nearestKSearch(
+            point, 1, nearestPointInds, nearestPointDists);
 
         if (numPointsFound == 1 && nearestPointDists[0] < REJECTION_THRESHOLD) {
           distSum += nearestPointDists[0];
