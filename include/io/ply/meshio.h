@@ -1,22 +1,21 @@
 #pragma once
 
+#include <exception>
 #include <experimental/filesystem>
 #include <vector>
-#include <exception>
 
 #include <Eigen/Core>
 
-#include "mesh/mesh.h"
 #include "io/ply/YaPly.h"
+#include "mesh/mesh.h"
 
 namespace {
-    using namespace telef::mesh;
-    namespace fs = std::experimental::filesystem;
-}
+using namespace telef::mesh;
+namespace fs = std::experimental::filesystem;
+} // namespace
 
 namespace telef::io::ply {
-    ColorMesh readPlyMesh(fs::path f);
-    void writePlyMesh(fs::path f, ColorMesh &mesh);
-    void writeObjMesh(fs::path f, ColorMesh &mesh);
-}
-
+ColorMesh readPlyMesh(fs::path f);
+void writePlyMesh(fs::path f, ColorMesh &mesh);
+void writeObjMesh(fs::path f, ColorMesh &mesh);
+} // namespace telef::io::ply

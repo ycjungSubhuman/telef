@@ -25,8 +25,7 @@ void FakeFrame::save(fs::path p) {
 boost::shared_ptr<DeviceCloud> FakeFrame::getDeviceCloud() { return this->dc; }
 
 namespace {
-ImagePtrT CloneImage(ImagePtrT image)
-{
+ImagePtrT CloneImage(ImagePtrT image) {
   std::vector<uint8_t> raw(static_cast<unsigned long>(image->getDataSize()));
   image->fillRaw(raw.data());
   pcl::io::FrameWrapper::Ptr wrapper = boost::make_shared<BufferFrameWrapper>(
@@ -36,9 +35,7 @@ ImagePtrT CloneImage(ImagePtrT image)
 }
 } // namespace
 
-ImagePtrT FakeFrame::getImage() {
-  return CloneImage(image);
-}
+ImagePtrT FakeFrame::getImage() { return CloneImage(image); }
 
 pcl::io::DepthImage::ConstPtr FakeFrame::getDepthImage() {
   return dc->depthImage;

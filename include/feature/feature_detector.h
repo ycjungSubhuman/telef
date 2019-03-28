@@ -1,46 +1,46 @@
 #pragma once
 
-#include <vector>
-#include <Eigen/Dense>
-#include <pcl/io/image.h>
-#include <cxcore.h>
-#include "type.h"
-#include "io/merger/device_input.h"
 #include "feature/face.h"
+#include "io/merger/device_input.h"
+#include "type.h"
+#include <Eigen/Dense>
+#include <cxcore.h>
+#include <pcl/io/image.h>
+#include <vector>
 
 namespace {
-    using namespace telef::types;
+using namespace telef::types;
 }
 
 namespace telef::feature {
 
-    // Data needed for fitting face
-    // TODO: Refactor, Unify with feature/face.h and add to own header file
-    using FittingSuite = struct FittingSuite {
-        using Ptr = std::shared_ptr<FittingSuite>;
-        using ConstPtr = std::shared_ptr<const FittingSuite>;
+// Data needed for fitting face
+// TODO: Refactor, Unify with feature/face.h and add to own header file
+using FittingSuite = struct FittingSuite {
+  using Ptr = std::shared_ptr<FittingSuite>;
+  using ConstPtr = std::shared_ptr<const FittingSuite>;
 
-        Feature::Ptr landmark2d;
-        CloudConstPtrT landmark3d;
-        std::vector<int> invalid3dLandmarks;
-        ImagePtrT rawImage;
-        CloudConstPtrT rawCloud;
-        std::vector<int> rawCloudLmkIdx;
-        float fx;
-        float fy;
-    };
+  Feature::Ptr landmark2d;
+  CloudConstPtrT landmark3d;
+  std::vector<int> invalid3dLandmarks;
+  ImagePtrT rawImage;
+  CloudConstPtrT rawCloud;
+  std::vector<int> rawCloudLmkIdx;
+  float fx;
+  float fy;
+};
 
-    /**
-     * Detects 2D Feature Points from 2D RGB Image
-     */
-    class FeatureDetector {
-    public:
-        // Consult http://docs.pointclouds.org/trunk/classpcl_1_1io_1_1_image.html
-        using ImageT = pcl::io::Image;
+/**
+ * Detects 2D Feature Points from 2D RGB Image
+ */
+class FeatureDetector {
+public:
+  // Consult http://docs.pointclouds.org/trunk/classpcl_1_1io_1_1_image.html
+  using ImageT = pcl::io::Image;
 
-        /**
-         * Detects Features and Return Them
-         */
-        virtual Feature getFeature(const ImageT &image) = 0;
-    };
-}
+  /**
+   * Detects Features and Return Them
+   */
+  virtual Feature getFeature(const ImageT &image) = 0;
+};
+} // namespace telef::feature

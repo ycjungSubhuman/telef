@@ -16,7 +16,7 @@ namespace telef::vis {
 class FittingVisualizer : public telef::io::FrontEnd<PCANonRigidFittingResult> {
 public:
   FittingVisualizer(const int geoMaxPoints = 2000,
-		    const float geoSearchRadius = 0.005);
+                    const float geoSearchRadius = 0.005);
   ~FittingVisualizer();
   using InputPtrT = boost::shared_ptr<PCANonRigidFittingResult>;
   void process(InputPtrT input) override;
@@ -24,9 +24,9 @@ public:
   void mousePositionCallback(GLFWwindow *window, double xpos, double ypos);
   void mouseScrollCallback(GLFWwindow *window, double xoffset, double yoffset);
   void mouseButtonCallback(GLFWwindow *window, int button, int action,
-			   int mods);
+                           int mods);
   void keyCallback(GLFWwindow *window, int key, int scancode, int action,
-		   int mods);
+                   int mods);
 
 private:
   void render();
@@ -35,12 +35,12 @@ private:
 
   void drawPointCloud(CloudConstPtrT cloud);
   void drawMesh(const ColorMesh &mesh, const std::vector<float> &normal,
-		ImagePtrT image);
+                ImagePtrT image);
   void drawColorPoints(const std::vector<float> &points, float pointSize,
-		       float r, float g, float b);
+                       float r, float g, float b);
   void drawCorrespondence(const std::vector<float> &pointSet1,
-			  const std::vector<float> &pointSet2, float r, float g,
-			  float b);
+                          const std::vector<float> &pointSet2, float r, float g,
+                          float b);
   void cycleMeshMode();
   void resetCamera();
 
@@ -97,7 +97,7 @@ private:
 
 /**
  * Saves fitting result to to multiple PNG files (RGB/Depth/Normal)
- * 
+ *
  * Note)
  * This renderer does not work will varying resolution.
  * If the first frame it received is AxB, the other frames should be
@@ -109,10 +109,10 @@ public:
   using InputPtrT = boost::shared_ptr<PCANonRigidFittingResult>;
 
   /**
-   * @param record_root 	recoding root folder. All the rendered images will
-   *				be saved under this folder
-   * @param filename_generator	takes frame index, returns filename without extension.
-   *				If not given, defaults to std::to_string
+   * @param record_root 	recoding root folder. All the rendered images
+   *will be saved under this folder
+   * @param filename_generator	takes frame index, returns filename without
+   *extension. If not given, defaults to std::to_string
    * @param color_ext		extension for color image file.
    * 				If not given, defaults to .png
    * @param depth_ext		extension for depth image file.
@@ -121,16 +121,17 @@ public:
    * 				If not given, defaults to .n.png
    */
   MeshNormalDepthRenderer(fs::path record_root,
-                          std::function<std::string(int i)> filename_generator=[](int i){return std::to_string(i);},
-                          std::string color_ext=".png", std::string depth_ext=".d.png",
-                          std::string normal_ext=".n.png");
+                          std::function<std::string(int i)> filename_generator =
+                              [](int i) { return std::to_string(i); },
+                          std::string color_ext = ".png",
+                          std::string depth_ext = ".d.png",
+                          std::string normal_ext = ".n.png");
 
   virtual ~MeshNormalDepthRenderer();
 
   void _process(InputPtrT input) override;
 
 private:
-
   void initFrameBuffers(InputPtrT input);
 
   fs::path m_record_root;
@@ -140,8 +141,8 @@ private:
   std::string m_normal_ext;
 
   GLuint m_normal_prog;
-  GLuint m_fb; // framebuffer
-  GLuint m_rb; // renderbufer
+  GLuint m_fb;  // framebuffer
+  GLuint m_rb;  // renderbufer
   GLuint m_drb; // depth renderbuffer
 
   GLuint m_vbuf;

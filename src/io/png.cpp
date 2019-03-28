@@ -20,7 +20,7 @@ void savePNG(fs::path p, ImageT &image) {
   image.fillRaw(imageData.data());
   std::vector<uint8_t> pngData;
   pcl::io::encodeRGBImageToPNG(imageData, image.getWidth(), image.getHeight(),
-			       pngData);
+                               pngData);
 
   // Save PNG
   std::ofstream imagef(p, std::ios_base::binary);
@@ -32,7 +32,7 @@ void saveDepthPNG(fs::path p, const pcl::io::DepthImage &image) {
   // Encode PNG
   unsigned w = image.getWidth();
   unsigned h = image.getHeight();
-  std::vector<uint16_t> imageData(w*h);
+  std::vector<uint16_t> imageData(w * h);
   image.fillDepthImageRaw(w, h, imageData.data());
   std::vector<uint8_t> pngData;
   pcl::io::encodeMonoImageToPNG(imageData, w, h, pngData);
@@ -63,7 +63,7 @@ ImagePtrT loadPNG(fs::path p) {
   size_t decodedWidth, decodedHeight;
   unsigned int decodedChannels;
   pcl::io::decodePNGToImage(pngData, imageData, decodedWidth, decodedHeight,
-			    decodedChannels);
+                            decodedChannels);
 
   pcl::io::FrameWrapper::Ptr frame = boost::make_shared<BufferFrameWrapper>(
       imageData, decodedWidth, decodedHeight);
@@ -72,7 +72,7 @@ ImagePtrT loadPNG(fs::path p) {
 }
 
 BufferFrameWrapper::BufferFrameWrapper(std::vector<uint8_t> data,
-				       unsigned width, unsigned height) {
+                                       unsigned width, unsigned height) {
   this->data = std::move(data);
   this->width = width;
   this->height = height;

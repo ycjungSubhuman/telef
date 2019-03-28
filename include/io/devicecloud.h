@@ -2,9 +2,9 @@
 
 #include "util/UvPointMapping.h"
 #include <experimental/filesystem>
+#include <pcl/io/image_depth.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/io/image_depth.h>
 
 namespace {
 namespace fs = std::experimental::filesystem;
