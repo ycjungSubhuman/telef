@@ -141,7 +141,10 @@ const char *mesh_normal_vertex_shader = "#version 460 \n"
                                         "in vec3 _normal; \n"
                                         "out vec3 normal; \n"
                                         "void main() { \n"
-                                        "  gl_Position = mvp*pos; \n"
+                                        "  vec4 xy_z = mvp*pos; \n"
+                                        "  xy_z /= xy_z.w; \n"
+                                        "  vec4 xyz = vec4(xy_z.x, xy_z.y, -pos.z, 1.0); \n"
+                                        "  gl_Position = xyz; \n"
                                         "  normal = _normal; \n"
                                         "} \n ";
 
@@ -854,16 +857,25 @@ void MeshNormalDepthRenderer::_process(InputPtrT input) {
   float fy = input->fy;
   float cx = m_maybe_width / 2.0f;
   float cy = m_maybe_height / 2.0f;
-  float far = 0.9f;
-  float near = 0.4f;
+  float far = 1.0f;
+  float near = 0.0f;
 
+  //    traditional proejction matrix
+  //    the output z component will be meaningless
+  //    the shader uses raw z values (in meter)
   Eigen::Matrix4f p1;
-  p1 << fx / cx, 0.0f, 0.0f, 0.0f, 0.0f, fy / cy, 0.0f, 0.0f, 0.0f, 0.0f,
-      -(near + far) / (far - near), -2.0f * near * far / (far - near), 0.0f,
-      0.0f, -1.0f, 0.0f;
+  p1 <<
+    fx / cx, 0.0f, 0.0f, 0.0f,
+    0.0f, fy / cy, 0.0f, 0.0f,
+    0.0f, 0.0f, -(near + far) / (far - near), -2.0f * near * far / (far - near),
+    0.0f, 0.0f, -1.0f, 0.0f;
   Eigen::Matrix4f flip; // flips z coordinate to -z
-  flip << 1.0, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
-      0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
+  flip <<
+    1.0, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, -1.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f;
+
   Eigen::Matrix4f mvp = p1 * flip * mv;
 
   Eigen::MatrixXf pos = Eigen::Map<Eigen::MatrixXf>(mesh.position.data(), 3,
