@@ -41,7 +41,7 @@ private:
 	Eigen::SparseMatrix<float> WRC;
 	Eigen::SparseMatrix<float> WSC;
 	Eigen::SparseMatrix<float> MASK;
-	Eigen::SparseMatrix<float> consVecCont;
+	Eigen::VectorXf consVecCont;
 
 	int width;
 	int height;
