@@ -12,6 +12,7 @@
 #include "util/convert_arr.h"
 #include "util/cu_quaternion.h"
 #include "util/transform.h"
+#include "util/require.h"
 
 #define EPS 0.005
 
@@ -139,6 +140,20 @@ PCAGPUNonRigidFittingPipe::_processData(
     isModelInitialized = true;
   }
 
+  if(0 < in->shapeCoeff.size() && 0 < in->expressionCoeff.size())
+    {
+      shapeCoeff.resize(in->shapeCoeff.size());
+      expressionCoeff.resize(in->expressionCoeff.size());
+      std::copy_n(
+          in->shapeCoeff.data(),
+          in->shapeCoeff.size(),
+          shapeCoeff.data());
+      std::copy_n(
+          in->expressionCoeff.data(),
+          in->expressionCoeff.size(),
+          expressionCoeff.data());
+    }
+
   C_ScanPointCloud c_scanPointCloud;
   loadScanToCUDADevice(
       &c_scanPointCloud,
@@ -155,10 +170,6 @@ PCAGPUNonRigidFittingPipe::_processData(
   ceres::Problem problem;
 
   // Reset input parameters if we are first frame or not using prev frames
-  if (!usePrevFrame || shapeCoeff.size() == 0)
-    shapeCoeff.assign(c_deformModel.shapeRank, 0);
-  if (!usePrevFrame || expressionCoeff.size() == 0)
-    expressionCoeff.assign(c_deformModel.expressionRank, 0);
   if (!usePrevFrame || t.size() == 0)
     t.assign(3, 0.0);
   if (!usePrevFrame || u.size() == 0)
@@ -186,37 +197,29 @@ PCAGPUNonRigidFittingPipe::_processData(
         expressionCoeff.data(),
         t.data(),
         u.data());
-  }
+        }
 
-  /*
   problem.AddResidualBlock(
-      new L2RegularizerFunctor(c_deformModel.shapeRank, 0),
+      new L2RegularizerFunctor(c_deformModel.shapeRank, 1e-4),
       NULL,
       shapeCoeff.data());
-  */
 
-  /*
   problem.AddResidualBlock(
       new L2RegularizerFunctor(c_deformModel.expressionRank, 1e-4),
       NULL,
       expressionCoeff.data());
-  */
-  /*
-  problem.AddResidualBlock(
-      new LinearUpperBarrierFunctor(
-          c_deformModel.expressionRank, 0.00002, 2, 1.0),
-      NULL,
-      expressionCoeff.data());
-  */
+
   ceres::Solver::Options options;
   options.minimizer_type = ceres::TRUST_REGION;
   options.minimizer_progress_to_stdout = false;
   options.max_num_iterations = 1000;
+  options.function_tolerance = 1e-15;
+  options.parameter_tolerance = 1e-12;
   options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
 
   /* Run Optimization */
   auto summary = ceres::Solver::Summary();
-  ceres::Solve(options, &problem, &summary);
+  //ceres::Solve(options, &problem, &summary);
   std::cout << summary.FullReport() << std::endl;
 
   float fu[3];
@@ -257,74 +260,13 @@ PCAGPUNonRigidFittingPipe::_processData(
 }
 
 const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11, // Chin
-    12,
-    13,
-    14,
-    15,
-    16,
-    // Others(frontal part)
-    17,
-    18,
-    19,
-    20,
-    21,
-    22,
-    23,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29,
-    30,
-    31,
-    32,
-    33,
-    34,
-    35,
-    36,
-    37,
-    38,
-    39,
-    40,
-    41,
-    42,
-    43,
-    44,
-    45,
-    46,
-    47,
-    48,
-    49,
-    50,
-    51,
-    52,
-    53,
-    54,
-    55,
-    56,
-    57,
-    58,
-    59,
-    60,
-    61,
-    62,
-    63,
-    64,
-    65,
-    66,
-    67,
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+    31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+    51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+    61, 62, 63, 64, 65, 66, 67,
 };
+
 } // namespace telef::align

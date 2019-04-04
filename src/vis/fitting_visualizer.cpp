@@ -247,6 +247,7 @@ Frame getFrame(
   }
 
   std::vector<float> meshGeo, scanGeo;
+  /*
   if (geoMaxPoints > 0) {
     pcl::PointCloud<PointT>::Ptr emptyLmks(new pcl::PointCloud<PointT>);
     std::vector<int> scanLmkIdx;
@@ -335,6 +336,7 @@ Frame getFrame(
       meshGeo.push_back(mesh.position(3 * meshGeoIdx[idx] + 2));
     }
   }
+    */
 
   return Frame{.mesh = mesh,
                .vertexNormal = vertexNormal,

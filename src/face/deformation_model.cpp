@@ -73,11 +73,9 @@ Eigen::VectorXf linearSum(
   if (rank != basisMatrix.cols()) {
     throw std::runtime_error("Coefficient dimension mismatch");
   }
-  Eigen::VectorXf result = Eigen::VectorXf::Zero(basisMatrix.rows());
-  for (long i = 0; i < rank; i++) {
-    result += coeff[i] * basisMatrix.col(i);
-  }
-  return center + result;
+  Eigen::VectorXd xd = Eigen::Map<const Eigen::VectorXd>(coeff, rank);
+  Eigen::VectorXf x = xd.cast<float>();
+  return center+(basisMatrix*x);
 }
 } // namespace
 

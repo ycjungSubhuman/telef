@@ -30,6 +30,7 @@ include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 add_library(telef
   include/align/nonrigid_pipe.h
   include/align/rigid_pipe.h
+  include/align/lmkfit_pipe.h
   include/cloud/cloud_pipe.h
   include/face/model.h
   include/feature/feature_detector.h
@@ -79,6 +80,7 @@ add_library(telef
 
   src/cloud/cloud_pipe.cpp
   src/align/rigid_pipe.cpp
+  src/align/lmkfit_pipe.cpp
   src/io/align/align_frontend.cpp
   src/io/ply/meshio.cpp
   src/io/bmp.cpp

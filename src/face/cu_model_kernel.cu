@@ -278,6 +278,7 @@ void reduce_closest_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, in
 void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius, int maxPoints) {
     int idim = num_points/3;
+    printf("WTF?\n");
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
     CUDA_ZERO(&numCorr, static_cast<size_t >(1));
@@ -286,8 +287,6 @@ void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d,
             position_d, num_points, scan, radius, maxPoints);
     reduce_closest_corr(meshCorr_d, scanCorr_d, distance_d, numCorr, maxPoints);
     CHECK_ERROR_MSG("Kernel Error");
-
-
 }
 
 void calculateAlignedPositions(float *result_pos_d, float *align_pos_d, float *position_d,
@@ -393,6 +392,7 @@ void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                             const bool isJacobianRequired) {
     float *align_pos_d, *result_pos_d;
     const int num_residuals = c_residuals.numResuduals;
+    printf("GeometricLossCalled\n");
 
     // Allocate memory for Rigid aligned positions
     CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
