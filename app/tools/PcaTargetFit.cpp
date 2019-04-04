@@ -6,8 +6,8 @@
 #include <string>
 
 #include "align/nonrigid_pipe.h"
+#include "align/rigid_pipe.h"
 #include "cloud/cloud_pipe.h"
-#include "face/classify_pipe.h"
 #include "face/feeder.h"
 #include "feature/feature_detector.h"
 #include "io/align/align_frontend.h"
@@ -182,6 +182,7 @@ int main(int ac, const char *const *av) {
   auto cloudChannel = std::make_shared<DummyCloudChannel<DeviceCloudConstT>>(
       [cloudPipe](auto in) -> decltype(auto) { return (*cloudPipe)(in); });
 
+  auto rigid = PCARigidFittingPipe();
   auto nonrigid = PCAGPUNonRigidFittingPipe(
       geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm, usePrevFrame);
   auto fitting2Projection = Fitting2ProjectionPipe();
@@ -193,16 +194,18 @@ int main(int ac, const char *const *av) {
   auto modelFeeder = MorphableModelFeederPipe(model);
   std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult>> merger;
   auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
-  //    auto featureDetector =
-  //    PRNetFeatureDetectionPipe(fs::path(prnetGraphPath),
-  //    fs::path(prnetChkptPath));
 
   boost::asio::io_service ioService;
   auto featureDetector = FeatureDetectionClientPipe(address, ioService);
 
   auto lmkToScanFitting = LmkToScanRigidFittingPipe();
   auto pipe1 = compose(
-      faceDetector, featureDetector, lmkToScanFitting, modelFeeder, nonrigid);
+      faceDetector,
+      featureDetector,
+      lmkToScanFitting,
+      modelFeeder,
+      rigid,
+      nonrigid);
   merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult>>(
       [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });
   if (vm.count("vis") > 0) {

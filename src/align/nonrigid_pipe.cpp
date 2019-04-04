@@ -120,7 +120,6 @@ PCAGPUNonRigidFittingPipe::_processData(
     boost::shared_ptr<PCANonRigidAlignmentSuite> in) {
   /* Load data to cuda device */
 
-  // std::cout << "Fitting PCA model GPU" << std::endl;
   if (!isModelInitialized) {
     auto shapeBasis = in->pca_model->getShapeBasisMatrix();
     auto expressionBasis = in->pca_model->getExpressionBasisMatrix();
@@ -151,7 +150,6 @@ PCAGPUNonRigidFittingPipe::_processData(
       in->fittingSuite->landmark3d);
 
   /* Setup Optimizer */
-  // std::cout << "Fitting PCA model to scan..." << std::endl;
   auto lmkCost = new PCAGPULandmarkDistanceFunctor(
       this->c_deformModel, c_scanPointCloud, cublasHandle);
   ceres::Problem problem;
@@ -164,10 +162,10 @@ PCAGPUNonRigidFittingPipe::_processData(
   if (!usePrevFrame || t.size() == 0)
     t.assign(3, 0.0);
   if (!usePrevFrame || u.size() == 0)
-    u = {3.14, 0.0, 0.0};
+    u = {0.0, 0.0, 0.0};
   problem.AddResidualBlock(
       lmkCost,
-      new ceres::CauchyLoss(0.5),
+      nullptr,
       shapeCoeff.data(),
       expressionCoeff.data(),
       t.data(),
@@ -183,26 +181,35 @@ PCAGPUNonRigidFittingPipe::_processData(
         geoSearchRadius);
     problem.AddResidualBlock(
         geoCost,
-        new ceres::CauchyLoss(0.5),
+        nullptr,
         shapeCoeff.data(),
         expressionCoeff.data(),
         t.data(),
         u.data());
   }
+
+  /*
   problem.AddResidualBlock(
-      new L2RegularizerFunctor(c_deformModel.shapeRank, 0.0002),
+      new L2RegularizerFunctor(c_deformModel.shapeRank, 0),
       NULL,
       shapeCoeff.data());
+  */
+
+  /*
   problem.AddResidualBlock(
-      new LinearBarrierFunctor(c_deformModel.expressionRank, 0.0002, 10),
+      new L2RegularizerFunctor(c_deformModel.expressionRank, 1e-4),
       NULL,
       expressionCoeff.data());
+  */
+  /*
   problem.AddResidualBlock(
       new LinearUpperBarrierFunctor(
           c_deformModel.expressionRank, 0.00002, 2, 1.0),
       NULL,
       expressionCoeff.data());
+  */
   ceres::Solver::Options options;
+  options.minimizer_type = ceres::TRUST_REGION;
   options.minimizer_progress_to_stdout = false;
   options.max_num_iterations = 1000;
   options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
@@ -250,6 +257,11 @@ PCAGPUNonRigidFittingPipe::_processData(
 }
 
 const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
+    0,
+    1,
+    2,
+    3,
+    4,
     5,
     6,
     7,
@@ -257,6 +269,11 @@ const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
     9,
     10,
     11, // Chin
+    12,
+    13,
+    14,
+    15,
+    16,
     // Others(frontal part)
     17,
     18,

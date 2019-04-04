@@ -41,7 +41,7 @@ private:
   std::mt19937 mt;
 
 public:
-  /** Construct PCA Model using a list of mesh files */
+  /** Construct a PCA Model using a list of mesh files */
   MorphableFaceModel(
       fs::path refSamplePath,
       const std::vector<fs::path> &shapeSamplePaths,
@@ -49,6 +49,13 @@ public:
       fs::path landmarkIdxPath,
       int shapeRank,
       int expressionRank);
+
+  /** Construct a PCA Model from existing linear model */
+  MorphableFaceModel(
+      ColorMesh refMesh,
+      std::shared_ptr<LinearModel> shapeModel,
+      std::shared_ptr<LinearModel> expressionModel,
+      std::vector<int> landmarkIdx);
 
   /** Load from existing model file */
   explicit MorphableFaceModel(fs::path fileName);

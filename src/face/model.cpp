@@ -1,4 +1,5 @@
 #include "face/model.h"
+#include "mesh/bilinear_model.h"
 
 namespace {
 namespace fs = std::experimental::filesystem;
@@ -37,6 +38,15 @@ MorphableFaceModel::MorphableFaceModel(
       expressionSamples, refMesh, expressionRank);
   readLmk(landmarkIdxPath.c_str(), landmarks);
 }
+
+MorphableFaceModel::MorphableFaceModel(
+    ColorMesh refMesh,
+    std::shared_ptr<LinearModel> shapeModel,
+    std::shared_ptr<LinearModel> expressionModel,
+    std::vector<int> landmarkIdx)
+    : shapeModel(std::move(shapeModel)),
+      expressionModel(std::move(expressionModel)),
+      landmarks(std::move(landmarkIdx)), refMesh(std::move(refMesh)) {}
 
 MorphableFaceModel::MorphableFaceModel(fs::path fileName) : mt(rd()) {
   refMesh = telef::io::ply::readPlyMesh(fileName.string() + ".ref.ply");

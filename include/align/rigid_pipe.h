@@ -12,26 +12,15 @@ namespace telef::align {
 // template <int ShapeRank>
 class PCARigidFittingPipe
     : public telef::io::
-          Pipe<telef::feature::FittingSuite, PCANonRigidAlignmentSuite> {
+          Pipe<PCANonRigidAlignmentSuite, PCANonRigidAlignmentSuite> {
 private:
   using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel>;
   using BaseT =
-      telef::io::Pipe<telef::feature::FittingSuite, PCANonRigidAlignmentSuite>;
+      telef::io::Pipe<PCANonRigidAlignmentSuite, PCANonRigidAlignmentSuite>;
   using PtCldPtr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
 
-  // Odd error =operator is deleted
-  MModelTptr pca_model;
-  telef::mesh::ColorMesh meanMesh;
-  PtCldPtr initShape;
-  Eigen::Matrix4f transformation;
-  // TODO: Keep last frame transformation matrix (Trans1 * Trans2)
-  // or pointcloud in to optimize between frames?
-
   boost::shared_ptr<PCANonRigidAlignmentSuite>
-  _processData(boost::shared_ptr<telef::feature::FittingSuite> in) override;
-
-public:
-  PCARigidFittingPipe(MModelTptr model);
+  _processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) override;
 };
 
 class LmkToScanRigidFittingPipe : public telef::io::Pipe<

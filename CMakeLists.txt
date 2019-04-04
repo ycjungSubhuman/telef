@@ -57,10 +57,12 @@ add_library(telef
   include/face/deformation_model.h
   include/io/devicecloud.h
   include/io/png.h
+  include/io/obj.h
   include/io/fakeframe.h
   include/util/fake_frame_record_device.h
   include/io/matrix.h
   include/io/landmark.h
+  include/io/dataset/face_warehouse.h
   include/util/convert_arr.h
   include/face/model_cudahelper.h
   include/face/raw_model.h
@@ -87,8 +89,10 @@ add_library(telef
   src/mesh/mesh.cpp
   src/io/devicecloud.cpp 
   src/io/png.cpp 
+  src/io/obj.cpp
   src/io/frontend.cpp 
   src/io/fakeframe.cpp 
+  src/io/dataset/face_warehouse.cpp
   src/util/UvPointMapping.cpp 
   src/util/fake_frame_record_device.cpp
   src/io/landmark.cpp
@@ -179,6 +183,9 @@ target_link_libraries(PcaTargetFit ${Boost_LIBRARIES} telef)
 
 add_executable(MakePcaModel app/tools/MakePcaModel.cpp)
 target_link_libraries(MakePcaModel ${Boost_LIBRARIES} telef)
+
+add_executable(MakeFwPcaModel app/tools/MakeFwPcaModel.cpp)
+target_link_libraries(MakeFwPcaModel ${Boost_LIBRARIES} telef)
 
 add_executable(RecordFakeFrame app/tools/RecordFakeFrame.cpp)
 target_link_libraries(RecordFakeFrame)

@@ -1,6 +1,5 @@
+#include <Eigen/Geometry>
 #include <iostream>
-
-#include <pcl/registration/transformation_estimation_svd_scale.h>
 
 #include "align/rigid_pipe.h"
 #include "face/model.h"
@@ -12,62 +11,32 @@ using namespace telef::types;
 using namespace telef::face;
 
 namespace telef::align {
-PCARigidFittingPipe::PCARigidFittingPipe(MModelTptr model)
-    : BaseT(), pca_model(model),
-      transformation(Eigen::Matrix4f::Identity(4, 4)) {
-  // Generate Mean Face Template
-  meanMesh = pca_model->genMesh(
-      Eigen::VectorXf::Zero(pca_model->getShapeRank()),
-      Eigen::VectorXf::Zero(pca_model->getExpressionRank()));
 
-  // Save initial point cloud for rigid fitting
-  initShape = telef::util::convert(meanMesh.position);
-}
+boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
+    boost::shared_ptr<PCANonRigidAlignmentSuite> in) {
+  std::vector<int> pca_lmks = in->pca_model->getLandmarks();
+  auto in_lmks = in->fittingSuite->landmark3d;
 
-boost::shared_ptr<PCANonRigidAlignmentSuite>
-PCARigidFittingPipe::_processData(boost::shared_ptr<FittingSuite> in) {
-  std::vector<int> pca_lmks = pca_model->getLandmarks();
-  auto in_lmks = in->landmark3d;
+  Eigen::VectorXf ref = in->pca_model->getReferenceVector();
+  Eigen::Matrix3Xf mesh_pts_t =
+      Eigen::Map<Eigen::Matrix3Xf>(ref.data(), 3, ref.size() / 3);
+  Eigen::MatrixXf mesh_lmk_pts(in_lmks->size(), 3);
 
-  std::vector<int> corr_tgt(in_lmks->points.size());
-  std::iota(
-      std::begin(corr_tgt),
-      std::end(corr_tgt),
-      0); // Fill with range 0, ..., n.
-
-  // Check if we detected good landmarks
-  if (corr_tgt.size() + in->invalid3dLandmarks.size() == pca_lmks.size()) {
-    // Remove invalid Correspondences
-    std::vector<int>::reverse_iterator riter = in->invalid3dLandmarks.rbegin();
-    while (riter != in->invalid3dLandmarks.rend()) {
-      std::vector<int>::iterator iter_data = pca_lmks.begin() + *riter;
-      iter_data = pca_lmks.erase(iter_data);
-      riter++;
-    }
-
-    Eigen::Matrix4f currentTransform;
-    pcl::registration::
-        TransformationEstimationSVDScale<pcl::PointXYZ, pcl::PointXYZRGBA>
-            svd;
-    svd.estimateRigidTransformation(
-        *initShape, pca_lmks, *in_lmks, corr_tgt, currentTransform);
-    this->transformation = currentTransform;
-  } else {
-    // std::cout << "\n Didn't detect all landmarks, using last transformation:"
-    // << std::endl;
+  for (int i = 0; i < in_lmks->size(); i++) {
+    mesh_lmk_pts.row(i) = mesh_pts_t.col(pca_lmks[i]);
   }
 
-  // std::cout << "\n Transformtion Matrix: \n" << this->transformation <<
-  // std::endl;
-  auto alignment = boost::shared_ptr<PCANonRigidAlignmentSuite>(
-      new PCANonRigidAlignmentSuite());
-  alignment->fittingSuite = in;
-  alignment->pca_model = pca_model;
-  alignment->transformation = this->transformation;
-  alignment->image = in->rawImage;
-  alignment->fx = in->fx;
-  alignment->fy = in->fy;
-  alignment->rawCloud = in->rawCloud;
-  return alignment;
+  Eigen::MatrixXf lmk_pts(in_lmks->size(), 3);
+  for (int i = 0; i < in_lmks->size(); i++) {
+    lmk_pts(i, 0) = in_lmks->points[i].x;
+    lmk_pts(i, 1) = in_lmks->points[i].y;
+    lmk_pts(i, 2) = in_lmks->points[i].z;
+  }
+
+  Eigen::MatrixXf transformation =
+      Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose());
+
+  in->transformation = transformation;
+  return in;
 }
 } // namespace telef::align

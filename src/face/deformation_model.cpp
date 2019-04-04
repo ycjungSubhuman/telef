@@ -34,10 +34,11 @@ Eigen::MatrixXf getPCABase(Eigen::MatrixXf data, int maxRank) {
   for (unsigned long i = 0; i < pairs.size(); i++) {
     auto s = bdc.singularValues()(i);
     auto s2 = s * s;
-    std::cout << s2 << ", ";
+    auto lamb = s2 / (d.rows() - 1);
+    std::cout << lamb << ", ";
     pairs[i] = std::make_pair(
-        s2, // propertional to eigenvalue (omitted /(n-1))
-        bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
+        lamb, // propertional to eigenvalue
+        lamb * bdc.matrixV().col(i)); // eivenvector, which is a PCA basis
   }
   std::cout << std::endl;
   std::sort(pairs.begin(), pairs.end(), [](auto &l, auto &r) {
