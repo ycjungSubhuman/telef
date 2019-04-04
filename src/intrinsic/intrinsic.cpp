@@ -295,7 +295,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 		// % enforce sum(w)=1
 		for(int k=0;k<K;k++) {
 			int p = ipos[i]*width+jpos[i];
-			int q = ipos[pointIdxNKNSearch[k]]*width+jpos[pointIdxNKNSearch[k]];
+			int q = ipos[pointIdxNKNSearch[k+1]]*width+jpos[pointIdxNKNSearch[k+1]];
 			//((float*)cvPtr2D(LLENORMAL, index[p], index[q]))[0] = w(k, 1) / ws;
 			LLENORMAL.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
@@ -334,7 +334,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 		// % enforce sum(w)=1
 		for(int k=0;k<K;k++) {
 			int p = ipos[i]*width+jpos[i];
-			int q = ipos[pointIdxNKNSearch[k]]*width+jpos[pointIdxNKNSearch[k]];
+			int q = ipos[pointIdxNKNSearch[k+1]]*width+jpos[pointIdxNKNSearch[k+1]];
 			//((float*)cvPtr2D(LLEGRID, index[p], index[q]))[0] = w(k, 1) / ws;
 			LLEGRID.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
