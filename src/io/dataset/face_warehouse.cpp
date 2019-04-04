@@ -72,35 +72,43 @@ const std::vector<int> fw_lmks = {
     164,   10334, 8802,  6171,  8835, 8918, 6267, 3376,
 };
 
-/*
 void normalize_position(
-    const std::vector<std::vector<Eigen::VectorXf>> &positions)
+    Eigen::VectorXf ref,
+    std::vector<std::vector<Eigen::VectorXf>> &positions,
+    std::vector<int> lmkInds)
 {
-  for(size_t i=0; i<m_positions.size(); i++)
+
+  Eigen::MatrixXf lmk_pts(lmkInds.size(), 3);
+  for (int i = 0; i < lmkInds.size(); i++) {
+    lmk_pts(i,0) = ref(3*lmkInds[i]+0);
+    lmk_pts(i,1) = ref(3*lmkInds[i]+1);
+    lmk_pts(i,2) = ref(3*lmkInds[i]+2);
+  }
+
+  for(size_t i=0; i<positions.size(); i++)
     {
-      for(size_t j=0; j<m_positions[i].size(); j++)
+      for(size_t j=0; j<positions[i].size(); j++)
         {
-          Eigen::VectorXf input = m_meshes[i][j];
+          Eigen::VectorXf v = positions[i][j];
+          Eigen::Matrix3Xf mesh_pts_t =
+            Eigen::Map<Eigen::Matrix3Xf>(v.data(), 3, v.size() / 3);
+          Eigen::MatrixXf mesh_lmk_pts(lmkInds.size(), 3);
+          for (int k = 0; k < lmkInds.size(); k++) {
+            mesh_lmk_pts.row(k) = mesh_pts_t.col(lmkInds[k]);
+          }
+          Eigen::MatrixXf trans =
+            Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose(), false);
+          Eigen::Matrix3Xf aligned =
+            (trans*mesh_pts_t.colwise().homogeneous()).colwise().hnormalized();
 
-          Eigen::Matrix3f R;
-          Eigen::Vector3f t;
-          fext::fitting::Align3DMesh(
-              R, t,
-              *ref, *input, lmk3d, false);
-
-          Eigen::Matrix3Xf p = input->GetPosition();
-          Eigen::Matrix3Xf transp = (R*p).colwise() + t;
-          auto transMesh =
-            CMesh::Create(transp, ref->GetFaces(), 3);
-          m_meshes[i][j] = transMesh;
+          positions[i][j] =
+            Eigen::Map<Eigen::VectorXf>(aligned.data(), aligned.size());
         }
-      fext::io::writeObj(std::to_string(i)+".obj", *m_meshes[i][0]);
     }
 }
-*/
 } // namespace
 
-FaceWarehouse::FaceWarehouse(fs::path root)
+FaceWarehouse::FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkInds)
     : m_root(std::move(root)), m_faces(get_tri_face(m_root)), m_idCount(150),
       m_bsCount(46) {
   for (int idIndex = 0; idIndex < m_idCount; idIndex++) {
@@ -137,7 +145,10 @@ FaceWarehouse::FaceWarehouse(fs::path root)
     m_mean_exps.emplace_back(std::move(meanBs));
   }
 
-  // normalize_position(m_positions);
+  if(lmkInds.has_value())
+    {
+      normalize_position(m_positions[0][0], m_positions, *lmkInds);
+    }
 }
 
 namespace {

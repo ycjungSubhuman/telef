@@ -7,6 +7,7 @@
 
 #include "align/nonrigid_pipe.h"
 #include "align/rigid_pipe.h"
+#include "align/lmkfit_pipe.h"
 #include "cloud/cloud_pipe.h"
 #include "face/feeder.h"
 #include "feature/feature_detector.h"
@@ -91,6 +92,7 @@ int main(int ac, const char *const *av) {
       "depthnormal,T",
       po::value<std::string>(),
       "record depth normal image to specified directory")(
+      "reg", po::value<float>()->default_value(0.00001f), "Regularizer")(
       "geo,Z", "Adds Geometric Term")(
       "geo-weight,W", po::value<float>(), "Weight control for Geometric Term")(
       "geo-radius,R",
@@ -183,6 +185,7 @@ int main(int ac, const char *const *av) {
       [cloudPipe](auto in) -> decltype(auto) { return (*cloudPipe)(in); });
 
   auto rigid = PCARigidFittingPipe();
+  auto lmkfit = LmkFitPipe(vm["reg"].as<float>());
   auto nonrigid = PCAGPUNonRigidFittingPipe(
       geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm, usePrevFrame);
   auto fitting2Projection = Fitting2ProjectionPipe();
@@ -205,6 +208,7 @@ int main(int ac, const char *const *av) {
       lmkToScanFitting,
       modelFeeder,
       rigid,
+      lmkfit,
       nonrigid);
   merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult>>(
       [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });

@@ -2,6 +2,7 @@
 #include "mesh/bilinear_model.h"
 #include <experimental/filesystem>
 #include <vector>
+#include <optional>
 
 namespace {
 using namespace telef::mesh;
@@ -12,7 +13,7 @@ namespace telef::io::dataset {
 
 class FaceWarehouse : public BilinearModel {
 public:
-  FaceWarehouse(fs::path root);
+  FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkInds=std::nullopt);
 
   ColorMesh GetMesh(int idIndex, int bsIndex) const override;
   ColorMesh GetNeutral(int idIndex) const override;

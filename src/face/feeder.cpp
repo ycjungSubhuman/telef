@@ -12,6 +12,9 @@ MorphableModelFeederPipe::_processData(
   result->image = in->rawImage;
   result->fx = in->fx;
   result->fy = in->fy;
+  result->shapeCoeff = Eigen::VectorXf::Zero(pca_model->getShapeRank());
+  result->expressionCoeff =
+    Eigen::VectorXf::Zero(pca_model->getExpressionRank());
   result->rawCloud = in->rawCloud;
   return result;
 }

@@ -39,8 +39,12 @@ int main(int argc, char **argv) {
   require(vm, "landmark");
   require(vm, "rank");
 
+  std::vector<int> lmkInds;
+  std::string lmkPath = vm["landmark"].as<std::string>();
+  readLmk(lmkPath.c_str(), lmkInds);
+
   FaceWarehouseAllSampler sampler;
-  FaceWarehouse fw(vm["fw"].as<std::string>());
+  FaceWarehouse fw(vm["fw"].as<std::string>(), lmkInds);
 
   const auto ref = fw.GetNeutral(0);
   const auto idSamples = sampler.SampleId(fw);
@@ -50,9 +54,6 @@ int main(int argc, char **argv) {
       idSamples, ref, vm["rank"].as<int>());
   const auto expModel = std::make_shared<BlendShapeDeformationModel>(
       exSamples, ref, exSamples.size());
-  std::vector<int> lmkInds;
-  std::string lmkPath = vm["landmark"].as<std::string>();
-  readLmk(lmkPath.c_str(), lmkInds);
 
   MorphableFaceModel model(ref, shapeModel, expModel, lmkInds);
   model.save(fs::path(vm["output"].as<std::string>()));

@@ -22,6 +22,8 @@ using PCANonRigidAlignmentSuite = struct PCANonRigidAlignmentSuite {
   Eigen::Matrix4f transformation;
   telef::types::ImagePtrT image;
   CloudConstPtrT rawCloud;
+  Eigen::VectorXf shapeCoeff;
+  Eigen::VectorXf expressionCoeff;
 
   float fx;
   float fy;
@@ -82,5 +84,6 @@ private:
   std::vector<double> u;
   std::vector<double> shapeCoeff;
   std::vector<double> expressionCoeff;
+  std::vector<double> fixedShapeCoeff;
 };
 } // namespace telef::align
