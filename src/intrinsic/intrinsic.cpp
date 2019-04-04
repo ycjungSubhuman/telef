@@ -1,4 +1,5 @@
 #include "intrinsic/intrinsic.h"
+#include <cstdio>
 
 namespace telef::intrinsic{
 
@@ -24,7 +25,7 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 	WRC.resize(dims,dims);
 	WSC.resize(dims,dims);
 	MASK.resize(dims,dims);
-	consVecCont.resize(dims,1);
+	consVecCont.resize(dims);
 	for(int i=0;i<height;++i)
 		for(int j=0;j<width;++j)
 		{
@@ -35,8 +36,8 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 			for(int k=0;k<3;k++)
 			{
 				color[3*width*i+3*j+k]=_rgb[3*width*i+3*j+k]/255.0;
-				nMap[3*width*i+3*j+k]=_normal[3*width*i+3*j+k]/128-1.0;
-				nn+=nMap[3*width*i+3*j+k];
+				nMap[3*width*i+3*j+k]=_normal[3*width*i+3*j+k]/128.0-1.0;
+				nn+=nMap[3*width*i+3*j+k]*nMap[3*width*i+3*j+k];
 			}
 			nn = sqrt(nn);
 			for(int k=0;k<3;k++)
@@ -54,6 +55,7 @@ void IntrinsicDecomposition::process(float *result_intensity)
 	//A = 4 * WRC + 3 * mask1 * (spI - LLEGRID) + 3 * mask2 * (spI - LLENORMAL) + 0.025 * WSC;
 	//b = 4 * consVecCont;
 	Eigen::SparseMatrix<float> spI(indexMapping.size(),indexMapping.size());
+	spI.setIdentity();
 
 	Eigen::SparseMatrix<float> A = 4 * WRC + 3 * MASK * (spI - LLEGRID) + 3 * MASK * (spI - LLENORMAL) + 0.025 * WSC;
 	Eigen::SimplicialLDLT<Eigen::SparseMatrix<float> > chol(A);  // performs a Cholesky factorization of A
@@ -87,7 +89,7 @@ void IntrinsicDecomposition::getMask(const uint16_t *_depth)
 {
 	const uint16_t INVALID = 65535;
 
-	int n;
+	int n=0;
 	for (int i=0;i<height;i++)
 		for(int j=0;j<width;j++)
 		{
@@ -154,7 +156,7 @@ void IntrinsicDecomposition::getVarianceMap(int patch_size)
 			if(!mask[i*width+j])
 				continue;
 			int cnt=0;
-			float p[3]={0.0},pp=0.0;
+			float p[3]={0.0,0.0,0.0},pp=0.0;
 			for(int k=-p_size;k<=p_size;k++)
 				for(int l=-p_size;l<=p_size;l++)
 				{
@@ -168,7 +170,11 @@ void IntrinsicDecomposition::getVarianceMap(int patch_size)
 					}
 					cnt++;
 				}
-			vMap[i*width+j] = (pp-p[0]*p[0]-p[1]*p[1]-p[2]*p[2])/cnt;
+			pp/=cnt;
+			p[0]/=cnt;
+			p[1]/=cnt;
+			p[2]/=cnt;
+			vMap[i*width+j] = pp-p[0]*p[0]-p[1]*p[1]-p[2]*p[2];
 		}
 	}
 }
@@ -231,11 +237,13 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 					{
 						ipos[n] = i+gi;
 						jpos[n] = j+gj;
+						vmin = var;
 						flag = false;
 					}
 				}
 			if(flag)
 				continue;
+			//printf("%d / %d : %d %d -> %d -> %d\n",n,Ngrid,ipos[n],jpos[n],ipos[n]*width+jpos[n],index[ipos[n]*width+jpos[n]]);
 
 			cloud3d->points[n].x = nMap[ipos[n]*width*3+jpos[n]*3+0];
 			cloud3d->points[n].y = nMap[ipos[n]*width*3+jpos[n]*3+1];
@@ -247,7 +255,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			cloud6d->points[n].r = points[ipos[n]*width*3+jpos[n]*3+0];
 			cloud6d->points[n].g = points[ipos[n]*width*3+jpos[n]*3+1];
 			cloud6d->points[n].b = points[ipos[n]*width*3+jpos[n]*3+2];
-			MASK.coeffRef(index[ipos[n]*width+jpos[n]],index[ipos[n]*width+jpos[n]]);
+			MASK.coeffRef(index[ipos[n]*width+jpos[n]],index[ipos[n]*width+jpos[n]]) = 1.0;
 			n++;
 		}
 
@@ -293,6 +301,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			LLENORMAL.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
 	}
+	std::printf("LLENORMAL\n");
 
 	//for LLEGRID
 	pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree6d;
@@ -331,7 +340,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			LLEGRID.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
 	}
-
+	std::printf("LLEGRID\n");
 	delete [] ipos;
 	delete [] jpos;
 }
@@ -382,7 +391,9 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(float sig_n)
 			WSC.coeffRef(p,q) += -weight;
 			WSC.coeffRef(q,p) += -weight;
 		}
+		//std::printf("%d / %d\n",it,indexMapping.size());
 	}
+	std::printf("WSC\n");
 }
 
 //WRC
@@ -448,9 +459,11 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(float sig_c, float si
 			WRC.coeffRef(q,p) += -weight;
 		
 			float dI = lp-lq;
-			consVecCont.coeffRef(p,1) += weight * dI;
-			consVecCont.coeffRef(q,1) -= weight * dI;
+			consVecCont.coeffRef(p) += weight * dI;
+			consVecCont.coeffRef(q) -= weight * dI;
 		}
+		//std::printf("%d / %d\n",it,indexMapping.size());
 	}
+	std::printf("WRC, consVecCont\n");
 }
 }
