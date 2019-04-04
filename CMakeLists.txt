@@ -76,6 +76,7 @@ add_library(telef
   include/vis/fitting_visualizer.h
   include/util/po_util.h
   include/face/feeder.h
+  include/intrinsic/intrinsic.h
 
   src/cloud/cloud_pipe.cpp
   src/align/rigid_pipe.cpp
@@ -105,7 +106,8 @@ add_library(telef
   src/align/lmk_scan_rigid_pipe.cpp
   src/vis/fitting_visualizer.cpp
   src/util/po_util.cpp
-  src/face/feeder.cpp)
+  src/face/feeder.cpp
+  src/intrinsic/intrinsic.cpp)
 
 target_include_directories(telef
   PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -196,6 +198,9 @@ target_link_libraries(DNNFaceDetector ${Boost_LIBRARIES} telef)
 
 add_executable(FaceTrackerClient app/byproducts/FaceTrackerClient.cpp)
 target_link_libraries(FaceTrackerClient ${Boost_LIBRARIES} telef)
+
+add_executable(IntrinsicDecomposition app/tools/IntrinsicDecomposition.cpp)
+target_link_libraries(IntrinsicDecomposition ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
   function(myaddtest testname testpath)
