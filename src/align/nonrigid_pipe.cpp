@@ -33,10 +33,12 @@ PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(
     const int geoMaxPoints,
     const float geoSearchRadius,
     const bool addGeoTerm,
-    const bool usePrevFrame)
+    const bool usePrevFrame,
+    const bool adjustCamera)
     : isModelInitialized(false), geoWeight(geoWeight),
       geoMaxPoints(geoMaxPoints), geoSearchRadius(geoSearchRadius),
-      addGeoTerm(addGeoTerm), usePrevFrame(usePrevFrame) {
+      addGeoTerm(addGeoTerm), usePrevFrame(usePrevFrame),
+      adjustCamera(adjustCamera) {
   if (cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
     throw std::runtime_error("Cublas could not be initialized");
   }
@@ -50,6 +52,7 @@ PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(
   this->geoSearchRadius = that.geoSearchRadius;
   this->addGeoTerm = that.addGeoTerm;
   this->usePrevFrame = that.usePrevFrame;
+  this->adjustCamera = that.adjustCamera;
   if (cublasCreate(&cublasHandle) != CUBLAS_STATUS_SUCCESS) {
     throw std::runtime_error("Cublas could not be initialized");
   }
@@ -65,6 +68,7 @@ PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe(
   this->geoSearchRadius = that.geoSearchRadius;
   this->addGeoTerm = that.addGeoTerm;
   this->usePrevFrame = that.usePrevFrame;
+  this->adjustCamera = that.adjustCamera;
 }
 
 PCAGPUNonRigidFittingPipe &PCAGPUNonRigidFittingPipe::
@@ -104,6 +108,7 @@ operator=(PCAGPUNonRigidFittingPipe &&that) {
     this->geoSearchRadius = that.geoSearchRadius;
     this->addGeoTerm = that.addGeoTerm;
     this->usePrevFrame = that.usePrevFrame;
+    this->adjustCamera = that.adjustCamera;
   }
 
   return *this;
@@ -174,15 +179,36 @@ PCAGPUNonRigidFittingPipe::_processData(
     t.assign(3, 0.0);
   if (!usePrevFrame || u.size() == 0)
     u = {0.0, 0.0, 0.0};
-  problem.AddResidualBlock(
-      lmkCost,
-      nullptr,
-      shapeCoeff.data(),
-      expressionCoeff.data(),
-      t.data(),
-      u.data());
 
-  if (addGeoTerm == true) {
+  if(0 != fixedShapeCoeff.size())
+    {
+      problem.AddResidualBlock(
+          lmkCost,
+          nullptr,
+          fixedShapeCoeff.data(),
+          expressionCoeff.data(),
+          t.data(),
+          u.data());
+      problem.SetParameterBlockConstant(fixedShapeCoeff.data());
+    }
+  else
+    {
+      problem.AddResidualBlock(
+          lmkCost,
+          nullptr,
+          shapeCoeff.data(),
+          expressionCoeff.data(),
+          t.data(),
+          u.data());
+    }
+
+  if (addGeoTerm && 0 == fixedShapeCoeff.size()) {
+    std::vector<double> fsc(in->shapeCoeff.size());
+    for(size_t i=0; i<fsc.size(); i++)
+      {
+        fsc[i] = in->shapeCoeff(i);
+      }
+    fixedShapeCoeff = fsc;
     auto geoCost = new PCAGPUGeometricDistanceFunctor(
         this->c_deformModel,
         c_scanPointCloud,
@@ -193,12 +219,19 @@ PCAGPUNonRigidFittingPipe::_processData(
     problem.AddResidualBlock(
         geoCost,
         nullptr,
-        shapeCoeff.data(),
+        fixedShapeCoeff.data(),
         expressionCoeff.data(),
         t.data(),
         u.data());
-        }
+    }
 
+  if(!adjustCamera)
+    {
+      problem.SetParameterBlockConstant(t.data());
+      //problem.SetParameterBlockConstant(u.data());
+    }
+
+  /*
   problem.AddResidualBlock(
       new L2RegularizerFunctor(c_deformModel.shapeRank, 1e-4),
       NULL,
@@ -208,10 +241,11 @@ PCAGPUNonRigidFittingPipe::_processData(
       new L2RegularizerFunctor(c_deformModel.expressionRank, 1e-4),
       NULL,
       expressionCoeff.data());
+  */
 
   ceres::Solver::Options options;
-  options.minimizer_type = ceres::TRUST_REGION;
   options.minimizer_progress_to_stdout = false;
+  options.use_nonmonotonic_steps=true;
   options.max_num_iterations = 1000;
   options.function_tolerance = 1e-15;
   options.parameter_tolerance = 1e-12;
@@ -219,7 +253,7 @@ PCAGPUNonRigidFittingPipe::_processData(
 
   /* Run Optimization */
   auto summary = ceres::Solver::Summary();
-  //ceres::Solve(options, &problem, &summary);
+  ceres::Solve(options, &problem, &summary);
   std::cout << summary.FullReport() << std::endl;
 
   float fu[3];

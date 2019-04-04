@@ -117,17 +117,31 @@ public:
     convertArray(fresiduals, residuals, num_residuals());
 
     if (isJacobianRequired) {
+      if(nullptr != jacobians[0])
+        {
       convertArray(
           fa1Jacobians,
           jacobians[0],
           num_residuals() * c_deformModel.shapeRank);
+        }
+
+      if(nullptr != jacobians[1])
+        {
       convertArray(
           fa2Jacobians,
           jacobians[1],
           num_residuals() * c_deformModel.expressionRank);
+        }
+      if(nullptr != jacobians[2])
+        {
       convertArray(
           ftJacobians, jacobians[2], num_residuals() * TRANSLATE_COEFF);
+        }
+
+      if(nullptr != jacobians[3])
+        {
       convertArray(fuJacobians, jacobians[3], num_residuals() * ROTATE_COEFF);
+        }
     }
 
     return true;

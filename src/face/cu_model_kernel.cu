@@ -278,7 +278,6 @@ void reduce_closest_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, in
 void find_mesh_to_scan_corr(int *meshCorr_d, int *scanCorr_d, float *distance_d, int *numCorr,
                             const float *position_d, int num_points, C_ScanPointCloud scan, float radius, int maxPoints) {
     int idim = num_points/3;
-    printf("WTF?\n");
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid((idim + BLOCKSIZE - 1) / BLOCKSIZE);
     CUDA_ZERO(&numCorr, static_cast<size_t >(1));
@@ -392,7 +391,6 @@ void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                             const bool isJacobianRequired) {
     float *align_pos_d, *result_pos_d;
     const int num_residuals = c_residuals.numResuduals;
-    printf("GeometricLossCalled\n");
 
     // Allocate memory for Rigid aligned positions
     CUDA_CHECK(cudaMalloc((void **) &align_pos_d, deformModel.dim * sizeof(float)));
@@ -430,6 +428,7 @@ void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                            result_pos_d, deformModel.dim, scanPointCloud, radius, num_residuals);
 
     CUDA_CHECK(cudaMemcpy(&point_pair.point_count, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
+    printf("corr: %d\n", point_pair.point_count);
 
     // TODO: Move to find_mesh_to_scan_corr and int* numCorr_d
     if (point_pair.point_count > num_residuals/3){

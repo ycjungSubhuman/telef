@@ -59,7 +59,8 @@ public:
       const int geoMaxPoints,
       const float geoSearchRadius,
       const bool addGeoTerm = true,
-      const bool usePrevFrame = false);
+      const bool usePrevFrame = false,
+      const bool adjustCamera = false);
   PCAGPUNonRigidFittingPipe(const PCAGPUNonRigidFittingPipe &that);
   PCAGPUNonRigidFittingPipe(PCAGPUNonRigidFittingPipe &&that) noexcept;
   PCAGPUNonRigidFittingPipe &operator=(const PCAGPUNonRigidFittingPipe &that);
@@ -81,6 +82,7 @@ private:
   float geoSearchRadius;
   bool usePrevFrame;
   bool addGeoTerm;
+  bool adjustCamera;
 
   std::vector<double> t;
   std::vector<double> u;

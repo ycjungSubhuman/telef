@@ -709,7 +709,7 @@ DepthNormalFrontend::~DepthNormalFrontend() {}
 void DepthNormalFrontend::initWidthHeight(InputPtrT input)
 {
   m_maybe_width = input->image->getWidth();
-  m_maybe_height = input->image->getWidth();
+  m_maybe_height = input->image->getHeight();
 }
 
 void DepthNormalFrontend::_process(InputPtrT input) {
