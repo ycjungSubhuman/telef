@@ -37,6 +37,8 @@ using PCANonRigidFittingResult = struct PCANonRigidFittingResult {
   Eigen::VectorXf shapeCoeff;
   Eigen::VectorXf expressionCoeff;
   telef::types::ImagePtrT image;
+  std::vector<uint8_t> rendered_normal;
+  std::vector<uint16_t> rendered_depth;
   telef::types::CloudConstPtrT cloud;
   Eigen::Matrix4f transformation;
   CloudConstPtrT landmark3d;

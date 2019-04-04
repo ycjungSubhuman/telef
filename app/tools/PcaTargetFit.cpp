@@ -18,7 +18,9 @@
 #include "io/merger.h"
 #include "io/merger/device_input_merger.h"
 #include "io/ply/meshio.h"
+#include "io/normaldepth_pipe.h"
 #include "vis/fitting_visualizer.h"
+#include "intrinsic/intrinsic_pipe.h"
 
 #include "glog/logging.h"
 #include "mesh/color_projection_pipe.h"
@@ -35,6 +37,7 @@ using namespace telef::face;
 using namespace telef::mesh;
 using namespace telef::vis;
 using namespace telef::util;
+using namespace telef::intrinsic;
 
 namespace fs = std::experimental::filesystem;
 
@@ -200,6 +203,8 @@ int main(int ac, const char *const *av) {
 
   boost::asio::io_service ioService;
   auto featureDetector = FeatureDetectionClientPipe(address, ioService);
+  auto normaldepth = MeshNormalDepthRenderer();
+  auto intrinsic = IntrinsicPipe();
 
   auto lmkToScanFitting = LmkToScanRigidFittingPipe();
   auto pipe1 = compose(
@@ -209,7 +214,9 @@ int main(int ac, const char *const *av) {
       modelFeeder,
       rigid,
       lmkfit,
-      nonrigid);
+      nonrigid,
+      normaldepth,
+      intrinsic);
   merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult>>(
       [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });
   if (vm.count("vis") > 0) {
@@ -219,7 +226,7 @@ int main(int ac, const char *const *av) {
   }
 
   if (vm.count("depthnormal") > 0) {
-    auto frontend = std::make_shared<MeshNormalDepthRenderer>(
+    auto frontend = std::make_shared<DepthNormalFrontend>(
         vm["depthnormal"].as<std::string>());
     merger->addFrontEnd(frontend);
   }

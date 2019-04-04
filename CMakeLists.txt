@@ -70,6 +70,7 @@ add_library(telef
   include/util/transform.h
   include/feature/feature_detect_frontend.h
   include/io/merger/device_input_merger.h
+  include/io/normaldepth_pipe.h
   include/feature/feature_detect_pipe.h
   include/util/eigen_file_io.h
   include/feature/face.h
@@ -78,6 +79,7 @@ add_library(telef
   include/util/po_util.h
   include/face/feeder.h
   include/intrinsic/intrinsic.h
+  include/intrinsic/intrinsic_pipe.h
 
   src/cloud/cloud_pipe.cpp
   src/align/rigid_pipe.cpp
@@ -99,6 +101,7 @@ add_library(telef
   src/util/UvPointMapping.cpp 
   src/util/fake_frame_record_device.cpp
   src/io/landmark.cpp
+  src/io/normaldepth_pipe.cpp
   src/face/model_cudahelper.cpp
   src/face/model.cpp
   src/face/deformation_model.cpp
@@ -109,7 +112,8 @@ add_library(telef
   src/vis/fitting_visualizer.cpp
   src/util/po_util.cpp
   src/face/feeder.cpp
-  src/intrinsic/intrinsic.cpp)
+  src/intrinsic/intrinsic.cpp
+  src/intrinsic/intrinsic_pipe.cpp)
 
 target_include_directories(telef
   PUBLIC ${OpenCV_INCLUDE_DIRS}
@@ -200,9 +204,6 @@ target_link_libraries(DNNFaceDetector ${Boost_LIBRARIES} telef)
 
 add_executable(FaceTrackerClient app/byproducts/FaceTrackerClient.cpp)
 target_link_libraries(FaceTrackerClient ${Boost_LIBRARIES} telef)
-
-add_executable(IntrinsicDecomposition app/tools/IntrinsicDecomposition.cpp)
-target_link_libraries(IntrinsicDecomposition ${Boost_LIBRARIES} telef)
 
 if (BUILD_TESTS)
   function(myaddtest testname testpath)

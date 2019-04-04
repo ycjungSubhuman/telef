@@ -110,7 +110,7 @@ private:
  * If the first frame it received is AxB, the other frames should be
  * AxB as well.
  */
-class MeshNormalDepthRenderer
+class DepthNormalFrontend
     : public telef::io::AsyncFrontEnd<PCANonRigidFittingResult> {
 public:
   using InputPtrT = boost::shared_ptr<PCANonRigidFittingResult>;
@@ -127,7 +127,7 @@ public:
    * @param normal_ext		extension for normal image file.
    * 				If not given, defaults to .n.png
    */
-  MeshNormalDepthRenderer(
+  DepthNormalFrontend(
       fs::path record_root,
       std::function<std::string(int i)> filename_generator =
           [](int i) { return std::to_string(i); },
@@ -135,12 +135,12 @@ public:
       std::string depth_ext = ".d.png",
       std::string normal_ext = ".n.png");
 
-  virtual ~MeshNormalDepthRenderer();
+  virtual ~DepthNormalFrontend();
 
   void _process(InputPtrT input) override;
 
 private:
-  void initFrameBuffers(InputPtrT input);
+  void initWidthHeight(InputPtrT input);
 
   fs::path m_record_root;
   std::function<std::string(int i)> m_filename_generator;
