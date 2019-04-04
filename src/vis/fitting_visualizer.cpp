@@ -753,5 +753,26 @@ void DepthNormalFrontend::_process(InputPtrT input) {
           m_maybe_height,
           3);
     }
+
+  if (0 != input->intensity.size())
+    {
+      std::vector<unsigned char> raw_intensity(input->intensity.size());
+      for (size_t i=0; i<raw_intensity.size(); i++)
+        {
+          raw_intensity[i] = static_cast<unsigned char>(input->intensity[i]*255);
+          if(0.0f != input->intensity[i])
+            {
+              std::cout << "FFUOWIEUF" << std::endl;;
+              std::cout << input->intensity[i] << std::endl;;
+              std::cout << raw_intensity[i] << std::endl;
+            }
+        }
+      pcl::io::saveCharPNGFile(
+          path.string() + ".i.png",
+          raw_intensity.data(),
+          m_maybe_width,
+          m_maybe_height,
+          1);
+    }
 }
 } // namespace telef::vis

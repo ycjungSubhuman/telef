@@ -33,6 +33,7 @@ IntrinsicPipe::_processData(boost::shared_ptr<PCANonRigidFittingResult> in)
   pcl::io::FrameWrapper::Ptr wrapper = boost::make_shared<BufferFrameWrapper>(
       albedo, in->image->getWidth(), in->image->getHeight());
   in->image = boost::make_shared<pcl::io::ImageRGB24>(wrapper);
+  in->intensity = intensity;
 
   return in;
 }

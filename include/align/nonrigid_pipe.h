@@ -38,6 +38,7 @@ using PCANonRigidFittingResult = struct PCANonRigidFittingResult {
   Eigen::VectorXf expressionCoeff;
   telef::types::ImagePtrT image;
   std::vector<uint8_t> rendered_normal;
+  std::vector<float> intensity;
   std::vector<uint16_t> rendered_depth;
   telef::types::CloudConstPtrT cloud;
   Eigen::Matrix4f transformation;
@@ -74,7 +75,7 @@ private:
   boost::shared_ptr<PCANonRigidFittingResult>
   _processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) override;
 
-  static const std::vector<int> landmarkSelection;
+ static const std::vector<int> landmarkSelection;
 
   // Geometric Term
   float geoWeight;

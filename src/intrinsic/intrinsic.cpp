@@ -232,7 +232,6 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 					if (i+gi<0 || i+gi>=height || j+gj<0 || j+gj>=width || !mask[(i+gi)*width+(j+gj)])
 						continue;
 					double var = vMap[(i+gi)*width+(j+gj)];
-                                        printf("var: %f\n", var);
 					if(mask[(i+gi)*width+(j+gj)] && var < vmin)
 					{
 						ipos[n] = i+gi;

@@ -428,8 +428,6 @@ void calculateGeometricLoss(float *residual, float *fa1Jacobian, float *fa2Jacob
                            result_pos_d, deformModel.dim, scanPointCloud, radius, num_residuals);
 
     CUDA_CHECK(cudaMemcpy(&point_pair.point_count, numCorr_d, sizeof(int), cudaMemcpyDeviceToHost));
-    printf("corr: %d\n", point_pair.point_count);
-
     // TODO: Move to find_mesh_to_scan_corr and int* numCorr_d
     if (point_pair.point_count > num_residuals/3){
         point_pair.point_count = num_residuals/3;
