@@ -26,6 +26,7 @@ private:
 	void getGridLLEMatrix(int K, int g_size);
 	void getNormalConstraintMatrix(float sig_n);
 	void getContinuousConstraintMatrix(float sig_c, float sig_i);
+	void getLaplacian();
 	void pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<float>& tar);
 
 	float *color;
@@ -42,6 +43,7 @@ private:
 	Eigen::SparseMatrix<float> WRC;
 	Eigen::SparseMatrix<float> WSC;
 	Eigen::SparseMatrix<float> MASK;
+	Eigen::SparseMatrix<float> L_S;
 	Eigen::VectorXf consVecCont;
 
 	int width;

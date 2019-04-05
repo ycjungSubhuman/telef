@@ -25,6 +25,7 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 	WRC.resize(dims,dims);
 	WSC.resize(dims,dims);
 	MASK.resize(dims,dims);
+	L_S.resize(dims,dims);
 	consVecCont.resize(dims);
 	for(int i=0;i<height;++i)
 		for(int j=0;j<width;++j)
@@ -51,13 +52,14 @@ void IntrinsicDecomposition::process(float *result_intensity)
 	getGridLLEMatrix(10,6);
 	getNormalConstraintMatrix(0.5);//sigma_n
 	getContinuousConstraintMatrix(0.0001,0.8);//sigma_c,sigma_i
+	getLaplacian();
 
 	//A = 4 * WRC + 3 * mask1 * (spI - LLEGRID) + 3 * mask2 * (spI - LLENORMAL) + 0.025 * WSC;
 	//b = 4 * consVecCont;
 	Eigen::SparseMatrix<float> spI(indexMapping.size(),indexMapping.size());
 	spI.setIdentity();
 
-	Eigen::SparseMatrix<float> A = 4 * WRC + 3 * MASK * (spI - LLEGRID) + 3 * MASK * (spI - LLENORMAL) + 0.025 * WSC;
+	Eigen::SparseMatrix<float> A = 4 * WRC + 3 * MASK * (spI - LLEGRID) + 3 * MASK * (spI - LLENORMAL) + L_S + 0.025 * WSC;
 	Eigen::SimplicialLDLT<Eigen::SparseMatrix<float> > chol(A);  // performs a Cholesky factorization of A
 	Eigen::VectorXf x = chol.solve(consVecCont*4);
 
@@ -86,6 +88,7 @@ void IntrinsicDecomposition::release()
 	WRC.setZero();
 	WSC.setZero();
 	MASK.setZero();
+	L_S.setZero();
 	consVecCont.setZero();
 	//cvReleaseSparseMat(&LLENORMAL);
 	//cvReleaseSparseMat(&LLEGRID);
@@ -501,4 +504,84 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(float sig_c, float si
 	cvReleaseSparseMat(&tmpSparse);
 	std::printf("WRC, consVecCont\n");
 }
+
+//L_S
+void IntrinsicDecomposition::getLaplacian()
+{
+	int nx[] = {0, 0, 0, 1, -1, -1, 1, 1, -1};
+	int ny[] = {0, 1, -1, 0, 0, -1, 1, -1, 1};
+	int pp[9];
+	float win[9][3],tmp[9][3],mu[3],tval[9][9];
+	cv::Mat1f var(3,3);
+
+	int dims2[2] = {dims, dims};//{h*w,h*w};
+	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_32FC1);
+	for(int it=0;it<indexMapping.size();++it)
+	{
+		int cnt=0;
+		int i=indexMapping[it].first;
+		int j=indexMapping[it].second;
+		mu[0]=mu[1]=mu[2]=0.0;
+		for(int k=0;k<9;k++)
+		{
+			int qi = i + nx[k];
+			int qj = j + ny[k];
+			int q = qi*width+qj;
+			if(qi < 0 || qj < 0 || qi >= height || qj >= width || !mask[q])
+				continue;
+			pp[cnt]=index[q];
+			win[cnt][0]=color[3*q+0];
+			win[cnt][1]=color[3*q+1];
+			win[cnt][2]=color[3*q+2];
+			mu[0]+=color[3*q+0];
+			mu[1]+=color[3*q+1];
+			mu[2]+=color[3*q+2];
+			cnt++;
+		}
+		mu[0]/=cnt;
+		mu[1]/=cnt;
+		mu[2]/=cnt;
+
+		for(int i=0;i<3;i++)
+			for(int j=0;j<3;j++)
+			{
+				var[i][j]=0;
+				for(int k=0;k<cnt;k++)
+					var[i][j]+=win[k][j]*win[k][i];
+				var[i][j]/=9;
+				var[i][j]+=mu[i]*mu[j];
+				if(i==j)
+					var[i][j]+=1e-5;
+			}
+		var = var.inv();
+
+		for(int k=0;k<cnt;k++)
+		{
+			win[k][0]-=mu[0];
+			win[k][1]-=mu[1];
+			win[k][2]-=mu[2];
+		}
+
+		for(int i=0;i<cnt;i++)
+			for(int j=0;j<3;j++)
+			{
+				tmp[i][j]=0.0;
+				for(int k=0;k<3;k++)
+					tmp[i][j]+=win[i][j]*var[j][k];
+			}
+		for(int i=0;i<cnt;i++)
+			for(int k=0;k<cnt;k++)
+			{
+				tval[i][k]=1.0;
+				for(int j=0;j<3;j++)
+					tval[i][k]+=tmp[i][j]*win[k][j];
+				tval[i][k]/=9;
+				((float*)cvPtr2D(tmpSparse, pp[i], pp[k]))[0] += tval[i][k];
+			}
+	}
+	pushSparseMatrix(tmpSparse,L_S);
+	cvReleaseSparseMat(&tmpSparse);
+	std::printf("L_S\n");
+}
+
 }
