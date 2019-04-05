@@ -60,6 +60,10 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
   // Set up LHS
   Eigen::MatrixXf A(3*lmkInds.size(), shapeRank+expRank);
   Eigen::VectorXf omega = Eigen::VectorXf::Ones(3*lmkInds.size());
+  for(int i=0; i<lmkInds.size(); i++)
+    {
+      omega(3*i+2) = 1.0f;
+    }
 
   A.block(0,0,3*lmkInds.size(),shapeRank) = shapeLmkMat;
   A.block(0,shapeRank,3*lmkInds.size(),expRank) = expLmkMat;
@@ -67,7 +71,7 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
   Eigen::MatrixXf ATA = A.transpose()*omega.asDiagonal()*A + regMat;
   Eigen::VectorXf ATb = A.transpose()*omega.asDiagonal()*b;
 
-  Eigen::VectorXf x = ATA.colPivHouseholderQr().solve(ATb);
+  Eigen::VectorXf x = ATA.householderQr().solve(ATb);
   std::cout << "Error: " << (A*x - b).norm() << std::endl;
 
   Eigen::VectorXf idCoeff = x.segment(0,shapeRank);
@@ -102,7 +106,7 @@ LmkFitPipe::_processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   for (int i=0; i<1; i++)
     {
       res = step_position(res, m_reg);
-      res = step_pose(res);
+      //      res = step_pose(res);
     }
   std::chrono::duration<double> dur = std::chrono::system_clock::now()-start;
   std::cout << "Time (Linear): " <<

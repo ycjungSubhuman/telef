@@ -13,11 +13,16 @@ namespace telef::align {
 class PCARigidFittingPipe
     : public telef::io::
           Pipe<PCANonRigidAlignmentSuite, PCANonRigidAlignmentSuite> {
+public:
+  PCARigidFittingPipe();
 private:
   using MModelTptr = std::shared_ptr<telef::face::MorphableFaceModel>;
   using BaseT =
       telef::io::Pipe<PCANonRigidAlignmentSuite, PCANonRigidAlignmentSuite>;
   using PtCldPtr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
+
+
+  float m_prev_scale;
 
   boost::shared_ptr<PCANonRigidAlignmentSuite>
   _processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) override;

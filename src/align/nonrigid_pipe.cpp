@@ -165,7 +165,7 @@ PCAGPUNonRigidFittingPipe::_processData(
       in->rawCloud,
       in->fx,
       in->fy,
-      landmarkSelection,
+      (0 == fixedShapeCoeff.size()) ? landmarkSelection : landmarkSelection_exp,
       in->transformation,
       in->fittingSuite->landmark3d);
 
@@ -228,7 +228,7 @@ PCAGPUNonRigidFittingPipe::_processData(
   if(!adjustCamera)
     {
       problem.SetParameterBlockConstant(t.data());
-      //problem.SetParameterBlockConstant(u.data());
+      problem.SetParameterBlockConstant(u.data());
     }
 
   /*
@@ -245,10 +245,10 @@ PCAGPUNonRigidFittingPipe::_processData(
 
   ceres::Solver::Options options;
   options.minimizer_progress_to_stdout = false;
-  options.use_nonmonotonic_steps=true;
+  //options.use_nonmonotonic_steps=true;
   options.max_num_iterations = 1000;
-  options.function_tolerance = 1e-15;
-  options.parameter_tolerance = 1e-12;
+  //options.function_tolerance = 1e-15;
+  //options.parameter_tolerance = 1e-12;
   options.linear_solver_type = ceres::LinearSolverType::DENSE_NORMAL_CHOLESKY;
 
   /* Run Optimization */
@@ -293,6 +293,7 @@ PCAGPUNonRigidFittingPipe::_processData(
   return result;
 }
 
+/*
 const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
     11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -301,6 +302,24 @@ const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
     41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
     51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
     61, 62, 63, 64, 65, 66, 67,
+*/
+
+const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
+    19, 21, 22, 24, 26,
+    37, 38, 40, 41,
+    43, 44, 46, 47,
+    51, 62, 66, 57,
+    48, 60, 64, 54,
+};
+
+const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection_exp{
+  0, 8, 16,
+    28, 33, 17,
+    19, 21, 22, 24, 26,
+    37, 38, 40, 41,
+    43, 44, 46, 47,
+    51, 62, 66, 57,
+    48, 60, 64, 54,
 };
 
 } // namespace telef::align

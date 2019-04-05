@@ -76,6 +76,7 @@ private:
   _processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) override;
 
  static const std::vector<int> landmarkSelection;
+ static const std::vector<int> landmarkSelection_exp;
 
   // Geometric Term
   float geoWeight;

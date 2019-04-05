@@ -12,6 +12,10 @@ using namespace telef::face;
 
 namespace telef::align {
 
+PCARigidFittingPipe::PCARigidFittingPipe() :
+    m_prev_scale(0.0f)
+{}
+
 boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
     boost::shared_ptr<PCANonRigidAlignmentSuite> in) {
   std::vector<int> pca_lmks = in->pca_model->getLandmarks();
@@ -46,7 +50,19 @@ boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
   Eigen::MatrixXf transformation =
       Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose());
 
-  in->transformation = transformation;
+  if(0.0f == m_prev_scale)
+    {
+      in->transformation = transformation;
+      m_prev_scale = transformation.block(0,0,3,1).norm();
+    }
+  else
+    {
+      float curr_scale = transformation.block(0,0,3,1).norm();
+      float scale = 0.8*m_prev_scale + 0.2*curr_scale;
+      in->transformation = transformation;
+      in->transformation.block(0,0,3,3) *= scale/curr_scale;
+      m_prev_scale = (std::isfinite(scale)) ? scale : 0.0f;
+    }
   return in;
 }
 } // namespace telef::align
