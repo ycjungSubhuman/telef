@@ -15,7 +15,7 @@ namespace telef::intrinsic {
 class IntrinsicDecomposition {
 public:
 	void initialize(const uint8_t *rgb, const uint8_t *normal, const uint16_t *depth, int width, int height);
-	void process(float *result_intensity);
+	void process(double *result_intensity);
 	void release();
 
 private:
@@ -24,27 +24,27 @@ private:
 	void getChrom();
 	void getVarianceMap(int patch_size);
 	void getGridLLEMatrix(int K, int g_size);
-	void getNormalConstraintMatrix(float sig_n);
-	void getContinuousConstraintMatrix(float sig_c, float sig_i);
+	void getNormalConstraintMatrix(double sig_n);
+	void getContinuousConstraintMatrix(double sig_c, double sig_i);
 	void getLaplacian();
-	void pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<float>& tar);
+	void pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<double>& tar);
 
-	float *color;
-	float *chrom;
-	float *points;
-	float *nMap;
-	float *vMap;
+	double *color;
+	double *chrom;
+	double *points;
+	double *nMap;
+	double *vMap;
 	int *index;
 	bool *mask;
 	std::vector<std::pair<int,int> > indexMapping;
 
-	Eigen::SparseMatrix<float> LLENORMAL;
-	Eigen::SparseMatrix<float> LLEGRID;
-	Eigen::SparseMatrix<float> WRC;
-	Eigen::SparseMatrix<float> WSC;
-	Eigen::SparseMatrix<float> MASK;
-	Eigen::SparseMatrix<float> L_S;
-	Eigen::VectorXf consVecCont;
+	Eigen::SparseMatrix<double> LLENORMAL;
+	Eigen::SparseMatrix<double> LLEGRID;
+	Eigen::SparseMatrix<double> WRC;
+	Eigen::SparseMatrix<double> WSC;
+	Eigen::SparseMatrix<double> MASK;
+	Eigen::SparseMatrix<double> L_S;
+	Eigen::VectorXd consVecCont;
 
 	int width;
 	int height;
