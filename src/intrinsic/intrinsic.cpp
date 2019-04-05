@@ -19,7 +19,7 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 	getMask(_depth);
 	getPoints(_depth);
 	getChrom();
-	int dims = indexMapping.size();
+	dims = indexMapping.size();
 	LLENORMAL.resize(dims,dims);
 	LLEGRID.resize(dims,dims);
 	WRC.resize(dims,dims);
@@ -66,6 +66,7 @@ void IntrinsicDecomposition::process(float *result_intensity)
 		int i=indexMapping[it].first;
 		int j=indexMapping[it].second;
 		result_intensity[i*width+j] = std::exp(x[it])/2.0;
+		std::printf("%f\t",result_intensity[i*width+j]);
 	}
 }
 
@@ -78,11 +79,31 @@ void IntrinsicDecomposition::release()
 	delete [] vMap;
 	delete [] mask;
 	delete [] index;
+	indexMapping.clear();
 
+	LLENORMAL.setZero();
+	LLEGRID.setZero();
+	WRC.setZero();
+	WSC.setZero();
+	MASK.setZero();
+	consVecCont.setZero();
 	//cvReleaseSparseMat(&LLENORMAL);
 	//cvReleaseSparseMat(&LLEGRID);
 	//cvReleaseSparseMat(&WRC);
 	//cvReleaseSparseMat(&WSC);
+}
+
+void IntrinsicDecomposition::pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<float>& tar)
+{
+	std::vector< Eigen::Triplet<float> > tp;
+	CvSparseMatIterator it;
+	for(CvSparseNode *node = cvInitSparseMatIterator(src, &it); node != 0; node = cvGetNextSparseNode( &it))
+	{
+		int* idx = CV_NODE_IDX(src,node); 
+		float val = ((float*)cvPtrND(src, idx))[0]; 
+		tp.push_back(Eigen::Triplet<float>(idx[0],idx[1],val));
+	}
+	tar.setFromTriplets(tp.begin(), tp.end());
 }
 
 void IntrinsicDecomposition::getMask(const uint16_t *_depth)
@@ -266,6 +287,8 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	pcl::KdTreeFLANN<pcl::PointXYZ> kdtree3d;
 	kdtree3d.setInputCloud(cloud3d);
 	cv::Mat1f z(K, 3);
+	int dims2[2] = {dims, dims};//{h*w,h*w};
+	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_32FC1);
 	for(int i=0;i<Ngrid;i++)
 	{
 		float tol=1e-3;
@@ -296,15 +319,18 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 		for(int k=0;k<K;k++) {
 			int p = ipos[i]*width+jpos[i];
 			int q = ipos[pointIdxNKNSearch[k+1]]*width+jpos[pointIdxNKNSearch[k+1]];
-			//((float*)cvPtr2D(LLENORMAL, index[p], index[q]))[0] = w(k, 1) / ws;
-			LLENORMAL.coeffRef(index[p],index[q]) = w(k,1) /ws;
+			((float*)cvPtr2D(tmpSparse, index[p], index[q]))[0] = w(k, 1) / ws;
+			//LLENORMAL.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
 	}
+	pushSparseMatrix(tmpSparse,LLENORMAL);
+	cvReleaseSparseMat(&tmpSparse);
 	std::printf("LLENORMAL\n");
 
 	//for LLEGRID
 	pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree6d;
 	kdtree6d.setInputCloud(cloud6d);
+	tmpSparse = cvCreateSparseMat(2, dims2, CV_32FC1);
 	for(int i=0;i<Ngrid;i++)
 	{
 		float tol=1e-3;
@@ -335,10 +361,12 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 		for(int k=0;k<K;k++) {
 			int p = ipos[i]*width+jpos[i];
 			int q = ipos[pointIdxNKNSearch[k+1]]*width+jpos[pointIdxNKNSearch[k+1]];
-			//((float*)cvPtr2D(LLEGRID, index[p], index[q]))[0] = w(k, 1) / ws;
-			LLEGRID.coeffRef(index[p],index[q]) = w(k,1) /ws;
+			((float*)cvPtr2D(tmpSparse, index[p], index[q]))[0] = w(k, 1) / ws;
+			//LLEGRID.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
 	}
+	pushSparseMatrix(tmpSparse,LLEGRID);
+	cvReleaseSparseMat(&tmpSparse);
 	std::printf("LLEGRID\n");
 	delete [] ipos;
 	delete [] jpos;
@@ -351,6 +379,8 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(float sig_n)
 	int ny[] = {1, -1, 0, 0, -1, 1, -1, 1};
 	float cp[3], cq[3];
 
+	int dims2[2] = {dims, dims};//{h*w,h*w};
+	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_32FC1);
 	for(int it=0;it<indexMapping.size();++it)
 	{
 		int i=indexMapping[it].first;
@@ -381,17 +411,19 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(float sig_n)
 			if(std::isnan(weight)) weight = 0;
 			int p = index[i*width+j];
 			int q = index[qi*width+qj];
-			//((float*)cvPtr2D(WSC, p, p))[0] += weight;
-			//((float*)cvPtr2D(WSC, q, q))[0] += weight;
-			//((float*)cvPtr2D(WSC, p, q))[0] += -weight;
-			//((float*)cvPtr2D(WSC, q, p))[0] += -weight;
-			WSC.coeffRef(p,p) += weight;
-			WSC.coeffRef(q,q) += weight;
-			WSC.coeffRef(p,q) += -weight;
-			WSC.coeffRef(q,p) += -weight;
+			((float*)cvPtr2D(tmpSparse, p, p))[0] += weight;
+			((float*)cvPtr2D(tmpSparse, q, q))[0] += weight;
+			((float*)cvPtr2D(tmpSparse, p, q))[0] += -weight;
+			((float*)cvPtr2D(tmpSparse, q, p))[0] += -weight;
+			//WSC.coeffRef(p,p) += weight;
+			//WSC.coeffRef(q,q) += weight;
+			//WSC.coeffRef(p,q) += -weight;
+			//WSC.coeffRef(q,p) += -weight;
 		}
 		//std::printf("%d / %d\n",it,indexMapping.size());
 	}
+	pushSparseMatrix(tmpSparse,WSC);
+	cvReleaseSparseMat(&tmpSparse);
 	std::printf("WSC\n");
 }
 
@@ -403,6 +435,8 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(float sig_c, float si
 	float cp[3], cq[3], ip[3], iq[3];
 	float lp, lq;
 
+	int dims2[2] = {dims, dims};//{h*w,h*w};
+	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_32FC1);
 	for(int it=0;it<indexMapping.size();++it)
 	{
 		int i=indexMapping[it].first;
@@ -448,14 +482,14 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(float sig_c, float si
 			if(std::isnan(weight)) weight = 0;
 			int p = index[i*width+j];
 			int q = index[qi*width+qj];
-			//((float*)cvPtr2D(WRC, p, p))[0] += weight;
-			//((float*)cvPtr2D(WRC, q, q))[0] += weight;
-			//((float*)cvPtr2D(WRC, p, q))[0] += -weight;
-			//((float*)cvPtr2D(WRC, q, p))[0] += -weight;
-			WRC.coeffRef(p,p) += weight;
-			WRC.coeffRef(q,q) += weight;
-			WRC.coeffRef(p,q) += -weight;
-			WRC.coeffRef(q,p) += -weight;
+			((float*)cvPtr2D(tmpSparse, p, p))[0] += weight;
+			((float*)cvPtr2D(tmpSparse, q, q))[0] += weight;
+			((float*)cvPtr2D(tmpSparse, p, q))[0] += -weight;
+			((float*)cvPtr2D(tmpSparse, q, p))[0] += -weight;
+			//WRC.coeffRef(p,p) += weight;
+			//WRC.coeffRef(q,q) += weight;
+			//WRC.coeffRef(p,q) += -weight;
+			//WRC.coeffRef(q,p) += -weight;
 		
 			float dI = lp-lq;
 			consVecCont.coeffRef(p) += weight * dI;
@@ -463,6 +497,8 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(float sig_c, float si
 		}
 		//std::printf("%d / %d\n",it,indexMapping.size());
 	}
+	pushSparseMatrix(tmpSparse,WRC);
+	cvReleaseSparseMat(&tmpSparse);
 	std::printf("WRC, consVecCont\n");
 }
 }

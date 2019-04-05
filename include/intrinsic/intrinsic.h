@@ -26,6 +26,7 @@ private:
 	void getGridLLEMatrix(int K, int g_size);
 	void getNormalConstraintMatrix(float sig_n);
 	void getContinuousConstraintMatrix(float sig_c, float sig_i);
+	void pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<float>& tar);
 
 	float *color;
 	float *chrom;
@@ -45,5 +46,6 @@ private:
 
 	int width;
 	int height;
+	int dims;
 	};
 }
