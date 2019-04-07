@@ -30,4 +30,7 @@ ENV USE_KINECT_1=$use_kinect_1
 COPY install_dependencies.sh /workspace/install_dependencies.sh
 RUN bash /workspace/install_dependencies.sh
 
+RUN apt-get update && apt-get install -y \
+    gdb vim
+
 WORKDIR /workspace
