@@ -732,6 +732,18 @@ void DepthNormalFrontend::_process(InputPtrT input) {
       m_maybe_width,
       m_maybe_height,
       3);
+
+  if(nullptr != input->original)
+    {
+      std::vector<unsigned char> raw_original(m_maybe_width * m_maybe_height * 3);
+      input->original->fillRaw(raw_original.data());
+      pcl::io::saveCharPNGFile(
+          path.string() + ".orig.png",
+          raw_original.data(),
+          m_maybe_width,
+          m_maybe_height,
+          3);
+    }
   if (0 != input->rendered_depth.size())
     {
       std::vector<unsigned short> raw_depth = input->rendered_depth;
