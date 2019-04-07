@@ -90,11 +90,22 @@ void normalize_position(
             Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose(), false);
           Eigen::Matrix3Xf aligned =
             (trans*mesh_pts_t.colwise().homogeneous()).colwise().hnormalized();
-
-          positions[i][j] =
+          Eigen::VectorXf pos = 
             Eigen::Map<Eigen::VectorXf>(aligned.data(), aligned.size());
+          positions[i][j] = pos;
         }
     }
+}
+
+std::vector<std::vector<int>> tri2vecvec(const Eigen::VectorXi &f) {
+  std::vector<std::vector<int>> result(f.size() / 3);
+  for (size_t i = 0; i < result.size(); i++) {
+    result[i].resize(3);
+    for (int j = 0; j < 3; j++) {
+      result[i][j] = f(3 * i + j);
+    }
+  }
+  return result;
 }
 } // namespace
 
@@ -119,6 +130,7 @@ FaceWarehouse::FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkI
       bsFile.read(
           reinterpret_cast<char *>(vertices.data()),
           3 * vCount * sizeof(float));
+
       bs_positions.emplace_back(std::move(vertices));
     }
 
@@ -140,19 +152,6 @@ FaceWarehouse::FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkI
       normalize_position(m_positions[0][0], m_positions, *lmkInds);
     }
 }
-
-namespace {
-std::vector<std::vector<int>> tri2vecvec(const Eigen::VectorXi &f) {
-  std::vector<std::vector<int>> result(f.size() / 3);
-  for (size_t i = 0; i < result.size(); i++) {
-    result[i].resize(3);
-    for (int j = 0; j < 3; j++) {
-      result[i][j] = f(3 * i + j);
-    }
-  }
-  return result;
-}
-} // namespace
 
 ColorMesh FaceWarehouse::GetMesh(int idIndex, int bsIndex) const {
   ColorMesh result;

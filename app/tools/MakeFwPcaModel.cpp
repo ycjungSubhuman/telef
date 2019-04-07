@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
   const auto shapeModel = std::make_shared<PCADeformationModel>(
       idSamples, ref, vm["rank"].as<int>());
   const auto expModel = std::make_shared<BlendShapeDeformationModel>(
-      exSamples, ref, exSamples.size());
+      exSamples, fw.GetMeanExp(0), exSamples.size());
 
   MorphableFaceModel model(ref, shapeModel, expModel, lmkInds);
   model.save(fs::path(vm["output"].as<std::string>()));

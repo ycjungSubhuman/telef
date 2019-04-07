@@ -72,7 +72,7 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
   Eigen::VectorXf ATb = A.transpose()*omega.asDiagonal()*b;
 
   Eigen::VectorXf x = ATA.householderQr().solve(ATb);
-  std::cout << "Error: " << (A*x - b).norm() << std::endl;
+  std::cout << "Error: " << (omega.asDiagonal()*A*x - omega.asDiagonal()*b).norm() << std::endl;
 
   Eigen::VectorXf idCoeff = x.segment(0,shapeRank);
   Eigen::VectorXf exCoeff = x.segment(shapeRank,expRank);

@@ -227,11 +227,10 @@ PCAGPUNonRigidFittingPipe::_processData(
 
   if(!adjustCamera)
     {
-      problem.SetParameterBlockConstant(t.data());
+      //problem.SetParameterBlockConstant(t.data());
       problem.SetParameterBlockConstant(u.data());
     }
 
-  /*
   problem.AddResidualBlock(
       new L2RegularizerFunctor(c_deformModel.shapeRank, 1e-4),
       NULL,
@@ -241,7 +240,6 @@ PCAGPUNonRigidFittingPipe::_processData(
       new L2RegularizerFunctor(c_deformModel.expressionRank, 1e-4),
       NULL,
       expressionCoeff.data());
-  */
 
   ceres::Solver::Options options;
   options.minimizer_progress_to_stdout = false;
@@ -253,7 +251,7 @@ PCAGPUNonRigidFittingPipe::_processData(
 
   /* Run Optimization */
   auto summary = ceres::Solver::Summary();
-  ceres::Solve(options, &problem, &summary);
+  //ceres::Solve(options, &problem, &summary);
   std::cout << summary.FullReport() << std::endl;
 
   float fu[3];
@@ -270,6 +268,7 @@ PCAGPUNonRigidFittingPipe::_processData(
   freeScanCUDA(c_scanPointCloud);
 
   auto result = boost::make_shared<PCANonRigidFittingResult>();
+  /*
   result->shapeCoeff =
       Eigen::Map<Eigen::VectorXd>(shapeCoeff.data(), c_deformModel.shapeRank)
           .cast<float>();
@@ -277,6 +276,9 @@ PCAGPUNonRigidFittingPipe::_processData(
       Eigen::Map<Eigen::VectorXd>(
           expressionCoeff.data(), c_deformModel.expressionRank)
           .cast<float>();
+  */
+  result->shapeCoeff = in->shapeCoeff;
+  result->expressionCoeff = in->expressionCoeff;
 
   std::cout << "Fitted(Shape): " << std::endl;
   std::cout << result->shapeCoeff << std::endl;
@@ -303,24 +305,14 @@ const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
     61, 62, 63, 64, 65, 66, 67,
     };
 
-/*
-const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection{
-    19, 21, 22, 24, 26,
-    37, 38, 40, 41,
-    43, 44, 46, 47,
-    51, 62, 66, 57,
-    48, 60, 64, 54,
-};
-*/
-
 const std::vector<int> PCAGPUNonRigidFittingPipe::landmarkSelection_exp{
-  0, 8, 16,
-    28, 33, 17,
-    19, 21, 22, 24, 26,
-    37, 38, 40, 41,
-    43, 44, 46, 47,
-    51, 62, 66, 57,
-    48, 60, 64, 54,
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+    31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+    51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+    61, 62, 63, 64, 65, 66, 67,
 };
 
 } // namespace telef::align
