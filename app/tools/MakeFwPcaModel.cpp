@@ -6,6 +6,7 @@
 #include "face/model.h"
 #include "io/dataset/face_warehouse.h"
 #include "io/landmark.h"
+#include "io/ply/meshio.h"
 #include "util/po_util.h"
 
 namespace {
@@ -46,17 +47,27 @@ int main(int argc, char **argv) {
   FaceWarehouseAllSampler sampler;
   FaceWarehouse fw(vm["fw"].as<std::string>(), lmkInds);
 
-  const auto ref = fw.GetNeutral(0);
+  const auto ref = fw.GetRef();
   const auto idSamples = sampler.SampleId(fw);
   const auto exSamples = sampler.SampleEx(fw);
 
   const auto shapeModel = std::make_shared<PCADeformationModel>(
       idSamples, ref, vm["rank"].as<int>());
   const auto expModel = std::make_shared<BlendShapeDeformationModel>(
-      exSamples, fw.GetMeanExp(0), exSamples.size());
+      exSamples, ref, exSamples.size());
 
   MorphableFaceModel model(ref, shapeModel, expModel, lmkInds);
   model.save(fs::path(vm["output"].as<std::string>()));
+
+  MorphableFaceModel m2(vm["output"].as<std::string>());
+  for(size_t i=0; i<exSamples.size(); i++)
+    {
+      Eigen::VectorXf sh = Eigen::VectorXf::Zero(idSamples.size());
+      Eigen::VectorXf ex = Eigen::VectorXf::Zero(exSamples.size());
+      ex(i) = 1.0f;
+      auto bs = m2.genMesh(sh, ex);
+      telef::io::ply::writePlyMesh("__"+std::to_string(i)+".ply", bs);
+    }
 
   return 0;
 }

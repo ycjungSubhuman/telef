@@ -26,14 +26,9 @@ boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
   Eigen::Matrix3Xf mesh_pts_t =
       Eigen::Map<Eigen::Matrix3Xf>(ref.data(), 3, ref.size() / 3);
   std::vector<int> selection = {
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-    31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-    41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
-    51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
-    61, 62, 63, 64, 65, 66, 67,
-};
+                                1, 2, 3, 4,
+                                12, 13, 14, 15,
+                                39, 42, 33,};
   Eigen::MatrixXf mesh_lmk_pts(selection.size(), 3);
 
   for (int i = 0; i < selection.size(); i++) {
@@ -50,19 +45,7 @@ boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
   Eigen::MatrixXf transformation =
       Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose());
 
-  if(0.0f == m_prev_scale)
-    {
-      in->transformation = transformation;
-      m_prev_scale = transformation.block(0,0,3,1).norm();
-    }
-  else
-    {
-      float curr_scale = transformation.block(0,0,3,1).norm();
-      float scale = 0.8*m_prev_scale + 0.2*curr_scale;
-      in->transformation = transformation;
-      in->transformation.block(0,0,3,3) *= scale/curr_scale;
-      m_prev_scale = (std::isfinite(scale)) ? scale : 0.0f;
-    }
+  in->transformation = transformation;
   return in;
 }
 } // namespace telef::align

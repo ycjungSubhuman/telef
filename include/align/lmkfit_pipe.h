@@ -22,5 +22,6 @@ private:
   _processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) override;
 
   float m_reg;
+  Eigen::VectorXf m_prevShape;
 };
 }

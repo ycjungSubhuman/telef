@@ -18,6 +18,7 @@ public:
   ColorMesh GetMesh(int idIndex, int bsIndex) const override;
   ColorMesh GetNeutral(int idIndex) const override;
   ColorMesh GetMeanExp(int bsIndex) const override;
+  ColorMesh GetRef() const override;
   int GetVertexCount() const override;
   int GetIdCount() const override;
   int GetBsCount() const override;
@@ -25,6 +26,7 @@ public:
 private:
   fs::path m_root;
   Eigen::VectorXi m_faces;
+  Eigen::VectorXf m_ref;
   std::vector<Eigen::VectorXf> m_mean_exps;
   std::vector<std::vector<Eigen::VectorXf>> m_positions;
   int m_idCount;

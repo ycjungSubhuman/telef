@@ -17,6 +17,7 @@ public:
   virtual ColorMesh GetMesh(int idIndex, int bsIndex) const = 0;
   virtual ColorMesh GetNeutral(int idIndex) const = 0;
   virtual ColorMesh GetMeanExp(int bsIndex) const = 0;
+  virtual ColorMesh GetRef() const =0;
   virtual int GetVertexCount() const = 0;
   virtual int GetIdCount() const = 0;
   virtual int GetBsCount() const = 0;
