@@ -421,6 +421,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	delete [] jpos;
 	delete [] nnIdx;
 	delete [] dists;
+    delete kdTree;
 	annClose();
 }
 
