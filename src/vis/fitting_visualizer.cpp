@@ -772,7 +772,7 @@ void DepthNormalFrontend::_process(InputPtrT input) {
       for (size_t i=0; i<raw_intensity.size(); i++)
         {
           raw_intensity[i] = static_cast<unsigned char>(input->intensity[i]*255);
-          if(0.0f != input->intensity[i])
+          if(false && 0.0f != input->intensity[i])
             {
               std::cout << "FFUOWIEUF" << std::endl;;
               std::cout << input->intensity[i] << std::endl;;

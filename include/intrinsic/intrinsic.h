@@ -7,9 +7,11 @@
 #include <opencv/highgui.h>
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/io/png_io.h>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <Eigen/SparseCholesky>
+#include <Eigen/IterativeLinearSolvers>
 
 namespace telef::intrinsic {
 class IntrinsicDecomposition {
@@ -27,7 +29,6 @@ private:
 	void getNormalConstraintMatrix(double sig_n);
 	void getContinuousConstraintMatrix(double sig_c, double sig_i);
 	void getLaplacian();
-	void pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<double>& tar);
 
 	double *color;
 	double *chrom;

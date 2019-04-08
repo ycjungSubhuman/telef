@@ -5,6 +5,40 @@ namespace telef::intrinsic{
 
 void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_normal, const uint16_t *_depth, int _width, int _height)
 {
+	// {
+	// 	int a,b;
+	// 	double x;
+	// 	Eigen::SparseMatrix<double> A;
+	// 	A.resize(34632,34632);
+	// 	std::vector<Eigen::Triplet<double> > tp;
+	// 	FILE *out=fopen("../A","r");
+	// 	for(int i=0;i<866278;i++)
+	// 	{
+	// 		fscanf(out,"%d %d %lf",&a,&b,&x);
+	// 		tp.push_back(Eigen::Triplet<double>(a-1,b-1,x));
+	// 	}
+	// 	A.setFromTriplets(tp.begin(), tp.end());
+	// 	fclose(out);
+	// 	Eigen::VectorXd bb;
+	// 	bb = Eigen::VectorXd::Zero(34632);
+	// 	out=fopen("../b","r");
+	// 	for(int i=0;i<34563;++i)
+	// 	{
+	// 		fscanf(out,"%d %d %lf",&a,&b,&x);
+	// 		bb[b-1]=x;
+	// 	}
+	// 	fclose(out);
+	// 	std::printf("recons\n");
+	// Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > cg(A);  // performs a Cholesky factorization of A
+	// //cg.compute(A);
+	// Eigen::VectorXd xx = cg.solve(bb);
+
+	// 	out=fopen("../depth/index","w");
+	// 	for(int i=0;i<34632;i++)
+	// 		fprintf(out,"%lf\n",xx[i]);
+	// 	fclose(out);
+	// }
+	// std::printf("hohoho\n");
 	width = _width;
 	height = _height;
 
@@ -18,14 +52,19 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 
 	getMask(_depth);
 	getPoints(_depth);
-	getChrom();
 	dims = indexMapping.size();
 	LLENORMAL.resize(dims,dims);
+	LLENORMAL.setZero();
 	LLEGRID.resize(dims,dims);
+	LLEGRID.setZero();
 	WRC.resize(dims,dims);
+	WRC.setZero();
 	WSC.resize(dims,dims);
+	WSC.setZero();
 	MASK.resize(dims,dims);
+	MASK.setZero();
 	L_S.resize(dims,dims);
+	L_S.setZero();
 	consVecCont = Eigen::VectorXd::Zero(dims);
 	for(int i=0;i<height;++i)
 		for(int j=0;j<width;++j)
@@ -44,6 +83,23 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 			for(int k=0;k<3;k++)
 				nMap[3*width*i+3*j+k]/=nn;
 		}
+
+	if(true)
+	{
+		uint8_t *out = new uint8_t[width*height*3];
+		for(int i=0;i<width*height*3;i++)
+		{
+			if(mask[i/3])
+				out[i]=(uint8_t)((nMap[i]+1.0)*128.0);
+		}
+      pcl::io::saveCharPNGFile(
+          "../depth/nMap.png",
+          out,
+          width,
+          height,3);
+      delete [] out;
+    }
+	getChrom();
 	getVarianceMap(5);
 }
 
@@ -59,9 +115,43 @@ void IntrinsicDecomposition::process(double *result_intensity)
 	Eigen::SparseMatrix<double> spI(indexMapping.size(),indexMapping.size());
 	spI.setIdentity();
 
-	Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * (spI - LLEGRID) + 3 * MASK * (spI - LLENORMAL) + L_S + 0.025 * WSC;
-	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > chol(A);  // performs a Cholesky factorization of A
-	Eigen::VectorXd x = chol.solve(consVecCont*4);
+	//Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * (spI - LLEGRID) + 3 * MASK * (spI - LLENORMAL) + 1 * L_S + 0.025 * WSC;
+	//Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLEGRID + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
+	Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLEGRID + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
+	Eigen::VectorXd b = 4 * consVecCont;
+
+	std::printf("Ax=b reconstructed\n");
+
+	if(false)
+	{
+		 FILE *out=fopen("../depth/A","w");
+		 for(int k=0;k<A.outerSize();++k)
+		 	for(Eigen::SparseMatrix<double>::InnerIterator it(A,k);it;++it)
+		 		fprintf(out,"%ld %ld %lf\n",it.row(),it.col(),it.value());
+		 fclose(out);
+
+		out=fopen("../depth/b","w");
+		for(int i=0;i<dims;++i)
+			fprintf(out,"%lf\n",b[i]);
+		fclose(out);
+
+		out=fopen("../depth/index","w");
+		for(int i=0;i<dims;i++)
+			fprintf(out,"%d %d\n",indexMapping[i].first,indexMapping[i].second);
+		fclose(out);
+	}
+
+	// for(int i=0;i<dims;i++)
+	// 	printf("%lf\n",consVecCont[i]);
+
+	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > cg(A);  // performs a Cholesky factorization of A
+	//cg.compute(A);
+	Eigen::VectorXd x = cg.solve(b);
+
+	std::printf("solved!\n");
+
+	//std::cout << "#iterations:     " << cg.iterations() << std::endl;
+	//std::cout << "estimated error: " << cg.error()      << std::endl;
 
 	for(int it=0;it<indexMapping.size();it++)
 	{
@@ -96,19 +186,6 @@ void IntrinsicDecomposition::release()
 	//cvReleaseSparseMat(&WSC);
 }
 
-void IntrinsicDecomposition::pushSparseMatrix(CvSparseMat *src,Eigen::SparseMatrix<double>& tar)
-{
-	std::vector< Eigen::Triplet<double> > tp;
-	CvSparseMatIterator it;
-	for(CvSparseNode *node = cvInitSparseMatIterator(src, &it); node != 0; node = cvGetNextSparseNode( &it))
-	{
-		int* idx = CV_NODE_IDX(src,node); 
-		double val = ((double*)cvPtrND(src, idx))[0]; 
-		tp.push_back(Eigen::Triplet<double>(idx[0],idx[1],val));
-	}
-	tar.setFromTriplets(tp.begin(), tp.end());
-}
-
 void IntrinsicDecomposition::getMask(const uint16_t *_depth)
 {
 	const uint16_t INVALID = 65535;
@@ -135,15 +212,16 @@ void IntrinsicDecomposition::getPoints(const uint16_t *depth)
 		is[i] = (double)(i-height/2)/height*2.0*std::tan(CV_PI/6);
 
 	for(int j=0;j<width;++j)
-		js[j] = (double)(j-width/2)/width*2.0*std::tan(CV_PI/6)*width/height;
+		js[j] = (double)(j-width/2)/width*2.0*std::tan(CV_PI/6)*height/width;
 
 	for(int i=0;i<height;i++)
 	{
 		for(int j=0;j<width;j++)
 		{
-			points[3*width*i+3*j+0]=js[j];
-			points[3*width*i+3*j+1]=is[i];
-			points[3*width*i+3*j+2]=-depth[i*width+j]/2000.0;
+			double d = depth[width*i+j]/65535.0;
+			points[3*width*i+3*j+0]=d*js[j];
+			points[3*width*i+3*j+1]=d*is[i];
+			points[3*width*i+3*j+2]=-d;
 		}
 	}
 	delete [] is;
@@ -163,11 +241,27 @@ void IntrinsicDecomposition::getChrom()
 		intensity += color[3*width*i+3*j+2]*color[3*width*i+3*j+2];
 		if(intensity<1e-10)
 			intensity=1e-10;
+		intensity = sqrt(intensity);
 
 		chrom[3*width*i+3*j+0] = color[3*width*i+3*j+0]/intensity;
 		chrom[3*width*i+3*j+1] = color[3*width*i+3*j+1]/intensity;
 		chrom[3*width*i+3*j+2] = color[3*width*i+3*j+2]/intensity;
 	}
+	if(false)
+	{
+		uint8_t *out = new uint8_t[width*height*3];
+		for(int i=0;i<width*height*3;i++)
+		{
+			if(mask[i/3])
+				out[i]=(uint8_t)(chrom[i]*255.0);
+		}
+      pcl::io::saveCharPNGFile(
+          "../depth/chrom.png",
+          out,
+          width,
+          height,3);
+      delete [] out;
+    }
 }
 
 void IntrinsicDecomposition::getVarianceMap(int patch_size)
@@ -198,7 +292,7 @@ void IntrinsicDecomposition::getVarianceMap(int patch_size)
 			p[0]/=cnt;
 			p[1]/=cnt;
 			p[2]/=cnt;
-			vMap[i*width+j] = pp-p[0]*p[0]-p[1]*p[1]-p[2]*p[2];
+			vMap[width*i+j] = pp-p[0]*p[0]-p[1]*p[1]-p[2]*p[2];
 		}
 	}
 }
@@ -245,6 +339,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 
 	//building kd-tree
   	int n=0;
+	std::vector<Eigen::Triplet<double> > tp;
 	for(int i=0;i<height;i+=g_size)
 		for(int j=0;j<width;j+=g_size)
 		{
@@ -278,11 +373,10 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			cloud6d->points[n].r = points[ipos[n]*width*3+jpos[n]*3+0];
 			cloud6d->points[n].g = points[ipos[n]*width*3+jpos[n]*3+1];
 			cloud6d->points[n].b = points[ipos[n]*width*3+jpos[n]*3+2];
-			MASK.coeffRef(index[ipos[n]*width+jpos[n]],index[ipos[n]*width+jpos[n]]) = 1.0;
+			tp.push_back(Eigen::Triplet<double>(index[ipos[n]*width+jpos[n]],index[ipos[n]*width+jpos[n]],1));
 			n++;
 		}
-	std::printf("Ngrid:%d / n:%d\n",Ngrid,n);
-
+	MASK.setFromTriplets(tp.begin(), tp.end());
 
 	std::vector<int> pointIdxNKNSearch(K+1);
 	std::vector<float> pointNKNSquaredDistance(K+1);
@@ -290,87 +384,102 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	//for LLENORMAL
 	pcl::KdTreeFLANN<pcl::PointXYZ> kdtree3d;
 	kdtree3d.setInputCloud(cloud3d);
-	cv::Mat1f z(K, 3);
+	cv::Mat1d z(K, 3);
 	int dims2[2] = {dims, dims};//{h*w,h*w};
-	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_64FC1);
+	tp.clear();
 	for(int i=0;i<Ngrid;i++)
 	{
 		double tol=1e-3;
 		kdtree3d.nearestKSearch(cloud3d->points[i],K+1,pointIdxNKNSearch,pointNKNSquaredDistance);
+
 		z.setTo(0);
-		for(int k=1;k<pointIdxNKNSearch.size();++k)
+		for(int k=0,kk=0;k<=K;++k)
 		{
-			z(k-1,0) = cloud3d->points[pointIdxNKNSearch[k]].x - cloud3d->points[i].x;
-			z(k-1,1) = cloud3d->points[pointIdxNKNSearch[k]].y - cloud3d->points[i].y;
-			z(k-1,2) = cloud3d->points[pointIdxNKNSearch[k]].z - cloud3d->points[i].z;
+			int nk=pointIdxNKNSearch[k];
+			if(nk==i)
+				continue;
+			z(kk,0) = nMap[ipos[nk]*width*3+jpos[nk]*3+0] - nMap[ipos[i]*width*3+jpos[i]*3+0];
+			z(kk,1) = nMap[ipos[nk]*width*3+jpos[nk]*3+1] - nMap[ipos[i]*width*3+jpos[i]*3+1];
+			z(kk,2) = nMap[ipos[nk]*width*3+jpos[nk]*3+2] - nMap[ipos[i]*width*3+jpos[i]*3+2];
+			kk++;
 		}
 
 		// % local covariance
-		cv::Mat1f C = z * z.t(); // C = KxK matrix
+		cv::Mat1d C = z * z.t(); // C = KxK matrix
 
 		// % regularlization (K>D)
 		double t = cv::trace(C)[0];
-		C = C + tol*t*cv::Mat1f::eye(K, K);
+		C = C + tol*t*cv::Mat1d::eye(K, K);
 
 		// % solve Cw=1
-		cv::Mat1f w(K, 1);
-		cv::solve(C, cv::Mat1f::ones(K, 1), w);
+		cv::Mat1d w(K, 1);
+		cv::solve(C, cv::Mat1d::ones(K, 1), w);
 		double ws = 0;
 		for(int k=0;k<K;k++)
 			ws += w(k, 1);
 
 		// % enforce sum(w)=1
-		for(int k=0;k<K;k++) {
+		for(int k=0,kk=0;k<=K;k++) {
+			if(pointIdxNKNSearch[k]==i)
+				continue;
 			int p = ipos[i]*width+jpos[i];
-			int q = ipos[pointIdxNKNSearch[k+1]]*width+jpos[pointIdxNKNSearch[k+1]];
-			((double*)cvPtr2D(tmpSparse, index[p], index[q]))[0] = w(k, 1) / ws;
+			int q = ipos[pointIdxNKNSearch[k]]*width+jpos[pointIdxNKNSearch[k]];
+			tp.push_back(Eigen::Triplet<double>(index[p],index[q],-w(kk++, 1) / ws));
 			//LLENORMAL.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
 	}
-	pushSparseMatrix(tmpSparse,LLENORMAL);
-	cvReleaseSparseMat(&tmpSparse);
+	for(int i=0;i<dims;++i)
+		tp.push_back(Eigen::Triplet<double>(i,i,1.0));
+	LLEGRID.setFromTriplets(tp.begin(), tp.end());
 	std::printf("LLENORMAL\n");
 
 	//for LLEGRID
 	pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree6d;
 	kdtree6d.setInputCloud(cloud6d);
-	tmpSparse = cvCreateSparseMat(2, dims2, CV_64FC1);
+	tp.clear();
 	for(int i=0;i<Ngrid;i++)
 	{
 		double tol=1e-3;
 		kdtree6d.nearestKSearch(cloud6d->points[i],K+1,pointIdxNKNSearch,pointNKNSquaredDistance);
 		z.setTo(0);
-		for(int k=1;k<pointIdxNKNSearch.size();++k)
+		for(int k=0,kk=0;k<=K;++k)
 		{
-			z(k-1,0) = cloud6d->points[pointIdxNKNSearch[k]].x - cloud6d->points[i].x;
-			z(k-1,1) = cloud6d->points[pointIdxNKNSearch[k]].y - cloud6d->points[i].y;
-			z(k-1,2) = cloud6d->points[pointIdxNKNSearch[k]].z - cloud6d->points[i].z;
+			int nk=pointIdxNKNSearch[k];
+			if(nk==i)
+				continue;
+			z(kk,0) = nMap[ipos[nk]*width*3+jpos[nk]*3+0] - nMap[ipos[i]*width*3+jpos[i]*3+0];
+			z(kk,1) = nMap[ipos[nk]*width*3+jpos[nk]*3+1] - nMap[ipos[i]*width*3+jpos[i]*3+1];
+			z(kk,2) = nMap[ipos[nk]*width*3+jpos[nk]*3+2] - nMap[ipos[i]*width*3+jpos[i]*3+2];
+			kk++;
 		}
 
 		// % local covariance
-		cv::Mat1f C = z * z.t(); // C = KxK matrix
+		cv::Mat1d C = z * z.t(); // C = KxK matrix
 
 		// % regularlization (K>D)
 		double t = cv::trace(C)[0];
-		C = C + tol*t*cv::Mat1f::eye(K, K);
+		C = C + tol*t*cv::Mat1d::eye(K, K);
 
 		// % solve Cw=1
-		cv::Mat1f w(K, 1);
-		cv::solve(C, cv::Mat1f::ones(K, 1), w);
+		cv::Mat1d w(K, 1);
+		cv::solve(C, cv::Mat1d::ones(K, 1), w);
 		double ws = 0;
 		for(int k=0;k<K;k++)
 			ws += w(k, 1);
 
 		// % enforce sum(w)=1
-		for(int k=0;k<K;k++) {
+		for(int k=0,kk=0;k<=K;k++) {
+			if(pointIdxNKNSearch[k]==i)
+				continue;
 			int p = ipos[i]*width+jpos[i];
-			int q = ipos[pointIdxNKNSearch[k+1]]*width+jpos[pointIdxNKNSearch[k+1]];
-			((double*)cvPtr2D(tmpSparse, index[p], index[q]))[0] = w(k, 1) / ws;
+			int q = ipos[pointIdxNKNSearch[k]]*width+jpos[pointIdxNKNSearch[k]];
+			tp.push_back(Eigen::Triplet<double>(index[p],index[q],-w(kk++, 1) / ws));
 			//LLEGRID.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
 	}
-	pushSparseMatrix(tmpSparse,LLEGRID);
-	cvReleaseSparseMat(&tmpSparse);
+	for(int i=0;i<dims;++i)
+		tp.push_back(Eigen::Triplet<double>(i,i,1.0));
+	LLEGRID.setFromTriplets(tp.begin(), tp.end());
 	std::printf("LLEGRID\n");
 	delete [] ipos;
 	delete [] jpos;
@@ -381,10 +490,10 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(double sig_n)
 {
 	int nx[] = {0, 0, 1, -1, -1, 1, 1, -1};
 	int ny[] = {1, -1, 0, 0, -1, 1, -1, 1};
-	double cp[3], cq[3];
+	double np[3], nq[3];
 
 	int dims2[2] = {dims, dims};//{h*w,h*w};
-	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_64FC1);
+	std::vector<Eigen::Triplet<double> > tp;
 	for(int it=0;it<indexMapping.size();++it)
 	{
 		int i=indexMapping[it].first;
@@ -393,9 +502,9 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(double sig_n)
 		if(!mask[i*width+j])
 			continue;
 
-		cp[0] = nMap[3*i*width+3*j+0];
-		cp[1] = nMap[3*i*width+3*j+1];
-		cp[2] = nMap[3*i*width+3*j+2];
+		np[0] = nMap[3*i*width+3*j+0];
+		np[1] = nMap[3*i*width+3*j+1];
+		np[2] = nMap[3*i*width+3*j+2];
 
 		for(int k=0;k<8;k++)
 		{
@@ -404,21 +513,21 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(double sig_n)
 			if(qi < 0 || qj < 0 || qi >= height || qj >= width || !mask[qi*width+qj])
 				continue;
 
-			cq[0] = nMap[3*qi*width+3*qj+0];
-			cq[1] = nMap[3*qi*width+3*qj+1];
-			cq[2] = nMap[3*qi*width+3*qj+2];
+			nq[0] = nMap[3*qi*width+3*qj+0];
+			nq[1] = nMap[3*qi*width+3*qj+1];
+			nq[2] = nMap[3*qi*width+3*qj+2];
 
-			double dist = 2.0 * (1.0 - (cp[0]*cq[0]+cp[1]*cq[1]+cp[2]*cq[2]));	
+			double dist = 2.0 * (1.0 - (np[0]*nq[0]+np[1]*nq[1]+np[2]*nq[2]));	
 
 			double weight = (exp(-dist*dist/(sig_n*sig_n)));
 
 			if(std::isnan(weight)) weight = 0;
 			int p = index[i*width+j];
 			int q = index[qi*width+qj];
-			((double*)cvPtr2D(tmpSparse, p, p))[0] += weight;
-			((double*)cvPtr2D(tmpSparse, q, q))[0] += weight;
-			((double*)cvPtr2D(tmpSparse, p, q))[0] += -weight;
-			((double*)cvPtr2D(tmpSparse, q, p))[0] += -weight;
+			tp.push_back(Eigen::Triplet<double>(p,p,weight));
+			tp.push_back(Eigen::Triplet<double>(q,q,weight));
+			tp.push_back(Eigen::Triplet<double>(p,q,-weight));
+			tp.push_back(Eigen::Triplet<double>(q,p,-weight));
 			//WSC.coeffRef(p,p) += weight;
 			//WSC.coeffRef(q,q) += weight;
 			//WSC.coeffRef(p,q) += -weight;
@@ -426,8 +535,7 @@ void IntrinsicDecomposition::getNormalConstraintMatrix(double sig_n)
 		}
 		//std::printf("%d / %d\n",it,indexMapping.size());
 	}
-	pushSparseMatrix(tmpSparse,WSC);
-	cvReleaseSparseMat(&tmpSparse);
+	WSC.setFromTriplets(tp.begin(), tp.end());
 	std::printf("WSC\n");
 }
 
@@ -440,7 +548,7 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(double sig_c, double 
 	double lp, lq;
 
 	int dims2[2] = {dims, dims};//{h*w,h*w};
-	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_64FC1);
+	std::vector<Eigen::Triplet<double> > tp;
 	for(int it=0;it<indexMapping.size();++it)
 	{
 		int i=indexMapping[it].first;
@@ -449,9 +557,9 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(double sig_c, double 
 		if(!mask[i*width+j])
 			continue;
 
-		cp[0] = nMap[3*i*width+3*j+0];
-		cp[1] = nMap[3*i*width+3*j+1];
-		cp[2] = nMap[3*i*width+3*j+2];
+		cp[0] = chrom[3*i*width+3*j+0];
+		cp[1] = chrom[3*i*width+3*j+1];
+		cp[2] = chrom[3*i*width+3*j+2];
 		ip[0] = color[3*i*width+3*j+0];
 		ip[1] = color[3*i*width+3*j+1];
 		ip[2] = color[3*i*width+3*j+2];
@@ -467,9 +575,9 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(double sig_c, double 
 			if(qi < 0 || qj < 0 || qi >= height || qj >= width || !mask[qi*width+qj])
 				continue;
 
-			cq[0] = nMap[3*qi*width+3*qj+0];
-			cq[1] = nMap[3*qi*width+3*qj+1];
-			cq[2] = nMap[3*qi*width+3*qj+2];
+			cq[0] = chrom[3*qi*width+3*qj+0];
+			cq[1] = chrom[3*qi*width+3*qj+1];
+			cq[2] = chrom[3*qi*width+3*qj+2];
 			iq[0] = color[3*qi*width+3*qj+0];
 			iq[1] = color[3*qi*width+3*qj+1];
 			iq[2] = color[3*qi*width+3*qj+2];
@@ -486,23 +594,22 @@ void IntrinsicDecomposition::getContinuousConstraintMatrix(double sig_c, double 
 			if(std::isnan(weight)) weight = 0;
 			int p = index[i*width+j];
 			int q = index[qi*width+qj];
-			((double*)cvPtr2D(tmpSparse, p, p))[0] += weight;
-			((double*)cvPtr2D(tmpSparse, q, q))[0] += weight;
-			((double*)cvPtr2D(tmpSparse, p, q))[0] += -weight;
-			((double*)cvPtr2D(tmpSparse, q, p))[0] += -weight;
+			tp.push_back(Eigen::Triplet<double>(p,p,weight));
+			tp.push_back(Eigen::Triplet<double>(q,q,weight));
+			tp.push_back(Eigen::Triplet<double>(p,q,-weight));
+			tp.push_back(Eigen::Triplet<double>(q,p,-weight));
 			//WRC.coeffRef(p,p) += weight;
 			//WRC.coeffRef(q,q) += weight;
 			//WRC.coeffRef(p,q) += -weight;
 			//WRC.coeffRef(q,p) += -weight;
 		
 			double dI = lp-lq;
-			consVecCont.coeffRef(p) += weight * dI;
-			consVecCont.coeffRef(q) -= weight * dI;
+			consVecCont[p] += weight * dI;
+			consVecCont[q] -= weight * dI;
 		}
 		//std::printf("%d / %d\n",it,indexMapping.size());
 	}
-	pushSparseMatrix(tmpSparse,WRC);
-	cvReleaseSparseMat(&tmpSparse);
+	WRC.setFromTriplets(tp.begin(), tp.end());
 	std::printf("WRC, consVecCont\n");
 }
 
@@ -513,10 +620,11 @@ void IntrinsicDecomposition::getLaplacian()
 	int ny[] = {0, 1, -1, 0, 0, -1, 1, -1, 1};
 	int pp[9];
 	double win[9][3],tmp[9][3],mu[3],tval[9][9];
-	cv::Mat1f var(3,3);
+	cv::Mat1d var(3,3);
 
 	int dims2[2] = {dims, dims};//{h*w,h*w};
-	CvSparseMat* tmpSparse = cvCreateSparseMat(2, dims2, CV_64FC1);
+	std::vector<Eigen::Triplet<double> > tp;
+	std::vector<double> sumA(dims);
 	for(int it=0;it<indexMapping.size();++it)
 	{
 		int cnt=0;
@@ -549,8 +657,8 @@ void IntrinsicDecomposition::getLaplacian()
 				var[i][j]=0;
 				for(int k=0;k<cnt;k++)
 					var[i][j]+=win[k][j]*win[k][i];
-				var[i][j]/=9;
-				var[i][j]+=mu[i]*mu[j];
+				var[i][j]/=cnt;
+				var[i][j]-=mu[i]*mu[j];
 				if(i==j)
 					var[i][j]+=1e-5;
 			}
@@ -576,12 +684,14 @@ void IntrinsicDecomposition::getLaplacian()
 				tval[i][k]=1.0;
 				for(int j=0;j<3;j++)
 					tval[i][k]+=tmp[i][j]*win[k][j];
-				tval[i][k]/=9;
-				((double*)cvPtr2D(tmpSparse, pp[i], pp[k]))[0] += tval[i][k];
+				tval[i][k]/=cnt;
+				tp.push_back(Eigen::Triplet<double>(pp[i],pp[k],-tval[i][k]));
+				sumA[pp[i]]+=tval[i][k];
 			}
 	}
-	pushSparseMatrix(tmpSparse,L_S);
-	cvReleaseSparseMat(&tmpSparse);
+	for(int i=0;i<dims;++i)
+		tp.push_back(Eigen::Triplet<double>(i,i,sumA[i]));
+	L_S.setFromTriplets(tp.begin(), tp.end());
 	std::printf("L_S\n");
 }
 
