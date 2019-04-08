@@ -219,8 +219,8 @@ int main(int ac, const char *const *av) {
       rigid,
       bsfit,
       nonrigid,
-      normaldepth);
-      //intrinsic);
+      normaldepth,
+      intrinsic);
   merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult>>(
       [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });
   if (vm.count("vis") > 0) {

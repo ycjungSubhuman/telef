@@ -69,11 +69,11 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
 
   Eigen::MatrixXd dExpLmkMat2d = expLmkMat2d.cast<double>();
   Eigen::VectorXd db2d = b2d.cast<double>();
-  Eigen::MatrixXd Q = 2.0*dExpLmkMat2d.transpose()*dExpLmkMat2d;
-  Eigen::VectorXd c = -2.0*dExpLmkMat2d.transpose()*db2d;
+  Eigen::MatrixXd Q = dExpLmkMat2d.transpose()*dExpLmkMat2d;
+  Eigen::VectorXd c = -dExpLmkMat2d.transpose()*db2d;
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(expRank);
   //Eigen::VectorXd bndl = -std::numeric_limits<double>::infinity()*Eigen::VectorXd::Ones(expRank);
-  Eigen::VectorXd bndl = Eigen::VectorXd::Zero(expRank);
+  Eigen::VectorXd bndl = -0.1*Eigen::VectorXd::Ones(expRank);
   Eigen::VectorXd bndu = std::numeric_limits<double>::infinity()*Eigen::VectorXd::Ones(expRank);
   Eigen::VectorXd scale = Eigen::VectorXd::Ones(expRank);
 
@@ -94,7 +94,7 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   minqpsetbc(state, algbndl, algbndu);
   minqpsetscale(state, algscale);
   minqpreport rep;
-  minqpsetalgoquickqp(state, 0.0, 0.0, 0.0, 1000, false);
+  minqpsetalgoquickqp(state, 0.0, 0.0, 0.0, 0, false);
   minqpoptimize(state);
   minqpresults(state, algx, rep);
   std::cout << int(rep.terminationtype) << " " <<
@@ -105,6 +105,11 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
 
   Eigen::VectorXf exCoeff =
     Eigen::Map<Eigen::VectorXd>(algx.getcontent(), algx.length()).cast<float>();
+
+  Eigen::VectorXf res = ref+expMat*exCoeff;
+  ColorMesh mres;
+  mres.position = res;
+  telef::io::ply::writePlyMesh("result.ply", mlmk);
 
   in->expressionCoeff = exCoeff;
 
