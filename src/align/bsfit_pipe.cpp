@@ -16,6 +16,7 @@ using namespace alglib;
 
 const std::vector<int> lmk_selection =
   {
+   7, 8, 9,
    51, 48, 54, 60, 64, 62, 57, 66,
    36, 37, 38, 39, 40, 41,
    42, 43, 44, 45, 46, 47, 
