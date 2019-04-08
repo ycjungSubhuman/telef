@@ -375,6 +375,8 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	for(int i=0;i<Ngrid;i++)
 	{
 		double tol=1e-3,eps;
+		for(int q=0;q<6;q++)
+			queryPt[q]=dataPts[i][q];
 		kdTree->annkSearch(queryPt, K+1, nnIdx, dists, eps);
 		z.setTo(0);
 		for(int k=0,kk=0;k<=K;++k)
@@ -422,6 +424,8 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	delete [] nnIdx;
 	delete [] dists;
     delete kdTree;
+    annDeallocPt(queryPt);
+    annDeallocPts(dataPts);
 	annClose();
 }
 
