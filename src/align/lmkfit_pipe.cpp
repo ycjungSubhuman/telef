@@ -36,17 +36,11 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
   Eigen::VectorXf ref = in->pca_model->getReferenceVector();
   const auto lmkInds = in->pca_model->getLandmarks();
   const auto shapeRank = in->pca_model->getShapeRank();
-  const auto expRank = in->pca_model->getExpressionRank();
-
   Eigen::MatrixXf shapeMat = in->pca_model->getShapeBasisMatrix();
-  Eigen::MatrixXf expMat = in->pca_model->getExpressionBasisMatrix();
-
   Eigen::MatrixXf shapeLmkMat = select_rows(shapeMat, lmkInds, 3, in->transformation);
-  Eigen::MatrixXf expLmkMat = select_rows(expMat, lmkInds, 3, in->transformation);
-  Eigen::MatrixXf expLmkMat2d = select_rows(expMat, lmkInds, 2, in->transformation);
 
   Eigen::MatrixXf regMat =
-    reg*Eigen::MatrixXf::Identity(shapeRank+expRank, shapeRank+expRank);
+    reg*Eigen::MatrixXf::Identity(shapeRank, shapeRank);
 
   // Set up RHS
   Eigen::VectorXf b = Eigen::VectorXf::Zero(3*lmkInds.size());
@@ -60,21 +54,16 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
     }
 
   // Set up LHS
-  Eigen::MatrixXf A(3*lmkInds.size(), shapeRank+expRank);
-
-  A.block(0,0,3*lmkInds.size(),shapeRank) = shapeLmkMat;
-  A.block(0,shapeRank,3*lmkInds.size(),expRank) = expLmkMat;
+  Eigen::MatrixXf A = shapeLmkMat;
 
   Eigen::MatrixXf ATA = A.transpose()*A + regMat;
   Eigen::VectorXf ATb = A.transpose()*b;
 
   Eigen::VectorXf x = ATA.householderQr().solve(ATb);
 
-  Eigen::VectorXf idCoeff = x.segment(0,shapeRank);
-  Eigen::VectorXf exCoeff = x.segment(shapeRank,expRank);
+  Eigen::VectorXf idCoeff = x;
 
   in->shapeCoeff = idCoeff;
-  in->expressionCoeff = exCoeff;
 
   return in;
 }
