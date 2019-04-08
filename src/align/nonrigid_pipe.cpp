@@ -228,18 +228,22 @@ PCAGPUNonRigidFittingPipe::_processData(
   if(!adjustCamera)
     {
       //problem.SetParameterBlockConstant(t.data());
-      problem.SetParameterBlockConstant(u.data());
+      //problem.SetParameterBlockConstant(u.data());
     }
 
+  /*
   problem.AddResidualBlock(
       new L2RegularizerFunctor(c_deformModel.shapeRank, 1e-4),
       NULL,
       shapeCoeff.data());
+  */
 
+  /*
   problem.AddResidualBlock(
       new L2RegularizerFunctor(c_deformModel.expressionRank, 1e-4),
       NULL,
       expressionCoeff.data());
+  */
 
   ceres::Solver::Options options;
   options.minimizer_progress_to_stdout = false;

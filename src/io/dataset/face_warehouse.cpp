@@ -111,7 +111,7 @@ std::vector<std::vector<int>> tri2vecvec(const Eigen::VectorXi &f) {
 
 FaceWarehouse::FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkInds)
     : m_root(std::move(root)), m_faces(get_tri_face(m_root)), m_idCount(150),
-      m_bsCount(46) {
+      m_bsCount(45) {
   for (int idIndex = 0; idIndex < m_idCount; idIndex++) {
     const auto bsPath = m_root / bs_filename(idIndex);
     TELEF_REQUIRE(fs::exists(bsPath));
@@ -120,12 +120,14 @@ FaceWarehouse::FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkI
     // check sanity
     int32_t bsCount, vCount, fCount;
     bsFile.read(reinterpret_cast<char *>(&bsCount), sizeof(int32_t));
+    bsCount-=1;
+    TELEF_REQUIRE(45 == bsCount);
     bsFile.read(reinterpret_cast<char *>(&vCount), sizeof(int32_t));
     bsFile.read(reinterpret_cast<char *>(&fCount), sizeof(int32_t));
 
     std::vector<Eigen::VectorXf> bs_positions;
     // load vertex position
-    for (int bsIndex = 0; bsIndex < m_bsCount; bsIndex++) {
+    for (int bsIndex = 0; bsIndex < m_bsCount+1; bsIndex++) {
       Eigen::VectorXf vertices(3 * vCount);
       bsFile.read(
           reinterpret_cast<char *>(vertices.data()),
@@ -138,13 +140,22 @@ FaceWarehouse::FaceWarehouse(fs::path root, std::optional<std::vector<int>> lmkI
   }
 
   // Calculate the mean expressions
-  for (size_t i = 0; i < m_bsCount; i++) {
+  for (size_t i = 0; i < m_bsCount+1; i++) {
     Eigen::VectorXf bsAcc = m_positions[0][i];
+    TELEF_REQUIRE(0 != bsAcc.size());
     for (size_t j = 0; j < m_idCount; j++) {
       bsAcc += m_positions[j][i];
     }
     const Eigen::VectorXf meanBs(bsAcc / static_cast<float>(m_idCount));
-    m_mean_exps.emplace_back(std::move(meanBs));
+
+    if (0 == i)
+      {
+        m_ref = meanBs;
+      }
+    else
+      {
+        m_mean_exps.emplace_back(std::move(meanBs));
+      }
   }
 
   if(lmkInds.has_value())
@@ -169,6 +180,15 @@ ColorMesh FaceWarehouse::GetMeanExp(int bsIndex) const {
   result.triangles = tri2vecvec(m_faces);
   return result;
 }
+
+ColorMesh FaceWarehouse::GetRef() const
+{
+  ColorMesh result;
+  result.position = m_ref;
+  result.triangles = tri2vecvec(m_faces);
+  return result;
+}
+
 int FaceWarehouse::GetVertexCount() const { return m_mean_exps[0].size() / 3; }
 int FaceWarehouse::GetIdCount() const { return m_idCount; }
 int FaceWarehouse::GetBsCount() const { return m_bsCount; }

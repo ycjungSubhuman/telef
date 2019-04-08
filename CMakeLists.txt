@@ -29,17 +29,24 @@ add_subdirectory(messages)
 file(GLOB ANN_SOURCES ann/src/*)
 file(GLOB ANN_HEADERS ann/include/ANN/*)
 
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ann/include/)
-
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ann/include/ alglib/)
 
 add_library(ann
   ${ANN_SOURCES}
   ${ANN_HEADERS})
 
+file(GLOB ALGLIB_HEADERS alglib/*.h)
+file(GLOB ALGLIB_SOURCES alglib/*.cpp)
+
+add_library(alglib
+    ${ALGLIB_HEADERS}
+    ${ALGLIB_SOURCES})
+
 add_library(telef
   include/align/nonrigid_pipe.h
   include/align/rigid_pipe.h
   include/align/lmkfit_pipe.h
+  include/align/bsfit_pipe.h
   include/cloud/cloud_pipe.h
   include/face/model.h
   include/feature/feature_detector.h
@@ -93,6 +100,7 @@ add_library(telef
   src/cloud/cloud_pipe.cpp
   src/align/rigid_pipe.cpp
   src/align/lmkfit_pipe.cpp
+  src/align/bsfit_pipe.cpp
   src/io/align/align_frontend.cpp
   src/io/ply/meshio.cpp
   src/io/bmp.cpp
@@ -169,6 +177,7 @@ target_link_libraries(telef
   -lGL
   glfw
   ann
+  alglib
   )
 
 

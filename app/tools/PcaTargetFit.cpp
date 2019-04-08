@@ -8,6 +8,7 @@
 #include "align/nonrigid_pipe.h"
 #include "align/rigid_pipe.h"
 #include "align/lmkfit_pipe.h"
+#include "align/bsfit_pipe.h"
 #include "cloud/cloud_pipe.h"
 #include "face/feeder.h"
 #include "feature/feature_detector.h"
@@ -189,6 +190,7 @@ int main(int ac, const char *const *av) {
 
   auto rigid = PCARigidFittingPipe();
   auto lmkfit = LmkFitPipe(vm["reg"].as<float>());
+  auto bsfit = BsFitPipe();
   auto nonrigid = PCAGPUNonRigidFittingPipe(
       geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm, usePrevFrame);
   auto fitting2Projection = Fitting2ProjectionPipe();
@@ -214,6 +216,8 @@ int main(int ac, const char *const *av) {
       modelFeeder,
       rigid,
       lmkfit,
+      rigid,
+      bsfit,
       nonrigid,
       normaldepth,
       intrinsic);

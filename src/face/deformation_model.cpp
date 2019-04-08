@@ -135,10 +135,7 @@ BlendShapeDeformationModel::BlendShapeDeformationModel(
   blendShapeVectors.resize(refMesh.position.size(), rank);
   for (int i = 0; i < rank; i++) {
     Eigen::VectorXf deformation = samples[i].position - refMesh.position;
-    std::copy_n(
-        deformation.data(),
-        deformation.size(),
-        blendShapeVectors.data() + i * refMesh.position.size());
+    blendShapeVectors.col(i) = deformation;
   }
   this->rank = rank;
 }
