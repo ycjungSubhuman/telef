@@ -108,6 +108,13 @@ FeatureDetectSuite::Ptr FeatureDetectionClientPipe::_processData(
   auto imgData = reqMsg.mutable_data();
   imgData->set_buffer(imgBuffer.data(), pclImage->getDataSize());
 
+  auto in_bbox = in->feature->boundingBox.getRect();
+  auto bbox = reqMsg.mutable_bbox();
+  bbox->set_left(in_bbox.left());
+  bbox->set_top(in_bbox.top());
+  bbox->set_right(in_bbox.right());
+  bbox->set_bottom(in_bbox.bottom());
+
   bool msgSent = send(reqMsg);
 
   LmkRsp rspMsg;
