@@ -1,44 +1,11 @@
 #include "intrinsic/intrinsic.h"
 #include <cstdio>
+#include <ANN/ANN.h>
 
 namespace telef::intrinsic{
 
 void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_normal, const uint16_t *_depth, int _width, int _height)
 {
-	// {
-	// 	int a,b;
-	// 	double x;
-	// 	Eigen::SparseMatrix<double> A;
-	// 	A.resize(34632,34632);
-	// 	std::vector<Eigen::Triplet<double> > tp;
-	// 	FILE *out=fopen("../A","r");
-	// 	for(int i=0;i<866278;i++)
-	// 	{
-	// 		fscanf(out,"%d %d %lf",&a,&b,&x);
-	// 		tp.push_back(Eigen::Triplet<double>(a-1,b-1,x));
-	// 	}
-	// 	A.setFromTriplets(tp.begin(), tp.end());
-	// 	fclose(out);
-	// 	Eigen::VectorXd bb;
-	// 	bb = Eigen::VectorXd::Zero(34632);
-	// 	out=fopen("../b","r");
-	// 	for(int i=0;i<34563;++i)
-	// 	{
-	// 		fscanf(out,"%d %d %lf",&a,&b,&x);
-	// 		bb[b-1]=x;
-	// 	}
-	// 	fclose(out);
-	// 	std::printf("recons\n");
-	// Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > cg(A);  // performs a Cholesky factorization of A
-	// //cg.compute(A);
-	// Eigen::VectorXd xx = cg.solve(bb);
-
-	// 	out=fopen("../depth/index","w");
-	// 	for(int i=0;i<34632;i++)
-	// 		fprintf(out,"%lf\n",xx[i]);
-	// 	fclose(out);
-	// }
-	// std::printf("hohoho\n");
 	width = _width;
 	height = _height;
 
@@ -84,7 +51,7 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const uint8_t *_nor
 				nMap[3*width*i+3*j+k]/=nn;
 		}
 
-	if(true)
+	if(false)
 	{
 		uint8_t *out = new uint8_t[width*height*3];
 		for(int i=0;i<width*height*3;i++)
@@ -112,34 +79,11 @@ void IntrinsicDecomposition::process(double *result_intensity)
 
 	//A = 4 * WRC + 3 * mask1 * (spI - LLEGRID) + 3 * mask2 * (spI - LLENORMAL) + 0.025 * WSC;
 	//b = 4 * consVecCont;
-	Eigen::SparseMatrix<double> spI(indexMapping.size(),indexMapping.size());
-	spI.setIdentity();
-
-	//Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * (spI - LLEGRID) + 3 * MASK * (spI - LLENORMAL) + 1 * L_S + 0.025 * WSC;
-	//Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLEGRID + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
 	Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLEGRID + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
 	Eigen::VectorXd b = 4 * consVecCont;
 
 	std::printf("Ax=b reconstructed\n");
 
-	if(false)
-	{
-		 FILE *out=fopen("../depth/A","w");
-		 for(int k=0;k<A.outerSize();++k)
-		 	for(Eigen::SparseMatrix<double>::InnerIterator it(A,k);it;++it)
-		 		fprintf(out,"%ld %ld %lf\n",it.row(),it.col(),it.value());
-		 fclose(out);
-
-		out=fopen("../depth/b","w");
-		for(int i=0;i<dims;++i)
-			fprintf(out,"%lf\n",b[i]);
-		fclose(out);
-
-		out=fopen("../depth/index","w");
-		for(int i=0;i<dims;i++)
-			fprintf(out,"%d %d\n",indexMapping[i].first,indexMapping[i].second);
-		fclose(out);
-	}
 
 	// for(int i=0;i<dims;i++)
 	// 	printf("%lf\n",consVecCont[i]);
@@ -158,7 +102,6 @@ void IntrinsicDecomposition::process(double *result_intensity)
 		int i=indexMapping[it].first;
 		int j=indexMapping[it].second;
 		result_intensity[i*width+j] = std::exp(x[it])/2.0;
-		//std::printf("%f\t",result_intensity[i*width+j]);
 	}
 }
 
@@ -209,10 +152,10 @@ void IntrinsicDecomposition::getPoints(const uint16_t *depth)
 	double *js = new double[width];
 
 	for(int i=0;i<height;++i)
-		is[i] = (double)(i-height/2)/height*2.0*std::tan(CV_PI/6);
+		is[i] = (double)(i-height/2)/height*2.0*std::tan(CV_PI/6)*height/(double)width;
 
 	for(int j=0;j<width;++j)
-		js[j] = (double)(j-width/2)/width*2.0*std::tan(CV_PI/6)*height/width;
+		js[j] = (double)(j-width/2)/width*2.0*std::tan(CV_PI/6);
 
 	for(int i=0;i<height;i++)
 	{
@@ -220,10 +163,11 @@ void IntrinsicDecomposition::getPoints(const uint16_t *depth)
 		{
 			double d = depth[width*i+j]/65535.0;
 			points[3*width*i+3*j+0]=d*js[j];
-			points[3*width*i+3*j+1]=d*is[i];
+			points[3*width*i+3*j+1]=-d*is[i];
 			points[3*width*i+3*j+2]=-d;
 		}
 	}
+
 	delete [] is;
 	delete [] js;
 }
@@ -247,21 +191,6 @@ void IntrinsicDecomposition::getChrom()
 		chrom[3*width*i+3*j+1] = color[3*width*i+3*j+1]/intensity;
 		chrom[3*width*i+3*j+2] = color[3*width*i+3*j+2]/intensity;
 	}
-	if(false)
-	{
-		uint8_t *out = new uint8_t[width*height*3];
-		for(int i=0;i<width*height*3;i++)
-		{
-			if(mask[i/3])
-				out[i]=(uint8_t)(chrom[i]*255.0);
-		}
-      pcl::io::saveCharPNGFile(
-          "../depth/chrom.png",
-          out,
-          width,
-          height,3);
-      delete [] out;
-    }
 }
 
 void IntrinsicDecomposition::getVarianceMap(int patch_size)
@@ -306,6 +235,12 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	int *jpos = new int[Maxgrid];
 	int Ngrid=0;
 
+	ANNpointArray dataPts;
+	ANNpoint queryPt;
+	ANNidxArray nnIdx;
+	ANNdistArray dists;
+	ANNkd_tree * kdTree;
+
 	for(int i=0;i<height;i+=g_size)
 		for(int j=0;j<width;j+=g_size)
 		{
@@ -326,16 +261,17 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 		}
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud3d (new pcl::PointCloud<pcl::PointXYZ>);
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud6d (new pcl::PointCloud<pcl::PointXYZRGB>);
 
   	// Generate pointcloud data
   	cloud3d->width = Ngrid;
   	cloud3d->height = 1;
   	cloud3d->points.resize (cloud3d->width * cloud3d->height);
 
-  	cloud6d->width = Ngrid;	
-  	cloud6d->height = 1;
-  	cloud6d->points.resize (cloud6d->width * cloud6d->height);
+
+	queryPt = annAllocPt(6);
+	dataPts = annAllocPts(Ngrid, 6);
+	nnIdx = new ANNidx[K+1];
+	dists = new ANNdist[K+1];
 
 	//building kd-tree
   	int n=0;
@@ -367,12 +303,12 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			cloud3d->points[n].y = nMap[ipos[n]*width*3+jpos[n]*3+1];
 			cloud3d->points[n].z = nMap[ipos[n]*width*3+jpos[n]*3+2];
 
-			cloud6d->points[n].x = nMap[ipos[n]*width*3+jpos[n]*3+0];
-			cloud6d->points[n].y = nMap[ipos[n]*width*3+jpos[n]*3+1];
-			cloud6d->points[n].z = nMap[ipos[n]*width*3+jpos[n]*3+2];
-			cloud6d->points[n].r = points[ipos[n]*width*3+jpos[n]*3+0];
-			cloud6d->points[n].g = points[ipos[n]*width*3+jpos[n]*3+1];
-			cloud6d->points[n].b = points[ipos[n]*width*3+jpos[n]*3+2];
+			dataPts[n][0] = nMap[ipos[n]*width*3+jpos[n]*3+0];
+			dataPts[n][1] = nMap[ipos[n]*width*3+jpos[n]*3+1];
+			dataPts[n][2] = nMap[ipos[n]*width*3+jpos[n]*3+2];
+			dataPts[n][3] = points[ipos[n]*width*3+jpos[n]*3+0];
+			dataPts[n][4] = points[ipos[n]*width*3+jpos[n]*3+1];
+			dataPts[n][5] = points[ipos[n]*width*3+jpos[n]*3+2];
 			tp.push_back(Eigen::Triplet<double>(index[ipos[n]*width+jpos[n]],index[ipos[n]*width+jpos[n]],1));
 			n++;
 		}
@@ -434,17 +370,16 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	std::printf("LLENORMAL\n");
 
 	//for LLEGRID
-	pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree6d;
-	kdtree6d.setInputCloud(cloud6d);
+	kdTree = new ANNkd_tree(dataPts, Ngrid, 6);
 	tp.clear();
 	for(int i=0;i<Ngrid;i++)
 	{
-		double tol=1e-3;
-		kdtree6d.nearestKSearch(cloud6d->points[i],K+1,pointIdxNKNSearch,pointNKNSquaredDistance);
+		double tol=1e-3,eps;
+		kdTree->annkSearch(queryPt, K+1, nnIdx, dists, eps);
 		z.setTo(0);
 		for(int k=0,kk=0;k<=K;++k)
 		{
-			int nk=pointIdxNKNSearch[k];
+			int nk=nnIdx[k];
 			if(nk==i)
 				continue;
 			z(kk,0) = nMap[ipos[nk]*width*3+jpos[nk]*3+0] - nMap[ipos[i]*width*3+jpos[i]*3+0];
@@ -469,10 +404,11 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 
 		// % enforce sum(w)=1
 		for(int k=0,kk=0;k<=K;k++) {
-			if(pointIdxNKNSearch[k]==i)
+			int nk=nnIdx[k];
+			if(nk==i)
 				continue;
 			int p = ipos[i]*width+jpos[i];
-			int q = ipos[pointIdxNKNSearch[k]]*width+jpos[pointIdxNKNSearch[k]];
+			int q = ipos[nk]*width+jpos[nk];
 			tp.push_back(Eigen::Triplet<double>(index[p],index[q],-w(kk++, 1) / ws));
 			//LLEGRID.coeffRef(index[p],index[q]) = w(k,1) /ws;
 		}
@@ -483,6 +419,9 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	std::printf("LLEGRID\n");
 	delete [] ipos;
 	delete [] jpos;
+	delete [] nnIdx;
+	delete [] dists;
+	annClose();
 }
 
 //WSC
@@ -620,7 +559,7 @@ void IntrinsicDecomposition::getLaplacian()
 	int ny[] = {0, 1, -1, 0, 0, -1, 1, -1, 1};
 	int pp[9];
 	double win[9][3],tmp[9][3],mu[3],tval[9][9];
-	cv::Mat1d var(3,3);
+	cv::Mat1d var(3,3),inv_var(3,3);
 
 	int dims2[2] = {dims, dims};//{h*w,h*w};
 	std::vector<Eigen::Triplet<double> > tp;
@@ -652,6 +591,7 @@ void IntrinsicDecomposition::getLaplacian()
 		mu[2]/=cnt;
 
 		for(int i=0;i<3;i++)
+		{
 			for(int j=0;j<3;j++)
 			{
 				var[i][j]=0;
@@ -659,10 +599,10 @@ void IntrinsicDecomposition::getLaplacian()
 					var[i][j]+=win[k][j]*win[k][i];
 				var[i][j]/=cnt;
 				var[i][j]-=mu[i]*mu[j];
-				if(i==j)
-					var[i][j]+=1e-5;
 			}
-		var = var.inv();
+			var[i][i]+=1e-5/cnt;
+		}
+		inv_var = var.inv();
 
 		for(int k=0;k<cnt;k++)
 		{
@@ -672,11 +612,11 @@ void IntrinsicDecomposition::getLaplacian()
 		}
 
 		for(int i=0;i<cnt;i++)
-			for(int j=0;j<3;j++)
+			for(int k=0;k<3;k++)
 			{
-				tmp[i][j]=0.0;
-				for(int k=0;k<3;k++)
-					tmp[i][j]+=win[i][j]*var[j][k];
+				tmp[i][k]=0.0;
+				for(int j=0;j<3;j++)
+					tmp[i][k]+=win[i][j]*inv_var[j][k];
 			}
 		for(int i=0;i<cnt;i++)
 			for(int k=0;k<cnt;k++)

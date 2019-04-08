@@ -25,7 +25,16 @@ find_package(VTK REQUIRED)
 find_package(dlib REQUIRED)
 
 add_subdirectory(messages)
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+
+file(GLOB ANN_SOURCES ann/src/*)
+file(GLOB ANN_HEADERS ann/include/ANN/*)
+
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ann/include/)
+
+
+add_library(ann
+  ${ANN_SOURCES}
+  ${ANN_HEADERS})
 
 add_library(telef
   include/align/nonrigid_pipe.h
@@ -159,6 +168,7 @@ target_link_libraries(telef
   -lGLEW
   -lGL
   glfw
+  ann
   )
 
 
