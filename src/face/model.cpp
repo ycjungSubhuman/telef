@@ -121,6 +121,10 @@ Eigen::VectorXf MorphableFaceModel::getReferenceVector() {
   return refMesh.position;
 }
 
+ColorMesh MorphableFaceModel::getReferenceMesh() {
+  return refMesh;
+}
+
 int MorphableFaceModel::getShapeRank() { return shapeModel->getRank(); }
 
 int MorphableFaceModel::getExpressionRank() {

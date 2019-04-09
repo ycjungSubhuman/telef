@@ -98,6 +98,8 @@ public:
   /** Returns reference model vertex position vector */
   Eigen::VectorXf getReferenceVector();
 
+  ColorMesh getReferenceMesh();
+
   /** Returns the number of PCA shape model basis */
   int getShapeRank();
 

@@ -96,6 +96,7 @@ int main(int ac, const char *const *av) {
       "depthnormal,T",
       po::value<std::string>(),
       "record depth normal image to specified directory")(
+      "skip-intrinsic", "Does not perform intrinsic decomposition")(
       "reg", po::value<float>()->default_value(0.00001f), "Regularizer")(
       "geo,Z", "Adds Geometric Term")(
       "geo-weight,W", po::value<float>(), "Weight control for Geometric Term")(
@@ -219,10 +220,15 @@ int main(int ac, const char *const *av) {
       rigid,
       bsfit,
       nonrigid,
-      normaldepth,
-      intrinsic);
+      normaldepth);
+
+  bool is_intrinsic = 0 == vm.count("skip-intrinsic");
   merger = std::make_shared<DeviceInputPipeMerger<PCANonRigidFittingResult>>(
-      [&pipe1](auto in) -> decltype(auto) { return pipe1(in); });
+      [&pipe1, is_intrinsic, &intrinsic](auto in) -> decltype(auto) {
+        auto res = pipe1(in);
+        if(is_intrinsic) return intrinsic(res);
+        else return res;
+      });
   if (vm.count("vis") > 0) {
     auto frontend =
         std::make_shared<FittingVisualizer>(geoMaxPoints, geoSearchRadius);

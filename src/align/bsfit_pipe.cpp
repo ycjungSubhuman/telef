@@ -107,10 +107,16 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   Eigen::VectorXf exCoeff =
     Eigen::Map<Eigen::VectorXd>(algx.getcontent(), algx.length()).cast<float>();
 
-  Eigen::VectorXf res = ref+expMat*exCoeff;
-  ColorMesh mres;
-  mres.position = res;
-  telef::io::ply::writePlyMesh("result.ply", mlmk);
+  /*
+  for(int i=0; i<expMat.cols(); i++)
+    {
+      Eigen::VectorXf res = shape+expMat.col(i);
+      ColorMesh mres;
+      mres.position = res;
+      mres.triangles = in->pca_model->getReferenceMesh().triangles;
+      telef::io::ply::writePlyMesh("cusbs_"+std::to_string(i)+".ply", mres);
+    }
+  */
 
   in->expressionCoeff = exCoeff;
 
