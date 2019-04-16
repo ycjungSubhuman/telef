@@ -15,6 +15,7 @@
 #include "util/shader.h"
 #include "util/normal.h"
 #include "vis/fitting_visualizer.h"
+#include "io/ply/meshio.h"
 
 namespace {
 using namespace telef::vis;
@@ -772,12 +773,6 @@ void DepthNormalFrontend::_process(InputPtrT input) {
       for (size_t i=0; i<raw_intensity.size(); i++)
         {
           raw_intensity[i] = static_cast<unsigned char>(input->intensity[i]*255);
-          if(false && 0.0f != input->intensity[i])
-            {
-              std::cout << "FFUOWIEUF" << std::endl;;
-              std::cout << input->intensity[i] << std::endl;;
-              std::cout << raw_intensity[i] << std::endl;
-            }
         }
       pcl::io::saveCharPNGFile(
           path.string() + ".i.png",
@@ -786,5 +781,24 @@ void DepthNormalFrontend::_process(InputPtrT input) {
           m_maybe_height,
           1);
     }
+
+  auto model = input->pca_model;
+  auto mesh = model->genMesh(input->shapeCoeff, input->expressionCoeff);
+  ColorMesh mesh_normalized;
+  mesh_normalized.position = mesh.position;
+  mesh_normalized.triangles = mesh.triangles;
+  mesh.applyTransform(input->transformation);
+  projectColor(input->image, mesh, input->fx, input->fy);
+  mesh_normalized.uv = mesh.uv;
+
+  telef::io::ply::writeObjMesh(
+      path.string()+".res.obj",
+      path.string()+m_color_ext,
+      mesh_normalized);
+
+  telef::io::ply::writeObjMesh(
+      path.string()+".orig.obj",
+      path.string()+".orig.png",
+      mesh);
 }
 } // namespace telef::vis

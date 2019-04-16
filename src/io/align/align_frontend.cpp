@@ -68,7 +68,5 @@ void ColorMeshPlyWriteFrontEnd::process(
   std::cout << "Saved" << std::endl;
   fs::path p{outputPath.c_str()};
   ply::writePlyMesh(p, *input);
-  auto stripped = p.parent_path() / p.stem();
-  ply::writeObjMesh(stripped.string() + ".obj", *input);
 }
 } // namespace telef::io::align

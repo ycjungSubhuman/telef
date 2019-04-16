@@ -81,7 +81,7 @@ void writePlyMesh(fs::path f, ColorMesh &mesh) {
   plyFile.save(f.c_str(), false);
 }
 
-void writeObjMesh(fs::path f, ColorMesh &mesh) {
+void writeObjMesh(fs::path f, fs::path img_path, ColorMesh &mesh) {
   auto stripped = f.parent_path() / f.stem();
   std::ofstream of(f.c_str());
   of << "mtllib " << f.stem().string() << ".mtl\n";
@@ -113,11 +113,7 @@ void writeObjMesh(fs::path f, ColorMesh &mesh) {
   mtl << "Tr 1.000000\n";
   mtl << "illum 1\n";
   mtl << "Ns 0.000000\n";
-  mtl << "map_Kd " << f.stem().string() << ".jpg\n";
+  mtl << "map_Kd " << img_path.string() << "\n";
   mtl.close();
-
-  if (mesh.image != nullptr) {
-    saveBMPFile(stripped.string() + ".jpg", *mesh.image);
-  }
 }
 } // namespace telef::io::ply

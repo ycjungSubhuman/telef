@@ -17,5 +17,5 @@ namespace fs = std::experimental::filesystem;
 namespace telef::io::ply {
 ColorMesh readPlyMesh(fs::path f);
 void writePlyMesh(fs::path f, ColorMesh &mesh);
-void writeObjMesh(fs::path f, ColorMesh &mesh);
+void writeObjMesh(fs::path f, fs::path img_path, ColorMesh &mesh);
 } // namespace telef::io::ply
