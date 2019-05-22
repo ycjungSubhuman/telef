@@ -596,7 +596,7 @@ Eigen::Matrix4f FittingVisualizer::getMvpMatrix() {
           .matrix();
 
   const float zFar = 1024.0f;
-  const float zNear = 1.0f;
+  const float zNear = 10.0f;
   Eigen::Matrix4f proj;
   auto yscale = 1.0f / tanf((M_PI * zoom * 0.5) / 2);
   auto xscale = yscale / (16.0f / 9.0f);
@@ -757,7 +757,12 @@ void DepthNormalFrontend::_process(InputPtrT input) {
 
   if (0 != input->rendered_normal.size())
     {
-      std::vector<unsigned char> raw_normals = input->rendered_normal;
+      std::vector<uint8_t> raw_normals(input->rendered_normal.size());
+      for(int i=0; i<input->rendered_normal.size(); i++)
+      {
+        raw_normals[i] = static_cast<uint8_t>(input->rendered_normal[i]*255);
+      }
+      // std::vector<unsigned char> raw_normals = input->rendered_normal;
       pcl::io::saveCharPNGFile(
           path.string() + m_normal_ext,
           raw_normals.data(),

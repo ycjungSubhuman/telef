@@ -13,7 +13,7 @@ IntrinsicPipe::_processData(boost::shared_ptr<PCANonRigidFittingResult> in)
   std::vector<uint8_t> rgb(in->image->getWidth()*in->image->getHeight()*3); 
   in->image->fillRaw(rgb.data());
   std::vector<uint16_t> depth = in->rendered_depth;
-  std::vector<uint8_t> normal = in->rendered_normal;
+  std::vector<float> normal = in->rendered_normal;
 
   std::vector<double> intensity(rgb.size()/3);
 

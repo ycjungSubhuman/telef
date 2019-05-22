@@ -12,13 +12,16 @@ using namespace telef::util;
 const char *mesh_normal_vertex_shader =
     "#version 460 \n"
     "uniform mat4 mvp; \n"
+    "uniform mat4 mv; \n"
     "in vec4 pos; \n"
     "in vec3 _normal; \n"
     "out vec3 normal; \n"
     "void main() { \n"
     "  vec4 xy_z = mvp*pos; \n"
+    "  vec4 _z = mv*pos; \n"
     "  xy_z /= xy_z.w; \n"
-    "  vec4 xyz = vec4(xy_z.x, xy_z.y, -pos.z, 1.0); \n"
+    "  _z /= _z.w; \n"
+    "  vec4 xyz = vec4(xy_z.x, xy_z.y, -_z.z, 1.0); \n"
     "  gl_Position = xyz; \n"
     "  normal = _normal; \n"
     "} \n ";
@@ -210,20 +213,25 @@ MeshNormalDepthRenderer::_processData(boost::shared_ptr<PCANonRigidFittingResult
   //    the output z component will be meaningless
   //    the shader uses raw z values (in meter)
   Eigen::Matrix4f p1;
-  p1 << fx / cx, 0.0f, 0.0f, 0.0f, 0.0f, fy / cy, 0.0f, 0.0f, 0.0f, 0.0f,
-      -(near + far) / (far - near), -2.0f * near * far / (far - near), 0.0f,
-      0.0f, -1.0f, 0.0f;
+  p1 << 
+	  fx / cx, 0.0f, 0.0f, 0.0f, 
+	     0.0f, fy / cy, 0.0f, 0.0f, 
+	     0.0f, 0.0f, 1.0f, 0.0f, 
+	     0.0f, 0.0f, -1.0f, 0.0f;
   Eigen::Matrix4f flip; // flips z coordinate to -z
   flip << 1.0, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
       0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
 
   Eigen::Matrix4f mvp = p1 * flip * mv;
+  Eigen::Matrix4f _mv = flip * mv;
 
   Eigen::MatrixXf pos = Eigen::Map<Eigen::MatrixXf>(
       mesh.position.data(), 3, mesh.position.size() / 3);
 
   GLint mvpPosition = glGetUniformLocation(m_normal_prog, "mvp");
+  GLint mvPosition = glGetUniformLocation(m_normal_prog, "mv");
   glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
+  glUniformMatrix4fv(mvPosition, 1, GL_FALSE, _mv.data());
 
   //     Draw
   std::vector<unsigned int> triangles(mesh.triangles.size() * 3);
@@ -243,7 +251,7 @@ MeshNormalDepthRenderer::_processData(boost::shared_ptr<PCANonRigidFittingResult
       NULL);
 
   //    Get pixel values
-  std::vector<uint8_t> raw_normals(m_maybe_width * m_maybe_height * 3);
+  std::vector<float> raw_normals(m_maybe_width * m_maybe_height * 3);
   std::vector<uint16_t> raw_depth(m_maybe_width * m_maybe_height);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   glReadPixels(
@@ -252,7 +260,7 @@ MeshNormalDepthRenderer::_processData(boost::shared_ptr<PCANonRigidFittingResult
       m_maybe_width,
       m_maybe_height,
       GL_RGB,
-      GL_UNSIGNED_BYTE,
+      GL_FLOAT,
       raw_normals.data());
   glReadPixels(
       0,
