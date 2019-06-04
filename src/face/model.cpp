@@ -1,11 +1,13 @@
 #include "face/model.h"
 #include "mesh/bilinear_model.h"
 
+
 namespace {
 namespace fs = std::experimental::filesystem;
 using namespace telef::mesh;
 using namespace telef::io;
 } // namespace
+
 
 namespace telef::face {
 MorphableFaceModel::MorphableFaceModel(

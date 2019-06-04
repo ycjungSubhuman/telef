@@ -192,8 +192,11 @@ int main(int ac, const char *const *av) {
   auto rigid = PCARigidFittingPipe();
   auto lmkfit = LmkFitPipe(vm["reg"].as<float>());
   auto bsfit = BsFitPipe();
+  /*
   auto nonrigid = PCAGPUNonRigidFittingPipe(
       geoWeight, geoMaxPoints, geoSearchRadius, addGeoTerm, usePrevFrame);
+  */
+  auto toresult = PCAToFittingResultPipe();
   auto fitting2Projection = Fitting2ProjectionPipe();
   auto colorProjection = ColorProjectionPipe();
 
@@ -219,7 +222,7 @@ int main(int ac, const char *const *av) {
       lmkfit,
       rigid,
       bsfit,
-      nonrigid,
+      toresult,
       normaldepth);
 
   bool is_intrinsic = 0 == vm.count("skip-intrinsic");

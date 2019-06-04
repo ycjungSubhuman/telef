@@ -9,6 +9,31 @@
 namespace {
 namespace po = boost::program_options;
 using namespace telef::util;
+
+// convert quad faces to triangle faces
+Eigen::MatrixXi
+quad_to_triangle(const Eigen::MatrixXf &V, const Eigen::MatrixXi &quads) {
+  Eigen::MatrixXi result(2 * quads.rows(), 3);
+  assert(4 == quads.cols());
+
+  for (Eigen::Index faceIndex = 0; faceIndex < quads.rows(); faceIndex++) {
+    Eigen::RowVectorXf A = V.row(quads(faceIndex, 0));
+    Eigen::RowVectorXf B = V.row(quads(faceIndex, 1));
+    Eigen::RowVectorXf C = V.row(quads(faceIndex, 2));
+    Eigen::RowVectorXf D = V.row(quads(faceIndex, 3));
+
+    // Choose ac
+    result(2 * faceIndex, 0) = quads(faceIndex, 0);
+    result(2 * faceIndex, 1) = quads(faceIndex, 1);
+    result(2 * faceIndex, 2) = quads(faceIndex, 2);
+    result(2 * faceIndex + 1, 0) = quads(faceIndex, 0);
+    result(2 * faceIndex + 1, 1) = quads(faceIndex, 2);
+    result(2 * faceIndex + 1, 2) = quads(faceIndex, 3);
+  }
+
+  return result;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {

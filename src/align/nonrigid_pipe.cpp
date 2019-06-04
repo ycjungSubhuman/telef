@@ -20,6 +20,24 @@ using namespace telef::types;
 using namespace telef::face;
 
 namespace telef::align {
+
+boost::shared_ptr<PCANonRigidFittingResult>
+PCAToFittingResultPipe::_processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in) 
+{
+  auto result = boost::make_shared<PCANonRigidFittingResult>() ;
+
+  result->image = in->image;
+  result->pca_model = in->pca_model;
+  result->cloud = in->rawCloud;
+  result->landmark3d = in->fittingSuite->landmark3d;
+  result->fx = in->fx;
+  result->fy = in->fy;
+  result->transformation = in->transformation;
+  result->expressionCoeff = in->expressionCoeff;
+  result->shapeCoeff = in->shapeCoeff;
+
+  return result;
+}
 PCAGPUNonRigidFittingPipe::PCAGPUNonRigidFittingPipe()
     : isModelInitialized(false), geoWeight(0), geoMaxPoints(0),
       geoSearchRadius(0), addGeoTerm(false) {
@@ -227,13 +245,14 @@ PCAGPUNonRigidFittingPipe::_processData(
 
   if(!adjustCamera)
     {
-      //problem.SetParameterBlockConstant(t.data());
-      //problem.SetParameterBlockConstant(u.data());
+      problem.SetParameterBlockConstant(t.data());
+      problem.SetParameterBlockConstant(u.data());
     }
+  problem.SetParameterBlockConstant(expressionCoeff.data());
 
   /*
   problem.AddResidualBlock(
-      new L2RegularizerFunctor(c_deformModel.shapeRank, 1e-4),
+      new L2RegularizerFunctor(c_deformModel.shapeRank, 1e-7),
       NULL,
       shapeCoeff.data());
   */
@@ -255,7 +274,7 @@ PCAGPUNonRigidFittingPipe::_processData(
 
   /* Run Optimization */
   auto summary = ceres::Solver::Summary();
-  //ceres::Solve(options, &problem, &summary);
+  ceres::Solve(options, &problem, &summary);
   std::cout << summary.FullReport() << std::endl;
 
   float fu[3];
@@ -272,7 +291,7 @@ PCAGPUNonRigidFittingPipe::_processData(
   freeScanCUDA(c_scanPointCloud);
 
   auto result = boost::make_shared<PCANonRigidFittingResult>();
-  /*
+
   result->shapeCoeff =
       Eigen::Map<Eigen::VectorXd>(shapeCoeff.data(), c_deformModel.shapeRank)
           .cast<float>();
@@ -280,10 +299,12 @@ PCAGPUNonRigidFittingPipe::_processData(
       Eigen::Map<Eigen::VectorXd>(
           expressionCoeff.data(), c_deformModel.expressionRank)
           .cast<float>();
-  */
-  result->shapeCoeff = in->shapeCoeff;
+  /*
   result->expressionCoeff = in->expressionCoeff;
+  result->shapeCoeff =
+    Eigen::Map<Eigen::VectorXd>(fixedShapeCoeff.data(), c_deformModel.shapeRank).cast<float>();
 
+  */
   std::cout << "Fitted(Shape): " << std::endl;
   std::cout << result->shapeCoeff << std::endl;
   std::cout << "Fitted(Expression): " << std::endl;

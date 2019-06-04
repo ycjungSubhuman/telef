@@ -26,9 +26,10 @@ boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
   Eigen::Matrix3Xf mesh_pts_t =
       Eigen::Map<Eigen::Matrix3Xf>(ref.data(), 3, ref.size() / 3);
   std::vector<int> selection = {
-                                1, 2, 3, 4,
-                                12, 13, 14, 15,
-                                39, 42, 33,};
+                                0, 1, 2, 3,
+                                13, 14, 15, 16,
+                                27, 28, 29, 30,
+                                33, 36, 39, 42, 45};
   Eigen::MatrixXf mesh_lmk_pts(selection.size(), 3);
 
   for (int i = 0; i < selection.size(); i++) {
@@ -42,8 +43,18 @@ boost::shared_ptr<PCANonRigidAlignmentSuite> PCARigidFittingPipe::_processData(
     lmk_pts(i, 2) = in_lmks->points[selection[i]].z;
   }
 
-  Eigen::MatrixXf transformation =
-      Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose());
+  Eigen::MatrixXf transformation;
+  if(m_prev_scale == 0.0f)
+    {
+      transformation = Eigen::umeyama(mesh_lmk_pts.transpose(), lmk_pts.transpose());
+      m_prev_scale = transformation.block(0,0,3,0).norm();
+    }
+  else
+    {
+      transformation = Eigen::umeyama(
+          m_prev_scale*mesh_lmk_pts.transpose(), lmk_pts.transpose(), false);
+      transformation.block(0,0,3,3) *= m_prev_scale;
+    }
 
   in->transformation = transformation;
   return in;

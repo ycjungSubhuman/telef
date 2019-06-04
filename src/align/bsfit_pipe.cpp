@@ -17,7 +17,8 @@ using namespace alglib;
 const std::vector<int> lmk_selection =
   {
    7, 8, 9,
-   51, 48, 54, 60, 64, 62, 57, 66,
+   //51, 48, 54, 60, 64, 62, 57, 66,
+   60, 62, 64, 66,
    37, 38, 40, 41,
    43, 44, 46, 47, 
    17, 19, 21,
@@ -65,8 +66,6 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   ColorMesh mlmk, mref;
   mlmk.position = lmk;
   mref.position = lmkref;
-  telef::io::ply::writePlyMesh("lmk3d.ply", mlmk);
-  telef::io::ply::writePlyMesh("reflmk.ply", mref);
 
   Eigen::MatrixXd dExpLmkMat2d = expLmkMat2d.cast<double>();
   Eigen::VectorXd db2d = b2d.cast<double>();
@@ -74,7 +73,7 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   Eigen::VectorXd c = -dExpLmkMat2d.transpose()*db2d;
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(expRank);
   //Eigen::VectorXd bndl = -std::numeric_limits<double>::infinity()*Eigen::VectorXd::Ones(expRank);
-  Eigen::VectorXd bndl = -0.1*Eigen::VectorXd::Ones(expRank);
+  Eigen::VectorXd bndl = -0.05*Eigen::VectorXd::Ones(expRank);
   Eigen::VectorXd bndu = std::numeric_limits<double>::infinity()*Eigen::VectorXd::Ones(expRank);
   Eigen::VectorXd scale = Eigen::VectorXd::Ones(expRank);
 

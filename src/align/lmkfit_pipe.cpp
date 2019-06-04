@@ -6,6 +6,9 @@
 
 #include "align/lmkfit_pipe.h"
 #include "align/rigid_pipe.h"
+#include "align/bsfit_pipe.h"
+#include "align/rigid_pipe.h"
+#include "io/ply/meshio.h"
 
 namespace
 {
@@ -33,7 +36,8 @@ boost::shared_ptr<PCANonRigidAlignmentSuite>
 step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
 {
   const auto landmark3d = in->fittingSuite->landmark3d;
-  Eigen::VectorXf ref = in->pca_model->getReferenceVector();
+  Eigen::VectorXf ref = in->pca_model->getReferenceVector() +
+    (in->pca_model->getExpressionBasisMatrix()*in->expressionCoeff);
   const auto lmkInds = in->pca_model->getLandmarks();
   const auto shapeRank = in->pca_model->getShapeRank();
   Eigen::MatrixXf shapeMat = in->pca_model->getShapeBasisMatrix();
@@ -67,6 +71,30 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in, float reg)
 
   return in;
 }
+
+boost::shared_ptr<PCANonRigidAlignmentSuite>
+step_shape(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
+{
+  PCAGPUNonRigidFittingPipe shfit(10, 2500, 0.10, true, true, false);
+  auto res = shfit(in);
+  in->shapeCoeff = res->shapeCoeff;
+
+  return in;
+}
+
+boost::shared_ptr<PCANonRigidAlignmentSuite>
+step_expression(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
+{
+  BsFitPipe bsfit;
+  return bsfit(in);
+}
+
+boost::shared_ptr<PCANonRigidAlignmentSuite>
+step_pose(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
+{
+  PCARigidFittingPipe posefit;
+  return posefit(in);
+}
 }
 
 namespace telef::align
@@ -84,8 +112,27 @@ LmkFitPipe::_processData(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
   if(0 == m_prevShape.size())
     {
-        res = step_position(res, m_reg);
-        m_prevShape = res->shapeCoeff;
+      res = step_position(res, m_reg);
+      Eigen::VectorXf shapeCoeff = res->shapeCoeff;
+      for(int i=0; i<10; i++)
+        {
+            res = step_shape(res);
+            //shapeCoeff = 0.8*shapeCoeff + 0.2*res->shapeCoeff;
+            shapeCoeff = res->shapeCoeff;
+            res = step_expression(res);
+            res = step_pose(res);
+        }
+        m_prevShape = shapeCoeff;
+        res->shapeCoeff = shapeCoeff;
+
+        auto exr = in->pca_model->getExpressionRank();
+        for(int i=0; i<exr; i++)
+          {
+            Eigen::VectorXf expressionCoeff = Eigen::VectorXf::Zero(exr);
+            expressionCoeff(i) = 1.0f;
+            ColorMesh bs = in->pca_model->genMesh(shapeCoeff, expressionCoeff);
+            telef::io::ply::writePlyMesh("bs_"+std::to_string(i)+".ply", bs);
+          }
     }
   else
     {
