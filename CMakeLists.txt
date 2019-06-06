@@ -76,6 +76,7 @@ add_library(telef
   include/io/png.h
   include/io/obj.h
   include/io/fakeframe.h
+  include/io/wrapper.h
   include/util/fake_frame_record_device.h
   include/io/matrix.h
   include/io/landmark.h
@@ -119,6 +120,7 @@ add_library(telef
   src/util/fake_frame_record_device.cpp
   src/io/landmark.cpp
   src/io/normaldepth_pipe.cpp
+  src/io/wrapper.cpp
   src/face/model_cudahelper.cpp
   src/face/model.cpp
   src/face/deformation_model.cpp

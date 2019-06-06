@@ -97,11 +97,13 @@ step_position(boost::shared_ptr<PCANonRigidAlignmentSuite> in)
   minqpsetalgoquickqp(state, 0.0, 0.0, 0.0, 0, false);
   minqpoptimize(state);
   minqpresults(state, algx, rep);
+  /*
   std::cout << int(rep.terminationtype) << " " <<
     rep.outeriterationscount <<
     " " << rep.inneriterationscount << std::endl;
 
   std::cout << algx.tostring(expRank) << std::endl;
+  */
 
   Eigen::VectorXf exCoeff =
     Eigen::Map<Eigen::VectorXd>(algx.getcontent(), algx.length()).cast<float>();

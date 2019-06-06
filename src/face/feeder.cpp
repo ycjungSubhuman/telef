@@ -31,7 +31,7 @@ MorphableModelFeederPipe::MorphableModelFeederPipe(
     : BaseT(), pca_model(model) {}
 
 MultipleModelFeederPipe::MultipleModelFeederPipe(
-  const std::vector<MModelTptr> &models, telef::io::MeshNormalDepthRenderer render, float reg) : 
+  const std::vector<MModelTptr> &models, telef::io::MeshNormalDepthRendererWrapper render, float reg) : 
   BaseT(), pca_model_selected(nullptr), pca_models(models), reg(reg), render(render)
   {
   }
@@ -79,7 +79,7 @@ MultipleModelFeederPipe::MultipleModelFeederPipe(
             float raw_depth = in->rawCloud->at(col, row).z;
             if(std::isfinite(raw_depth))
             {
-              float dist = raw_depth - renderResult->rendered_depth[j]; 
+              float dist = raw_depth - static_cast<float>(renderResult->rendered_depth[j])/65535; 
               assert(count != 0.0f);
               error += dist*dist / count;
             }

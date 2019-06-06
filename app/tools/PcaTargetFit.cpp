@@ -20,6 +20,7 @@
 #include "io/merger/device_input_merger.h"
 #include "io/ply/meshio.h"
 #include "io/normaldepth_pipe.h"
+#include "io/wrapper.h"
 #include "vis/fitting_visualizer.h"
 #include "intrinsic/intrinsic_pipe.h"
 
@@ -205,7 +206,7 @@ int main(int ac, const char *const *av) {
   {
     models.emplace_back(new MorphableFaceModel(fs::path(modelPaths[i].c_str())));
   }
-  auto normaldepth = MeshNormalDepthRenderer();
+  auto normaldepth = MeshNormalDepthRendererWrapper();
   auto modelFeeder = MultipleModelFeederPipe(models, normaldepth, vm["reg"].as<float>());
   std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult>> merger;
   auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
