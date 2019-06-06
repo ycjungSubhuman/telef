@@ -13,7 +13,7 @@ IntrinsicPipe::_processData(boost::shared_ptr<PCANonRigidFittingResult> in)
   std::vector<uint8_t> rgb(in->image->getWidth()*in->image->getHeight()*3); 
   in->image->fillRaw(rgb.data());
   std::vector<uint16_t> depth = in->rendered_depth;
-  std::vector<uint8_t> normal = in->rendered_normal;
+  std::vector<float> normal = in->rendered_normal;
 
   std::vector<double> intensity(rgb.size()/3);
 
@@ -27,7 +27,7 @@ IntrinsicPipe::_processData(boost::shared_ptr<PCANonRigidFittingResult> in)
   std::vector<uint8_t> albedo(rgb.size());
   for(int i=0; i<rgb.size(); i++)
     {
-      albedo[i] = static_cast<uint8_t>(static_cast<double>(rgb[i])/intensity[i/3]/2.0);
+      albedo[i] = static_cast<uint8_t>(static_cast<double>(rgb[i])/intensity[i/3]*2.0);
     }
 
   pcl::io::FrameWrapper::Ptr wrapper = boost::make_shared<BufferFrameWrapper>(

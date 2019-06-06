@@ -1,3 +1,5 @@
+export DISPLAY=:0
+
 docker build -t telef:kinect1 --build-arg use_kinect_1=1 . && 
     xhost +local:root; \
     nvidia-docker run -it \

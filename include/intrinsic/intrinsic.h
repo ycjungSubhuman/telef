@@ -16,7 +16,7 @@
 namespace telef::intrinsic {
 class IntrinsicDecomposition {
 public:
-	void initialize(const uint8_t *rgb, const uint8_t *normal, const uint16_t *depth, int width, int height);
+	void initialize(const uint8_t *rgb, const float *normal, const uint16_t *depth, int width, int height);
 	void process(double *result_intensity);
 	void release();
 
