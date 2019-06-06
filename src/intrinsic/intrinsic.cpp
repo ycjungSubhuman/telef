@@ -34,16 +34,19 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const float *_norma
 	L_S.resize(dims,dims);
 	L_S.setZero();
 	consVecCont = Eigen::VectorXd::Zero(dims);
-	FILE *fin = fopen("rn.txt","r");
-	for(int i=0;i<height;++i)
-		for(int j=0;j<width;++j)
-		{
-			double rnn[3];
-			fscanf(fin,"[%lf %lf %lf] ",&rnn[0],&rnn[1],&rnn[2]);
-			for(int k=0;k<3;++k)
-				nMap[3*width*i+3*j+k]=rnn[k];
-		}
-	fclose(fin);
+	if(dd)
+	{
+		FILE *fin = fopen("rn.txt","r");
+		for(int i=0;i<height;++i)
+			for(int j=0;j<width;++j)
+			{
+				double rnn[3];
+				fscanf(fin,"[%lf %lf %lf] ",&rnn[0],&rnn[1],&rnn[2]);
+				for(int k=0;k<3;++k)
+					nMap[3*width*i+3*j+k]=rnn[k];
+			}
+		fclose(fin);
+	}
 	for(int i=0;i<height;++i)
 		for(int j=0;j<width;++j)
 		{
@@ -84,11 +87,14 @@ void IntrinsicDecomposition::process(double *result_intensity)
 	getContinuousConstraintMatrix(0.0001,0.8); // sigma_c,sigma_i
 	getLaplacian();
 
+	Eigen::SparseMatrix<double> eye(dims,dims);
+	eye.setIdentity();
+
 	//A = 4 * WRC + 3 * mask1 * (spI - LLEGRID) + 3 * mask2 * (spI - LLENORMAL) + 0.025 * WSC;
 	//b = 4 * consVecCont;
-	// Eigen::SparseMatrix<double> A = 4 * WRC + 1 * L_S + 0.025 * WSC;
-	//Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
-	Eigen::SparseMatrix<double> A = 4 * WRC + 1 * MASK * LLEGRID + 1 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
+	//Eigen::SparseMatrix<double> A = 4 * WRC + 1 * L_S + 0.025 * WSC;
+	// Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
+	Eigen::SparseMatrix<double> A = 4 * WRC +  1 * MASK * LLEGRID +  1 *MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;// + 0.05*eye;
 	///Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
 	Eigen::VectorXd b = 4 * consVecCont;
 
