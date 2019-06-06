@@ -275,7 +275,7 @@ PCAGPUNonRigidFittingPipe::_processData(
   /* Run Optimization */
   auto summary = ceres::Solver::Summary();
   ceres::Solve(options, &problem, &summary);
-  std::cout << summary.FullReport() << std::endl;
+  //std::cout << summary.FullReport() << std::endl;
 
   float fu[3];
   float ft[3];
@@ -305,10 +305,12 @@ PCAGPUNonRigidFittingPipe::_processData(
     Eigen::Map<Eigen::VectorXd>(fixedShapeCoeff.data(), c_deformModel.shapeRank).cast<float>();
 
   */
+ /*
   std::cout << "Fitted(Shape): " << std::endl;
   std::cout << result->shapeCoeff << std::endl;
   std::cout << "Fitted(Expression): " << std::endl;
   std::cout << result->expressionCoeff << std::endl;
+  */
   result->image = in->image;
   result->pca_model = in->pca_model;
   result->cloud = in->rawCloud;

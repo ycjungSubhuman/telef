@@ -88,7 +88,7 @@ int main(int ac, const char *const *av) {
   po::options_description desc("Captures RGB-D from camera. Generate and write "
                                "face mesh as ply and obj");
   desc.add_options()("help,H", "print this help message")(
-      "model,M", po::value<std::string>(), "specify PCA model path")(
+      "models,M", po::value<std::vector<std::string>>()->multitoken(), "specify PCA model path")(
       "detector,D",
       po::value<std::string>(),
       "specify Dlib pretrained Face detection model path")(
@@ -127,10 +127,10 @@ int main(int ac, const char *const *av) {
     return 1;
   }
 
-  require(vm, "model");
+  require(vm, "models");
   require(vm, "detector");
 
-  std::string modelPath = vm["model"].as<std::string>();
+  std::vector<std::string> modelPaths = vm["models"].as<std::vector<std::string>>();
   std::string detectModelPath = vm["detector"].as<std::string>();
   std::string address("");
 
@@ -200,16 +200,18 @@ int main(int ac, const char *const *av) {
   auto fitting2Projection = Fitting2ProjectionPipe();
   auto colorProjection = ColorProjectionPipe();
 
-  std::shared_ptr<MorphableFaceModel> model;
-  model = std::make_shared<MorphableFaceModel>(fs::path(modelPath.c_str()));
-
-  auto modelFeeder = MorphableModelFeederPipe(model);
+  std::vector<std::shared_ptr<MorphableFaceModel>> models;
+  for(size_t i=0; i<modelPaths.size(); i++)
+  {
+    models.emplace_back(new MorphableFaceModel(fs::path(modelPaths[i].c_str())));
+  }
+  auto normaldepth = MeshNormalDepthRenderer();
+  auto modelFeeder = MultipleModelFeederPipe(models, normaldepth, vm["reg"].as<float>());
   std::shared_ptr<DeviceInputPipeMerger<PCANonRigidFittingResult>> merger;
   auto faceDetector = DlibFaceDetectionPipe(detectModelPath);
 
   boost::asio::io_service ioService;
   auto featureDetector = FeatureDetectionClientPipe(address, ioService);
-  auto normaldepth = MeshNormalDepthRenderer();
   auto intrinsic = IntrinsicPipe();
 
   auto lmkToScanFitting = LmkToScanRigidFittingPipe();
