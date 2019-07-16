@@ -794,7 +794,13 @@ void DepthNormalFrontend::_process(InputPtrT input) {
   mesh_normalized.triangles = mesh.triangles;
   mesh.applyTransform(input->transformation);
   projectColor(input->image, mesh, input->fx, input->fy);
+  projectColor(input->image, *input->deformed_mesh, input->fx, input->fy);
   mesh_normalized.uv = mesh.uv;
+
+  telef::io::ply::writeObjMesh(
+      path.string()+".deform.obj",
+      path.string()+m_color_ext,
+      *input->deformed_mesh);
 
   telef::io::ply::writeObjMesh(
       path.string()+".res.obj",

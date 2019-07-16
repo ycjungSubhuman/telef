@@ -44,6 +44,7 @@ using PCANonRigidFittingResult = struct PCANonRigidFittingResult {
   telef::types::CloudConstPtrT cloud;
   Eigen::Matrix4f transformation;
   CloudConstPtrT landmark3d;
+  std::shared_ptr<ColorMesh> deformed_mesh;
   float fx;
   float fy;
 

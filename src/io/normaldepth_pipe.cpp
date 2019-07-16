@@ -186,9 +186,12 @@ MeshNormalDepthRenderer::_processData(boost::shared_ptr<PCANonRigidFittingResult
   colormesh2raw(mesh, tpos, F);
   Eigen::MatrixXf newpos = telef::mesh::lmk2deformed(tpos, F, input->landmark3d, input->pca_model->getLandmarks(), 10.0);
 
-  //Eigen::MatrixXf newpos = tpos;
   Eigen::MatrixXf newpost = newpos.transpose();
   auto vertexNormal = getVertexNormal(mesh);
+
+  ColorMesh deformed_mesh(mesh);
+  deformed_mesh.position = Eigen::Map<Eigen::VectorXf>(newpost.data(), newpost.size());
+  input->deformed_mesh = std::make_shared<ColorMesh>(deformed_mesh);
 
   //        vertex positions
   glBindBuffer(GL_ARRAY_BUFFER, m_vbuf);
