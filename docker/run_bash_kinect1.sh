@@ -9,4 +9,4 @@ docker build -t telef:kinect1 --build-arg use_kinect_1=1 . &&
     -v /data:/data \
     -e DISPLAY=$DISPLAY \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
-    telef:kinect1 /bin/bash
+    telef:kinect1 /bin/sh -c 'cd build && exec /bin/bash'

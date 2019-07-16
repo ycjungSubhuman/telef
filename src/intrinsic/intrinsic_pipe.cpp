@@ -27,7 +27,17 @@ IntrinsicPipe::_processData(boost::shared_ptr<PCANonRigidFittingResult> in)
   std::vector<uint8_t> albedo(rgb.size());
   for(int i=0; i<rgb.size(); i++)
     {
-      albedo[i] = static_cast<uint8_t>(static_cast<double>(rgb[i])/intensity[i/3]);
+      if(depth[i/3]==65535)
+      {
+        albedo[i] = 0;
+        continue;
+      }
+      double tmp = static_cast<double>(rgb[i])/255.0;
+      tmp/=intensity[i/3];
+      if(tmp>1.0)
+        tmp=1.0;
+      // albedo[i] = static_cast<uint8_t>(static_cast<double>(rgb[i])/intensity[i/3]);
+      albedo[i] = static_cast<uint8_t>(tmp*255.0);
     }
 
   pcl::io::FrameWrapper::Ptr wrapper = boost::make_shared<BufferFrameWrapper>(

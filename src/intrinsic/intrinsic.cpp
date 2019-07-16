@@ -34,19 +34,6 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const float *_norma
 	L_S.resize(dims,dims);
 	L_S.setZero();
 	consVecCont = Eigen::VectorXd::Zero(dims);
-	if(dd)
-	{
-		FILE *fin = fopen("rn.txt","r");
-		for(int i=0;i<height;++i)
-			for(int j=0;j<width;++j)
-			{
-				double rnn[3];
-				fscanf(fin,"[%lf %lf %lf] ",&rnn[0],&rnn[1],&rnn[2]);
-				for(int k=0;k<3;++k)
-					nMap[3*width*i+3*j+k]=rnn[k];
-			}
-		fclose(fin);
-	}
 	for(int i=0;i<height;++i)
 		for(int j=0;j<width;++j)
 		{
@@ -67,6 +54,21 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const float *_norma
 				//printf("%lf %lf %lf\n",nMap[3*width*i+3*j+0],nMap[3*width*i+3*j+1],nMap[3*width*i+3*j+2]);
 			}
 		}
+	if(false)
+	{
+		FILE *fin = fopen("../out/rn.txt","r");
+		if(fin==NULL)
+			printf("rn is not exist!\n");
+		for(int i=0;i<height;++i)
+			for(int j=0;j<width;++j)
+			{
+				double rnn[3];
+				fscanf(fin,"[%lf %lf %lf] ",&rnn[0],&rnn[1],&rnn[2]);
+				for(int k=0;k<3;++k)
+					nMap[3*width*i+3*j+k]=rnn[k];
+			}
+		fclose(fin);
+	}
 	if(dd)
 	{
 		FILE *out = fopen("../depth/normal","w");
@@ -82,7 +84,7 @@ void IntrinsicDecomposition::initialize(const uint8_t *_rgb, const float *_norma
 
 void IntrinsicDecomposition::process(double *result_intensity)
 {
-	getGridLLEMatrix(20,3); //K, g_size
+	getGridLLEMatrix(20,10); //K, g_size
 	getNormalConstraintMatrix(0.5); // sigma_n
 	getContinuousConstraintMatrix(0.0001,0.8); // sigma_c,sigma_i
 	getLaplacian();
@@ -92,9 +94,9 @@ void IntrinsicDecomposition::process(double *result_intensity)
 
 	//A = 4 * WRC + 3 * mask1 * (spI - LLEGRID) + 3 * mask2 * (spI - LLENORMAL) + 0.025 * WSC;
 	//b = 4 * consVecCont;
-	//Eigen::SparseMatrix<double> A = 4 * WRC + 1 * L_S + 0.025 * WSC;
+	// Eigen::SparseMatrix<double> A = 4 * WRC + 1 * L_S + 0.025 * WSC;
 	// Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
-	Eigen::SparseMatrix<double> A = 4 * WRC +  1 * MASK * LLEGRID +  1 *MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;// + 0.05*eye;
+	Eigen::SparseMatrix<double> A = 4 * WRC +  3 * MASK * LLEGRID +  3 *MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;// + 0.05*eye;
 	///Eigen::SparseMatrix<double> A = 4 * WRC + 3 * MASK * LLENORMAL + 1 * L_S + 0.025 * WSC;
 	Eigen::VectorXd b = 4 * consVecCont;
 
@@ -157,6 +159,7 @@ void IntrinsicDecomposition::getMask(const uint16_t *_depth)
 	for (int i=0;i<height;i++)
 		for(int j=0;j<width;j++)
 		{
+			index[i*width+j]=-1;
 			mask[i*width+j] = (_depth[i*width+j]!=INVALID);
 			if(mask[i*width+j])
 			{
@@ -321,11 +324,11 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	int *jpos = new int[Maxgrid];
 	int Ngrid=0;
 
-	ANNpointArray dataPts,dataPts3;
-	ANNpoint queryPt,queryPt3;
+	ANNpointArray dataPts3,dataPts6;
+	ANNpoint queryPt3,queryPt6;
 	ANNidxArray nnIdx;
 	ANNdistArray dists;
-	ANNkd_tree * kdTree,* kdTree3;
+	ANNkd_tree * kdTree;
 
 	for(int i=0;i<height;i+=g_size)
 		for(int j=0;j<width;j+=g_size)
@@ -356,8 +359,8 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	queryPt3 = annAllocPt(3);
 	dataPts3 = annAllocPts(Ngrid, 3);
 
-	queryPt = annAllocPt(6);
-	dataPts = annAllocPts(Ngrid, 6);
+	queryPt6 = annAllocPt(6);
+	dataPts6 = annAllocPts(Ngrid, 6);
 	nnIdx = new ANNidx[K+1];
 	dists = new ANNdist[K+1];
 
@@ -394,18 +397,17 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			dataPts3[n][1] = nMap[ipos[n]*width*3+jpos[n]*3+1];
 			dataPts3[n][2] = nMap[ipos[n]*width*3+jpos[n]*3+2];
 
-			dataPts[n][0] = nMap[ipos[n]*width*3+jpos[n]*3+0];
-			dataPts[n][1] = nMap[ipos[n]*width*3+jpos[n]*3+1];
-			dataPts[n][2] = nMap[ipos[n]*width*3+jpos[n]*3+2];
-			dataPts[n][3] = points[ipos[n]*width*3+jpos[n]*3+0];
-			dataPts[n][4] = points[ipos[n]*width*3+jpos[n]*3+1];
-			dataPts[n][5] = points[ipos[n]*width*3+jpos[n]*3+2];
-			// dataPts[n][6] = chrom[ipos[n]*width*3+jpos[n]*3+0];
-			// dataPts[n][7] = chrom[ipos[n]*width*3+jpos[n]*3+1];
-			// dataPts[n][8] = chrom[ipos[n]*width*3+jpos[n]*3+2];
+			dataPts6[n][0] = nMap[ipos[n]*width*3+jpos[n]*3+0];
+			dataPts6[n][1] = nMap[ipos[n]*width*3+jpos[n]*3+1];
+			dataPts6[n][2] = nMap[ipos[n]*width*3+jpos[n]*3+2];
+			dataPts6[n][3] = points[ipos[n]*width*3+jpos[n]*3+0];
+			dataPts6[n][4] = points[ipos[n]*width*3+jpos[n]*3+1];
+			dataPts6[n][5] = points[ipos[n]*width*3+jpos[n]*3+2];
+
 			tp.push_back(Eigen::Triplet<double>(index[ipos[n]*width+jpos[n]],index[ipos[n]*width+jpos[n]],1));
 			n++;
 		}
+	printf("LLE points:%d\n",n);
 
 
 	if(dd)
@@ -439,7 +441,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	//for LLENORMAL
 	//pcl::KdTreeFLANN<pcl::PointXYZ> kdtree3d;
 	//kdtree3d.setInputCloud(cloud3d);
-	kdTree3 = new ANNkd_tree(dataPts3, Ngrid, 3);
+	kdTree = new ANNkd_tree(dataPts3, Ngrid, 3);
 	cv::Mat1d z(K, 3);
 	int dims2[2] = {dims, dims};//{h*w,h*w};
 	tp.clear();
@@ -450,7 +452,7 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 			queryPt3[q]=dataPts3[i][q];
 		//kdtree3d.nearestKSearch(cloud3d->points[i],K+1,pointIdxNKNSearch,pointNKNSquaredDistance);
 
-		kdTree3->annkSearch(queryPt3, K+1, nnIdx, dists, eps);
+		kdTree->annkSearch(queryPt3, K+1, nnIdx, dists, eps);
 		z.setTo(0);
 		for(int k=0,kk=0;k<=K;++k)
 		{
@@ -513,7 +515,15 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 		}
 		double lcheck = sqrt(check[0]*check[0]+check[1]*check[1]+check[2]*check[2]);
 		//printf("LLENORMAL %d : %lf\t%lf %lf %lf \t %lf %lf %lf\n",i,t,nMap[ipos[i]*width*3+jpos[i]*3+0],nMap[ipos[i]*width*3+jpos[i]*3+1],nMap[ipos[i]*width*3+jpos[i]*3+2],check[0],check[1],check[2]);
-		//printf("LLEGNORMAL %d : %lf %lf/\t%lf %lf %lf \t %lf %lf %lf\n",i,t,acos((nMap[ipos[i]*width*3+jpos[i]*3+0]*check[0]+nMap[ipos[i]*width*3+jpos[i]*3+1]*check[1]+nMap[ipos[i]*width*3+jpos[i]*3+2]*check[2])/lcheck),nMap[ipos[i]*width*3+jpos[i]*3+0],nMap[ipos[i]*width*3+jpos[i]*3+1],nMap[ipos[i]*width*3+jpos[i]*3+2],check[0],check[1],check[2]);
+		if (false && t>1.0)
+		{
+			printf("LLEGNORMAL %d : %lf %lf/\t%lf %lf %lf \t %lf %lf %lf\n",i,t,acos((nMap[ipos[i]*width*3+jpos[i]*3+0]*check[0]+nMap[ipos[i]*width*3+jpos[i]*3+1]*check[1]+nMap[ipos[i]*width*3+jpos[i]*3+2]*check[2])/lcheck),nMap[ipos[i]*width*3+jpos[i]*3+0],nMap[ipos[i]*width*3+jpos[i]*3+1],nMap[ipos[i]*width*3+jpos[i]*3+2],check[0],check[1],check[2]);
+			for(int k=0;k<=K;++k)
+			{
+				int nk=nnIdx[k];
+				printf("%d:\t%lf %lf %lf\n",nk,nMap[ipos[nk]*width*3+jpos[nk]*3+0],nMap[ipos[nk]*width*3+jpos[nk]*3+1],nMap[ipos[nk]*width*3+jpos[nk]*3+2]);
+			}
+		}
 
 		// % enforce sum(w)=1
 		for(int k=0,kk=0;k<=K;k++) {
@@ -531,17 +541,18 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	LLENORMAL.setFromTriplets(tp.begin(), tp.end());
 	std::printf("LLENORMAL\n");
 	annClose();
+	delete kdTree;
 
 	//for LLEGRID
-	kdTree = new ANNkd_tree(dataPts, Ngrid, 6);
+	kdTree = new ANNkd_tree(dataPts6, Ngrid, 6);
 	tp.clear();
 	for(int i=0;i<Ngrid;i++)
 	{
 		double tol=1e-3,eps=0.0;
 		for(int q=0;q<6;q++)
-			queryPt[q]=dataPts[i][q];
+			queryPt6[q]=dataPts6[i][q];
 
-		kdTree->annkSearch(queryPt, K+1, nnIdx, dists, eps);
+		kdTree->annkSearch(queryPt6, K+1, nnIdx, dists, eps);
 		z.setTo(0);
 
 		// std::vector<myPoint> v;
@@ -652,11 +663,10 @@ void IntrinsicDecomposition::getGridLLEMatrix(int K, int g_size)
 	delete [] nnIdx;
 	delete [] dists;
     delete kdTree;
-    delete kdTree3;
-    annDeallocPt(queryPt);
-    annDeallocPts(dataPts);
     annDeallocPt(queryPt3);
     annDeallocPts(dataPts3);
+    annDeallocPt(queryPt6);
+    annDeallocPts(dataPts6);
 	annClose();
 }
 
