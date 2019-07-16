@@ -4,3 +4,6 @@
 [submodule "lib/face-alignment"]
 	path = lib/face-alignment
 	url = https://github.com/spacejake/face-alignment.git
+[submodule "lib/libigl"]
+	path = lib/libigl
+	url = https://github.com/libigl/libigl

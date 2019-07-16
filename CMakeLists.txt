@@ -29,7 +29,7 @@ add_subdirectory(messages)
 file(GLOB ANN_SOURCES ann/src/*)
 file(GLOB ANN_HEADERS ann/include/ANN/*)
 
-include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ann/include/ alglib/)
+include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES} ann/include/ alglib/ lib/libigl/include)
 
 add_library(ann
   ${ANN_SOURCES}
@@ -43,61 +43,6 @@ add_library(alglib
     ${ALGLIB_SOURCES})
 
 add_library(telef
-  include/align/nonrigid_pipe.h
-  include/align/rigid_pipe.h
-  include/align/lmkfit_pipe.h
-  include/align/bsfit_pipe.h
-  include/cloud/cloud_pipe.h
-  include/face/model.h
-  include/feature/feature_detector.h
-  include/io/align/align_frontend.h
-  include/io/ply/meshio.h
-  include/io/ply/YaPly.h
-  include/io/bmp.h
-  include/io/channel.h
-  include/io/device.h
-  include/io/frontend.h
-  include/io/grabber.h
-  include/io/merger.h
-  include/io/opencv_metadata_wrapper.h
-  include/io/pipe.h
-  include/mesh/color_projection_pipe.h
-  include/mesh/colormapping.h
-  include/mesh/mesh.h
-  include/util/eigen_pcl.h
-  include/util/UvPointMapping.h
-  include/camera.h
-  include/type.h
-  include/align/cost_func.h
-  include/face/classified_model.h
-  include/face/classify_pipe.h
-  include/face/deformation_model.h
-  include/io/devicecloud.h
-  include/io/png.h
-  include/io/obj.h
-  include/io/fakeframe.h
-  include/io/wrapper.h
-  include/util/fake_frame_record_device.h
-  include/io/matrix.h
-  include/io/landmark.h
-  include/io/dataset/face_warehouse.h
-  include/util/convert_arr.h
-  include/face/model_cudahelper.h
-  include/face/raw_model.h
-  include/util/transform.h
-  include/feature/feature_detect_frontend.h
-  include/io/merger/device_input_merger.h
-  include/io/normaldepth_pipe.h
-  include/feature/feature_detect_pipe.h
-  include/util/eigen_file_io.h
-  include/feature/face.h
-  include/util/pcl_cv.h
-  include/vis/fitting_visualizer.h
-  include/util/po_util.h
-  include/face/feeder.h
-  include/intrinsic/intrinsic.h
-  include/intrinsic/intrinsic_pipe.h
-
   src/cloud/cloud_pipe.cpp
   src/align/rigid_pipe.cpp
   src/align/lmkfit_pipe.cpp
@@ -110,6 +55,7 @@ add_library(telef
   src/align/nonrigid_pipe.cpp
   src/mesh/colormapping.cpp
   src/mesh/mesh.cpp
+  src/mesh/deform.cpp
   src/io/devicecloud.cpp 
   src/io/png.cpp 
   src/io/obj.cpp

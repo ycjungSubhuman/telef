@@ -3,6 +3,8 @@
 #include "io/normaldepth_pipe.h"
 #include "util/normal.h"
 #include "util/shader.h"
+#include "util/colormesh.h"
+#include "mesh/deform.h"
 
 namespace {
 using namespace telef::io;
@@ -11,14 +13,14 @@ using namespace telef::util;
 
 const char *mesh_normal_vertex_shader =
     "#version 460 \n"
-    "uniform mat4 mvp; \n"
-    "uniform mat4 mv; \n"
+    "uniform mat4 vp; \n"
+    "uniform mat4 v; \n"
     "in vec4 pos; \n"
     "in vec3 _normal; \n"
     "out vec3 normal; \n"
     "void main() { \n"
-    "  vec4 xy_z = mvp*pos; \n"
-    "  vec4 _z = mv*pos; \n"
+    "  vec4 xy_z = vp*pos; \n"
+    "  vec4 _z = v*pos; \n"
     "  xy_z /= xy_z.w; \n"
     "  _z /= _z.w; \n"
     "  vec4 xyz = vec4(xy_z.x, xy_z.y, -_z.z, 1.0); \n"
@@ -178,16 +180,22 @@ MeshNormalDepthRenderer::_processData(boost::shared_ptr<PCANonRigidFittingResult
   auto mesh =
       input->pca_model->genMesh(input->shapeCoeff, input->expressionCoeff);
 
-  auto vertexPosition = mesh.position;
+  mesh.applyTransform(input->transformation);
+  Eigen::MatrixXf tpos;
+  Eigen::MatrixXi F;
+  colormesh2raw(mesh, tpos, F);
+  Eigen::MatrixXf newpos = telef::mesh::lmk2deformed(tpos, F, input->landmark3d, input->pca_model->getLandmarks(), 10.0);
+
+  //Eigen::MatrixXf newpos = tpos;
+  Eigen::MatrixXf newpost = newpos.transpose();
   auto vertexNormal = getVertexNormal(mesh);
-  assert(vertexNormal.size() == vertexPosition.size());
 
   //        vertex positions
   glBindBuffer(GL_ARRAY_BUFFER, m_vbuf);
   glBufferData(
       GL_ARRAY_BUFFER,
-      vertexPosition.size() * sizeof(float),
-      vertexPosition.data(),
+      newpost.size() * sizeof(float),
+      newpost.data(),
       GL_STREAM_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -222,16 +230,13 @@ MeshNormalDepthRenderer::_processData(boost::shared_ptr<PCANonRigidFittingResult
   flip << 1.0, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f,
       0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
 
-  Eigen::Matrix4f mvp = p1 * flip * mv;
-  Eigen::Matrix4f _mv = flip * mv;
+  Eigen::Matrix4f vp = p1 * flip;
+  Eigen::Matrix4f _v = flip;
 
-  Eigen::MatrixXf pos = Eigen::Map<Eigen::MatrixXf>(
-      mesh.position.data(), 3, mesh.position.size() / 3);
-
-  GLint mvpPosition = glGetUniformLocation(m_normal_prog, "mvp");
-  GLint mvPosition = glGetUniformLocation(m_normal_prog, "mv");
-  glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, mvp.data());
-  glUniformMatrix4fv(mvPosition, 1, GL_FALSE, _mv.data());
+  GLint mvpPosition = glGetUniformLocation(m_normal_prog, "vp");
+  GLint mvPosition = glGetUniformLocation(m_normal_prog, "v");
+  glUniformMatrix4fv(mvpPosition, 1, GL_FALSE, vp.data());
+  glUniformMatrix4fv(mvPosition, 1, GL_FALSE, _v.data());
 
   //     Draw
   std::vector<unsigned int> triangles(mesh.triangles.size() * 3);

@@ -223,7 +223,6 @@ int main(int ac, const char *const *av) {
       modelFeeder,
       rigid,
       lmkfit,
-      rigid,
       bsfit,
       toresult,
       normaldepth);
