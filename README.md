@@ -48,7 +48,6 @@ If you want to try your Kinect instead of pre-recorded video, you can delete `-F
 * Fitting does not work with Kinect v2 (Grabber implementation have bug right now)
 * The project is not real-time yet
 
-## Reference
+## Note
 
-Face model samples
-* Tianye Li*, Timo Bolkart*, Michael J. Black, Hao Li, and Javier Romero. 2017. Learning a model of facial shape and expression from 4D scans. ACM Trans. Graph. 36, 6, Article 194 (November 2017), 17 pages. https://doi.org/10.1145/3130800.3130813
+This project is obsolete and unmaintained now. This code was written when I was very new to 3D face reconstruction and tracking. Since the C++ code I wrote was not very easy to maintain and my teammates being more familiar with Python, we moved on to another code based on Python. Unfortunately, because of license issues, we cannot share the new code. My suggestion for this codebase is: You can look up some example codes for using PCL grabber and basic fitting methods for 3D face model. But don't spend too much time on making this code run on your computer. I did not tested this code running on different computers other than my labmates', which contained pre-installed dependencies and data files.
